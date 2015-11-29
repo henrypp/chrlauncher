@@ -1,6 +1,6 @@
 # chrlauncher
 
-Portable Chromium launcher and updater. On 64-bit systems it's download 64-bit version of Chromium.
+Portable Chromium launcher and updater.
 
 #### Folder structure:
 - \bin - Chromium binaries directory.
@@ -9,8 +9,18 @@ Portable Chromium launcher and updater. On 64-bit systems it's download 64-bit v
 #### Settings:
 ~~~
 [chrlauncher]
-cmdline=<chrome.exe command line>
-no_check=<1 - disable update checking, 0 (default) - check for updates everyday>
+
+; ChromiumArchitecture=0
+; <0 - auto (default), 64 - check for 64-bit Chromium, 32 - check for 32-bit Chromium>
+
+; ChromiumCheckDays=1
+; check for new version once in X days.
+;
+; <0 - disable update checking, 1 - once in day (delault)>
+
+; ChromiumCommandLine=--user-data-dir=..\profile --no-default-browser-check
+; command line for run Chromium
+; see here: http://peter.sh/experiments/chromium-command-line-switches/
 ~~~
 Website: www.henrypp.org<br />
 Support: support@henrypp.org<br />
