@@ -242,7 +242,6 @@
   <ItemGroup>
     <ClInclude Include="..\routine\application.h" />
     <ClInclude Include="..\routine\routine.h" />
-    <ClInclude Include="src\include\sdk.h" />
     <ClInclude Include="src\include\unzip.h" />
     <ClInclude Include="src\main.h" />
     <ClInclude Include="src\resource.h" />

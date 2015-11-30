@@ -41,9 +41,6 @@
     <ClInclude Include="..\routine\application.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\sdk.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\include\unzip.h">
       <Filter>Header Files</Filter>
     </ClInclude>

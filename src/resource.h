@@ -9,15 +9,7 @@
 #define IDM_MAIN 100
 
 // Dialogs
-#define IDD_ABOUT 100
-#define IDD_MAIN 101
-
-// About Dlg
-#define IDC_LOGO 100
-#define IDC_TITLE 101
-#define IDC_COPYRIGHT 102
-#define IDC_LINKS 103
-#define IDC_INFO 104
+#define IDD_MAIN 100
 
 // Main Dlg
 #define IDC_PROGRESS 1001
@@ -37,13 +29,17 @@
 #define IDI_MAIN 100
 
 // Strings
-#define IDS_VERSION 1000
-#define IDS_REVISION 1001
-#define IDS_BUILD 1002
-#define IDS_COMMIT 1003
-#define IDS_DATE 1004
+#define IDS_ABOUT 1000
 
-#define IDS_STATUS_DOWNLOAD 1005
-#define IDS_STATUS_INSTALL 1006
+#define IDS_VERSION 1001
+#define IDS_REVISION 1002
+#define IDS_BUILD 1003
+#define IDS_COMMIT 1004
+#define IDS_DATE 1005
+
+#define IDS_STATUS_DOWNLOAD 1006
+#define IDS_STATUS_INSTALL 1007
+
+#define IDS_QUESTION_BUSY 1008
 
 #endif // __RESOURCE_H__
