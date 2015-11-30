@@ -1,6 +1,6 @@
 # chrlauncher
 
-Portable Chromium launcher and updater.
+Small and very fast portable Chromium launcher and updater.
 
 #### Folder structure:
 - \bin - Chromium binaries directory.
