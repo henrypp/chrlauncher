@@ -2,6 +2,10 @@
 
 Small and very fast portable Chromium launcher and updater.
 
+#### Supported browser:
+- Launcher - all Chromium based browsers (see "Folder structure" organization).
+- Updater - only Chromium.
+
 #### Folder structure:
 - \bin - Chromium binaries directory.
 - \profile - Chromium profile directory.
