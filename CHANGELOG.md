@@ -1,3 +1,7 @@
+v1.4 (4 December 2015)
++ added "ChromiumDirectory" setting
+- fixed statusbar flickering
+
 v1.3 (1 December 2015)
 - fixed incorrect version checking
 
