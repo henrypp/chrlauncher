@@ -1,3 +1,9 @@
+v1.5 (17 December 2015)
++ added "Mozilla Firefox" support 
++ added new settings
++ added command line for run specified browser
+- fixed CreateProcess current directory parameter
+
 v1.4 (4 December 2015)
 + added "ChromiumDirectory" setting
 - fixed statusbar flickering

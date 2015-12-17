@@ -1,39 +1,86 @@
 chrlauncher
 
-Small and very fast portable Chromium launcher and updater.
+Small and very fast portable launcher and updater for Chromium and Mozilla Firefox.
 
 Supported browser:
-- Launcher - all Chromium based browsers (see "Folder structure").
-- Updater - only Chromium.
+- Launcher - Chromium, Mozilla Firefox and their clones (hi Google Chrome!).
+- Updater - Chromium, Mozilla Firefox.
 
 Folder structure:
-- \bin - Chromium binaries directory.
-- \profile - Chromium profile directory.
+- chromium\bin - Chromium binaries directory.
+- firefox\bin - Mozilla Firefox binaries directory.
+
+Command line:
+- /browser chromium - run Chromium
+- /browser firefox - run Mozilla Firefox
 
 Settings:
 [chrlauncher]
 
-# Select Chromium architecture:
+# Set binary architecture:
 #
-# 0 -> auto detected
-# 64 -> check for 64-bit Chromium
-# 32 -> check for 32-bit Chromium
-ChromiumArchitecture=0
+# 0	-> autodetect (default)
+# 64	-> 64-bit
+# 32	-> 32-bit
+#
+BrowserArchitecture=0
 
-# Check for new version once in X days:
+# Last update checking timestamp:
 #
-# 0 -> disable update checking
-# 1 -> once in day
-ChromiumCheckDays=1
+BrowserCheckDate=0
 
-# Command line for run Chromium
-# See here: http://peter.sh/experiments/chromium-command-line-switches/
+# Check for new browser version once in X days:
 #
-#ChromiumCommandLine=--user-data-dir=..\profile --no-default-browser-check
+# 0	-> disable update checking
+# 1	-> once in day (default)
+#
+BrowserCheckPeriod=1
+
+# Select internet browser:
+#
+# chromium	-> Chromium (default)
+# firefox	-> Firefox
+#
+BrowserName=chromium
+
+# Command line for Chromium
+#
+# See here:
+# http://peter.sh/experiments/chromium-command-line-switches/
+#
+ChromiumCommandLine=--user-data-dir=..\profile --no-default-browser-check
 
 # Chromium binaries directory
 #
-#ChromiumDirectory=bin
+ChromiumDirectory=.\chromium\bin
+
+# Command line for Firefox
+#
+# See here:
+# https://developer.mozilla.org/docs/Mozilla/Command_Line_Options
+#
+FirefoxCommandLine=-profile "..\profile" -no-remote
+
+# Firefox binaries directory
+#
+FirefoxDirectory=.\firefox\bin
+
+# Firefox update channel
+#
+# release	-> Release channel (default)
+# esr		-> ESR (Extended Support Release)
+#
+FirefoxChannel=release
+
+# Localization:
+#
+# en-US	-> english (default)
+# ru	-> russian
+#
+# See here:
+# https://ftp.mozilla.org/pub/firefox/releases/latest/README.txt
+#
+FirefoxLocalization=en-US
 
 Website: www.henrypp.org
 Support: support@henrypp.org
