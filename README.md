@@ -10,7 +10,7 @@ Small and very fast portable launcher and updater for Chromium and Mozilla Firef
 - chromium\bin - Chromium binaries directory.
 - firefox\bin - Mozilla Firefox binaries directory.
 
-#### Command line:
+#### Command line
 - /browser chromium - run Chromium
 - /browser firefox - run Mozilla Firefox
 
