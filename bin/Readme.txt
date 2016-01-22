@@ -1,9 +1,7 @@
 chrlauncher
 
 Small and very fast portable launcher and updater for Chromium.
-
-Set as default internet browser:
-run SetDefaultBrowser.bat (as admin)
+To set as default internet browser run SetDefaultBrowser.bat (as admin).
 
 Supported browser:
 - Launcher - Chromium and their clones (hi Google Chrome!).
