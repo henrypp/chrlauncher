@@ -24,31 +24,10 @@
     <ClCompile Include="src\include\unzip.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\routine\app_helper.cpp">
+    <ClCompile Include="..\routine\rstring.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\include\mar_read.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\include\bzlib.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\include\decompress.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\include\compress.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\include\crctable.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\include\huffman.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\include\randtable.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\include\blocksort.c">
+    <ClCompile Include="..\routine\rapp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -65,19 +44,13 @@
     <ClInclude Include="src\include\unzip.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\routine\app_helper.h">
+    <ClInclude Include="..\routine\rstring.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\routine\app_config.h">
+    <ClInclude Include="..\routine\rconfig.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\mar.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\include\bzlib.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\include\bzlib_private.h">
+    <ClInclude Include="..\routine\rapp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

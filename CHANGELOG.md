@@ -1,3 +1,9 @@
+v1.6 (22 January 2016)
++ added script to set chrlauncher as default browser
+- cleanup Chromium package on extract
+- removed Mozilla Firefox support (because his have native autoupdater)
+- minor bug fixes
+
 v1.5 (17 December 2015)
 + added "Mozilla Firefox" support 
 + added new settings
