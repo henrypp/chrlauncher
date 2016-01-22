@@ -51,4 +51,4 @@ ChromiumDirectory=.\bin
 Website: www.henrypp.org<br />
 Support: support@henrypp.org<br />
 <br />
-(c) 2015 Henry++
+(c) 2016 Henry++
