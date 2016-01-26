@@ -18,6 +18,8 @@ if not exist %CHRLAUNCHER_PATH% (
 
 	) else (
 
+		regedit /s "%~dp0RegistryFix.reg"
+
 		reg add "HKCR\chrlauncherHTML\DefaultIcon" /v "" /t REG_SZ /d "%CHRLAUNCHER_ICON%" /f
 		reg add "HKCR\chrlauncherHTML\shell\open\command" /v "" /t REG_SZ /d "%CHRLAUNCHER_ARGS%" /f
 
