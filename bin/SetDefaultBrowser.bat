@@ -4,7 +4,7 @@ set "CHRLAUNCHER_PATH=%~dp0chrlauncher.exe"
 set "CHRLAUNCHER_ICON=\"%CHRLAUNCHER_PATH%\",0"
 set "CHRLAUNCHER_ARGS=\"%CHRLAUNCHER_PATH%\" /url \"%%1\""
 
-if not exist %CHRLAUNCHER_PATH% (
+if not exist "%CHRLAUNCHER_PATH%" (
 
 	echo ERROR: "chrlauncher.exe" not found.
 
@@ -18,43 +18,39 @@ if not exist %CHRLAUNCHER_PATH% (
 
 	) else (
 
-		regedit /s "%~dp0RegistryFix.reg"
+		regedit /s "%~dp0RegistryCleaner.reg"
 
-		reg add "HKCR\chrlauncherHTML\DefaultIcon" /v "" /t REG_SZ /d "%CHRLAUNCHER_ICON%" /f
-		reg add "HKCR\chrlauncherHTML\shell\open\command" /v "" /t REG_SZ /d "%CHRLAUNCHER_ARGS%" /f
+		reg add "HKLM\Software\Classes\chrlauncherHTML" /v "" /t REG_SZ /d "Chromium Document" /f
+		reg add "HKLM\Software\Classes\chrlauncherHTML\DefaultIcon" /v "" /t REG_SZ /d "%CHRLAUNCHER_ICON%" /f
+		reg add "HKLM\Software\Classes\chrlauncherHTML\shell\open\command" /v "" /t REG_SZ /d "%CHRLAUNCHER_ARGS%" /f
 
-		reg add "HKCR\chrlauncherURL\DefaultIcon" /v "" /t REG_SZ /d "%CHRLAUNCHER_ICON%" /f
-		reg add "HKCR\chrlauncherURL\shell\open\command" /v "" /t REG_SZ /d "%CHRLAUNCHER_ARGS%" /f
+		reg add "HKLM\Software\Classes\chrlauncherURL" /v "" /t REG_SZ /d "Chromium Document" /f
+		reg add "HKLM\Software\Classes\chrlauncherURL" /v "URL Protocol" /t REG_SZ /d "" /f
+		reg add "HKLM\Software\Classes\chrlauncherURL\DefaultIcon" /v "" /t REG_SZ /d "%CHRLAUNCHER_ICON%" /f
+		reg add "HKLM\Software\Classes\chrlauncherURL\shell\open\command" /v "" /t REG_SZ /d "%CHRLAUNCHER_ARGS%" /f
 
-		reg add "HKCR\ftp\DefaultIcon" /v "" /t REG_SZ /d "%CHRLAUNCHER_ICON%" /f
-		reg add "HKCR\ftp\shell\open\command" /v "" /t REG_SZ /d "%CHRLAUNCHER_ARGS%" /f
+		reg add "HKLM\Software\RegisteredApplications" /v "chrlauncher" /t REG_SZ /d "Software\Clients\StartMenuInternet\CHRLAUNCHER.EXE\Capabilities" /f
 
-		reg add "HKCR\http\DefaultIcon" /v "" /t REG_SZ /d "%CHRLAUNCHER_ICON%" /f
-		reg add "HKCR\http\shell\open\command" /v "" /t REG_SZ /d "%CHRLAUNCHER_ARGS%" /f
+		reg add "HKLM\Software\Clients\StartMenuInternet\CHRLAUNCHER.EXE\DefaultIcon" /v "" /t REG_SZ /d "%CHRLAUNCHER_ICON%" /f
 
-		reg add "HKCR\https\DefaultIcon" /v "" /t REG_SZ /d "%CHRLAUNCHER_ICON%" /f
-		reg add "HKCR\https\shell\open\command" /v "" /t REG_SZ /d "%CHRLAUNCHER_ARGS%" /f
+		reg add "HKLM\Software\Clients\StartMenuInternet\CHRLAUNCHER.EXE\shell\open\command" /v "" /t REG_SZ /d "\"%CHRLAUNCHER_PATH%\"" /f
 
-		reg add "HKCR\.htm" /v "" /t REG_SZ /d "chrlauncherHTML" /f
-		reg add "HKCR\.html" /v "" /t REG_SZ /d "chrlauncherHTML" /f
-		reg add "HKCR\.shtml" /v "" /t REG_SZ /d "chrlauncherHTML" /f
-		reg add "HKCR\.xht" /v "" /t REG_SZ /d "chrlauncherHTML" /f
-		reg add "HKCR\.xhtml" /v "" /t REG_SZ /d "chrlauncherHTML" /f
+		reg add "HKLM\Software\Clients\StartMenuInternet\CHRLAUNCHER.EXE\Capabilities" /v "ApplicationIcon" /t REG_SZ /d "%CHRLAUNCHER_ICON%" /f
+		reg add "HKLM\Software\Clients\StartMenuInternet\CHRLAUNCHER.EXE\Capabilities" /v "ApplicationName" /t REG_SZ /d "Chromium" /f
 
-		reg add "HKCU\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\ftp\UserChoice" /v "ProgId" /t REG_SZ /d "chrlauncherHTML" /f
-		reg add "HKCU\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\http\UserChoice" /v "ProgId" /t REG_SZ /d "chrlauncherHTML" /f
-		reg add "HKCU\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\https\UserChoice" /v "ProgId" /t REG_SZ /d "chrlauncherHTML" /f
+		reg add "HKLM\Software\Clients\StartMenuInternet\CHRLAUNCHER.EXE\Capabilities\StartMenu" /v "StartMenuInternet" /t REG_SZ /d "CHRLAUNCHER.EXE" /f
 
-		reg add "HKCU\Software\Microsoft\Windows\Shell\Associations\MIMEAssociations\text/html\UserChoice" /v "ProgId" /t REG_SZ /d "chrlauncherHTML" /f
+		reg add "HKLM\Software\Clients\StartMenuInternet\CHRLAUNCHER.EXE\Capabilities\FileAssociations" /v ".htm" /t REG_SZ /d "chrlauncherHTML" /f
+		reg add "HKLM\Software\Clients\StartMenuInternet\CHRLAUNCHER.EXE\Capabilities\FileAssociations" /v ".html" /t REG_SZ /d "chrlauncherHTML" /f	
+		reg add "HKLM\Software\Clients\StartMenuInternet\CHRLAUNCHER.EXE\Capabilities\FileAssociations" /v ".shtml" /t REG_SZ /d "chrlauncherHTML" /f
+		reg add "HKLM\Software\Clients\StartMenuInternet\CHRLAUNCHER.EXE\Capabilities\FileAssociations" /v ".xht" /t REG_SZ /d "chrlauncherHTML" /f
+		reg add "HKLM\Software\Clients\StartMenuInternet\CHRLAUNCHER.EXE\Capabilities\FileAssociations" /v ".xhtml" /t REG_SZ /d "chrlauncherHTML" /f
 
-		reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.htm\UserChoice" /v "ProgId" /t REG_SZ /d "chrlauncherHTML" /f
-		reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.html\UserChoice" /v "ProgId" /t REG_SZ /d "chrlauncherHTML" /f
-		reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.shtml\UserChoice" /v "ProgId" /t REG_SZ /d "chrlauncherHTML" /f
-		reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.xht\UserChoice" /v "ProgId" /t REG_SZ /d "chrlauncherHTML" /f
-		reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.xhtml\UserChoice" /v "ProgId" /t REG_SZ /d "chrlauncherHTML" /f
+		reg add "HKLM\Software\Clients\StartMenuInternet\CHRLAUNCHER.EXE\Capabilities\URLAssociations" /v "ftp" /t REG_SZ /d "chrlauncherURL" /f
+		reg add "HKLM\Software\Clients\StartMenuInternet\CHRLAUNCHER.EXE\Capabilities\URLAssociations" /v "http" /t REG_SZ /d "chrlauncherURL" /f
+		reg add "HKLM\Software\Clients\StartMenuInternet\CHRLAUNCHER.EXE\Capabilities\URLAssociations" /v "https" /t REG_SZ /d "chrlauncherURL" /f
 
 	)
 )
 
 pause
-
