@@ -20,7 +20,7 @@ if not exist "%CHRLAUNCHER_PATH%" (
 
 		regedit /s "%~dp0RegistryCleaner.reg"
 
-		reg add "HKLM\Software\Classes\chrlauncherHTML" /v "" /t REG_SZ /d "Chromium Document" /f
+		reg add "HKLM\Software\Classes\chrlauncherHTML" /v "" /t REG_SZ /d "chrlauncher document" /f
 		reg add "HKLM\Software\Classes\chrlauncherHTML\DefaultIcon" /v "" /t REG_SZ /d "%CHRLAUNCHER_ICON%" /f
 		reg add "HKLM\Software\Classes\chrlauncherHTML\shell\open\command" /v "" /t REG_SZ /d "%CHRLAUNCHER_ARGS%" /f
 
