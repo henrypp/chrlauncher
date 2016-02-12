@@ -1,5 +1,7 @@
 # chrlauncher
 
+![chrlauncher](http://www.henrypp.org/images/chrlauncher.jpg)
+
 Small and very fast portable launcher and updater for Chromium.
 
 ```
