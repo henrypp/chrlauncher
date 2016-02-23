@@ -1,3 +1,9 @@
+v1.7 (23 February 2016)
++ support to use portable version of PPAPI (see "FlashPlayerPath" config)
+- fixed "SetDefaultBrowser" script (now used internal win7 feature to set as default browser)
+- removed std::regex (saved about 100kb)
+- stability improvements
+
 v1.6 (22 January 2016)
 + added script to set chrlauncher as default browser
 - cleanup Chromium package on extract

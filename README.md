@@ -20,37 +20,44 @@ To set as default internet browser run SetDefaultBrowser.bat (as admin).
 ~~~
 [chrlauncher]
 
-# Set browser architecture:
+# Command line for Chromium:
+#
+# See here:
+# http://peter.sh/experiments/chromium-command-line-switches/
+#
+ChromiumCommandLine=--user-data-dir=..\profile --no-default-browser-check --allow-outdated-plugins
+
+# Chromium binaries directory:
+#
+ChromiumDirectory=.\bin
+
+# Adobe Flash Player PPAPI DLL path:
+#
+# See here:
+# http://effect8.ru/soft/media/adobe-flash-player-portable.html
+#
+FlashPlayerPath=.\plugins\pepflashplayer.dll
+
+# Set Chromium binaries architecture:
 #
 # 0	-> autodetect (default)
 # 64	-> 64-bit
 # 32	-> 32-bit
 #
-BrowserArchitecture=0
+ChromiumArchitecture=0
 
-# Last update checking timestamp:
-#
-BrowserCheckDate=0
-
-# Check for new browser version once in X days:
+# Check for new Chromium version once in X days:
 #
 # 0	-> disable update checking
 # 1	-> once in day (default)
 #
-BrowserCheckPeriod=1
+ChromiumCheckPeriod=1
 
-# Command line for Chromium
+# Last update checking timestamp:
 #
-# See here:
-# http://peter.sh/experiments/chromium-command-line-switches/
-#
-ChromiumCommandLine=--user-data-dir=..\profile --no-default-browser-check
-
-# Chromium binaries directory
-#
-ChromiumDirectory=.\bin
+ChromiumCheckPeriodLast=0
 ~~~
 Website: www.henrypp.org<br />
 Support: support@henrypp.org<br />
 <br />
-(c) 2016 Henry++
+(c) 2015, 2016 Henry++
