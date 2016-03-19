@@ -4,7 +4,7 @@ Small and very fast portable launcher and updater for Chromium.
 To set as default internet browser run SetDefaultBrowser.bat (as admin).
 
 Supported browser:
-- Launcher - Chromium and their clones (hi Google Chrome!).
+- Launcher - Chromium and their clones (like Google Chrome, Yandex Browser and other legitimate trojans!).
 - Updater - Chromium only.
 
 Folder structure:
@@ -19,7 +19,7 @@ Settings:
 # See here:
 # http://peter.sh/experiments/chromium-command-line-switches/
 #
-ChromiumCommandLine=--user-data-dir=..\profile --no-default-browser-check --allow-outdated-plugins
+ChromiumCommandLine=--user-data-dir=..\profile --no-default-browser-check --allow-outdated-plugins --disable-component-update
 
 # Chromium binaries directory:
 #
@@ -40,6 +40,16 @@ FlashPlayerPath=.\plugins\pepflashplayer.dll
 #
 ChromiumArchitecture=0
 
+# Type of Chromium builds:
+#
+# dev-official		-> official development builds from continuous repository (default)
+# dev-codecs-sync	-> unofficial development builds with codecs from "github.com/henrypp/chromium"
+# stable-codecs-sync	-> unofficial stable builds with codecs from "github.com/henrypp/chromium"
+# dev-codecs-nosync	-> unofficial development builds with codecs and without the profile button from "github.com/henrypp/chromium"
+# stable-codecs-nosync	-> unofficial stable builds with codecs and without the profile button from "github.com/henrypp/chromium"
+#
+ChromiumType=dev-official
+
 # Check for new Chromium version once in X days:
 #
 # 0	-> disable update checking
@@ -54,4 +64,4 @@ ChromiumCheckPeriodLast=0
 Website: www.henrypp.org
 Support: support@henrypp.org
 
-(c) 2015, 2016 Henry++
+(c) 2016 Henry++

@@ -1,3 +1,8 @@
+v1.8 (19 March 2016)
++ now distributed under MIT license
++ support to download unofficial build with codecs (see chrlauncher.ini)
+- updated PPAPI to 21.0.0.182
+
 v1.7 (23 February 2016)
 + support to use portable version of PPAPI (see "FlashPlayerPath" config)
 - fixed "SetDefaultBrowser" script (now used internal win7 feature to set as default browser)
