@@ -1,3 +1,11 @@
+v1.9 (19 April 2016)
++ now you can pass arguments to Chromium through launcher command line
+- fixed parsing arguments ("blank tab" bug)
+- fixed custom builds cleanup
+- updated "SetDefaultBrowser" script
+- updated PPAPI to 21.0.0.213
+- minor bug fixes
+
 v1.8 (19 March 2016)
 + now distributed under MIT license
 + support to download unofficial build with codecs (see chrlauncher.ini)
