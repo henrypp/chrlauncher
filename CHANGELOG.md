@@ -1,3 +1,7 @@
+v1.9.1 (23 April 2016)
++ now you can pass environment variables via command line
+- update checking time don't saved sometimes
+
 v1.9 (19 April 2016)
 + now you can pass arguments to Chromium through launcher command line
 - fixed parsing arguments ("blank tab" bug)
