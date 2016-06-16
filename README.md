@@ -54,7 +54,7 @@ ChromiumArchitecture=0
 # dev-codecs-nosync	-> unofficial development builds with codecs and without the profile button from "github.com/henrypp/chromium"
 # stable-codecs-nosync	-> unofficial stable builds with codecs and without the profile button from "github.com/henrypp/chromium"
 #
-ChromiumType=dev-official
+ChromiumType=dev-codecs-sync
 
 # Check for new Chromium version once in X days:
 #
