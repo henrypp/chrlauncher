@@ -1,3 +1,9 @@
+v1.9.2 (16 Juny 2016)
+- removed update checking when Chromium is running (issue #16)
+- fixed working under proxy (issue #17)
+- changed default browser type to "dev-codecs-sync"
+- updated PPAPI to 21.0.0.242
+
 v1.9.1 (23 April 2016)
 + now you can pass environment variables via command line
 - update checking time don't saved sometimes
