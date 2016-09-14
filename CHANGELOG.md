@@ -1,3 +1,10 @@
+v1.9.3 (15 September 2016)
++ command line arguments
++ output debug strings on error
+- updated PPAPI to 23.0.0.162
+- updated to the latest sdk
+- fixed localization
+
 v1.9.2 (16 Juny 2016)
 - removed update checking when Chromium is running (issue #16)
 - fixed working under proxy (issue #17)

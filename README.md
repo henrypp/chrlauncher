@@ -8,6 +8,11 @@ Small and very fast portable launcher and updater for Chromium.
 To set as default internet browser run SetDefaultBrowser.bat (as admin).
 ```
 
+### Command line:
+```
+/f - forced update checking
+/q - no error messages visible (quiet)
+```
 #### Supported browser
 - Launcher - Chromium and their clones (like Google Chrome, Yandex Browser and other legitimate trojans!).
 - Updater - Chromium only.
