@@ -1,3 +1,7 @@
+v1.9.4 (16 September 2016)
+- fixed localization (issue #32)
++ output debug strings on silent mode
+
 v1.9.3 (15 September 2016)
 + command line arguments
 + output debug strings on error
