@@ -8,7 +8,7 @@ Small and very fast portable launcher and updater for Chromium.
 To set as default internet browser run SetDefaultBrowser.bat (as admin).
 ```
 
-### Command line:
+#### Command line
 ```
 /f - forced update checking
 /q - no error messages visible (quiet)
