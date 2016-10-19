@@ -53,7 +53,7 @@ ChromiumArchitecture=0
 
 # Type of Chromium builds:
 #
-# dev-official		-> official development builds from continuous repository (default)
+# dev-official		-> official development builds from snapshots repository (default)
 # dev-codecs-sync	-> unofficial development builds with codecs from "github.com/henrypp/chromium"
 # stable-codecs-sync	-> unofficial stable builds with codecs from "github.com/henrypp/chromium"
 # dev-codecs-nosync	-> unofficial development builds with codecs and without the profile button from "github.com/henrypp/chromium"
