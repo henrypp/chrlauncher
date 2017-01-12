@@ -1,3 +1,17 @@
+v2.0 (12 January 2017)
+* now download and install update is working in background
++ added tray icon and show it when new version found
++ added download control option
++ added "ChromiumBinary" option to set custom Chromium binary file name
+- increased download buffer size
+- fixed run Chromium when directory contain spaces
+- fixed race conditions on download
+- fixed relative/environment path generation
+- fixed open links if chrlauncher set as default browser
+- removed PPAPI from package
+- updated readme
+- code cleanup
+
 v1.9.4 (16 September 2016)
 + output debug strings on silent mode
 - fixed localization (issue #32)

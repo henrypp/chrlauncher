@@ -43,7 +43,7 @@ if not exist "%CHRLAUNCHER_PATH%" (
 
 		reg add "HKLM\Software\Clients\StartMenuInternet\chrlauncher\Capabilities" /v "ApplicationIcon" /t REG_SZ /d "%CHRLAUNCHER_ICON%" /f
 		reg add "HKLM\Software\Clients\StartMenuInternet\chrlauncher\Capabilities" /v "ApplicationName" /t REG_SZ /d "chrlauncher" /f
-		reg add "HKLM\Software\Clients\StartMenuInternet\chrlauncher\Capabilities" /v "ApplicationDescription" /t REG_SZ /d "Chromium (portable)" /f
+		reg add "HKLM\Software\Clients\StartMenuInternet\chrlauncher\Capabilities" /v "ApplicationDescription" /t REG_SZ /d "Chromium portable launcher and updater" /f
 
 		reg add "HKLM\Software\Clients\StartMenuInternet\chrlauncher\Capabilities\FileAssociations" /v ".htm" /t REG_SZ /d "chrlauncherHTML" /f
 		reg add "HKLM\Software\Clients\StartMenuInternet\chrlauncher\Capabilities\FileAssociations" /v ".html" /t REG_SZ /d "chrlauncherHTML" /f	

@@ -125,7 +125,7 @@
       <ExceptionHandling>Sync</ExceptionHandling>
       <ControlFlowGuard>false</ControlFlowGuard>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <PreprocessorDefinitions>_UNICODE;UNICODE;_CRT_SECURE_NO_WARNINGS;_APP_NO_SETTINGS;_APP_NO_UPDATES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;_CRT_SECURE_NO_WARNINGS;_APP_NO_SETTINGS;_APP_NO_UPDATES;_APP_HAVE_TRAY;_APP_STARTMINIMIZED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>
       </MinimalRebuild>
       <EnableParallelCodeGeneration>
@@ -166,7 +166,7 @@
       <ExceptionHandling>Sync</ExceptionHandling>
       <ControlFlowGuard>false</ControlFlowGuard>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <PreprocessorDefinitions>_UNICODE;UNICODE;_CRT_SECURE_NO_WARNINGS;_APP_NO_SETTINGS;_APP_NO_UPDATES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;_CRT_SECURE_NO_WARNINGS;_APP_NO_SETTINGS;_APP_NO_UPDATES;_APP_HAVE_TRAY;_APP_STARTMINIMIZED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>
       </MinimalRebuild>
       <EnableParallelCodeGeneration>
@@ -212,7 +212,7 @@
       <MinimalRebuild>
       </MinimalRebuild>
       <DebugInformationFormat>None</DebugInformationFormat>
-      <PreprocessorDefinitions>_UNICODE;UNICODE;_CRT_SECURE_NO_WARNINGS;_APP_NO_SETTINGS;_APP_NO_UPDATES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;_CRT_SECURE_NO_WARNINGS;_APP_NO_SETTINGS;_APP_NO_UPDATES;_APP_HAVE_TRAY;_APP_STARTMINIMIZED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <OmitFramePointers>true</OmitFramePointers>
       <EnableParallelCodeGeneration>
       </EnableParallelCodeGeneration>
@@ -257,7 +257,7 @@
       <MinimalRebuild>
       </MinimalRebuild>
       <DebugInformationFormat>None</DebugInformationFormat>
-      <PreprocessorDefinitions>_UNICODE;UNICODE;_CRT_SECURE_NO_WARNINGS;_APP_NO_SETTINGS;_APP_NO_UPDATES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;_CRT_SECURE_NO_WARNINGS;_APP_NO_SETTINGS;_APP_NO_UPDATES;_APP_HAVE_TRAY;_APP_STARTMINIMIZED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <EnableParallelCodeGeneration>
       </EnableParallelCodeGeneration>
       <BufferSecurityCheck>false</BufferSecurityCheck>
