@@ -52,7 +52,7 @@ ChromiumArchitecture=0
 #
 # false	-> show tray tip if update found, downloading manually (default)
 # true	-> auto download update and install it!
-ChromiumAutoDownload=falseboolean
+ChromiumAutoDownload=false
 
 # Bring chrlauncher window when download started (boolean)
 #
