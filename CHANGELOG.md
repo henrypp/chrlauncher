@@ -1,3 +1,6 @@
+v2.1 (18 January 2017)
+- fixed PPAPI arguments
+
 v2.0 (12 January 2017)
 * now download and install update is working in background
 + added tray icon and show it when new version found
