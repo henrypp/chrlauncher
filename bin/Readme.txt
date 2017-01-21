@@ -77,12 +77,12 @@ ChromiumType=dev-codecs-sync
 
 # Check for new Chromium version once in X days (integer):
 #
-# 1	-> check updates once in a 1 day (default)
+# 1	-> check updates once in a X day (default)
 # 0	-> disable update checking
 # -1	-> force update checking
 ChromiumCheckPeriod=1
 
-# Last cached founded build date of Chromium in unix-time format(integer):
+# Last cached founded build date of Chromium in unix-time format (integer):
 ChromiumLastBuild=0
 
 # Last cached update checking timestamp (integer):

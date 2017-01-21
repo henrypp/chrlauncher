@@ -1,3 +1,6 @@
+v2.2 (21 January 2017)
+- fixed OpenZip failure
+
 v2.1 (18 January 2017)
 - fixed PPAPI arguments
 
