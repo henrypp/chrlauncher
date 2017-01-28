@@ -28,7 +28,7 @@ chrlauncher has feature for use portable Flash Player PPAPI.
 - open "chrlauncher.ini" and find "FlashPlayerPath" option and then set ".\Plugins\%flash_player_dll_name_here%"
 
 #### Settings:
-~~~
+~~~ini
 [chrlauncher]
 
 # Command line for Chromium (string):
