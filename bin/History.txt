@@ -5,7 +5,7 @@ v2.3 (14 February 2017)
 - removed "--disable-component-update" from arguments (issue #35)
 - updated documentation
 - updated localization
-- fixed opening incorrect urls (issue #52)
+- fixed opening incorrect urls (issue #52 and #56)
 - fixed bugs
 
 v2.2 (21 January 2017)
