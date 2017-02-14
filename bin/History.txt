@@ -1,3 +1,13 @@
+v2.3 (14 February 2017)
++ added "ungoogled-chromium" support
++ added force upda checking state into the "ChromiumCheckPeriod" param
+- increased startup speed
+- removed "--disable-component-update" from arguments (issue #35)
+- updated documentation
+- updated localization
+- fixed opening incorrect urls (issue #52)
+- fixed bugs
+
 v2.2 (21 January 2017)
 - fixed OpenZip failure
 

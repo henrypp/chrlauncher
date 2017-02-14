@@ -29,15 +29,17 @@ Settings:
 
 # Command line for Chromium (string):
 # See here: http://peter.sh/experiments/chromium-command-line-switches/
-ChromiumCommandLine=--user-data-dir=..\profile --no-default-browser-check --allow-outdated-plugins --disable-component-update
-
-# Chromium binaries directory (string):
-ChromiumDirectory=.\bin
+ChromiumCommandLine=--user-data-dir=..\profile --no-default-browser-check --allow-outdated-plugins
 
 # Chromium binary file name (string):
 ChromiumBinary=chrome.exe
 
+# Chromium binaries directory (string):
+# Relative (to chrlauncher directory) or full path (env. variables supported).
+ChromiumDirectory=.\bin
+
 # Adobe Flash Player PPAPI portable library path (string):
+# Relative (to chrlauncher directory) or full path (env. variables supported).
 # Download here: http://effect8.ru/soft/media/adobe-flash-player-portable.html
 FlashPlayerPath=.\plugins\pepflashplayer.dll
 
@@ -50,9 +52,9 @@ ChromiumArchitecture=0
 
 # Auto download updates if founded (boolean)
 #
-# false	-> show tray tip if update found, downloading manually (default)
-# true	-> auto download update and install it!
-ChromiumAutoDownload=false
+# false	-> show tray tip if update found, downloading manually
+# true	-> auto download update and install it! (default)
+ChromiumAutoDownload=true
 
 # Bring chrlauncher window when download started (boolean)
 #
@@ -69,10 +71,11 @@ ChromiumIsSilent=false
 # Type of Chromium builds:
 #
 # dev-official		-> official development builds from snapshots repository "commondatastorage.googleapis.com/chromium-browser-snapshots/index.html"
-# dev-codecs-sync	-> unofficial development builds with codecs from "github.com/henrypp/chromium/releases" (default)
-# stable-codecs-sync	-> unofficial stable builds with codecs from "github.com/henrypp/chromium/releases"
-# dev-codecs-nosync	-> unofficial development builds with codecs and without the profile button from "github.com/henrypp/chromium/releases"
-# stable-codecs-nosync	-> unofficial stable builds with codecs and without the profile button from "github.com/henrypp/chromium/releases"
+# dev-codecs-sync	-> unofficial development builds with codecs "github.com/henrypp/chromium/releases" (default)
+# stable-codecs-sync	-> unofficial stable builds with codecs "github.com/henrypp/chromium/releases"
+# dev-codecs-nosync	-> unofficial development builds with codecs and without google services "github.com/henrypp/chromium/releases"
+# stable-codecs-nosync	-> unofficial stable builds with codecs and without google services "github.com/henrypp/chromium/releases"
+# ungoogled-chromium	-> unofficial builds without google integration and enhanced privacy "github.com/Eloston/ungoogled-chromium"
 ChromiumType=dev-codecs-sync
 
 # Check for new Chromium version once in X days (integer):
