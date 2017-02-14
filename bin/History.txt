@@ -1,6 +1,6 @@
 v2.3 (14 February 2017)
 + added "ungoogled-chromium" support (issue #33)
-+ added force upda checking state into the "ChromiumCheckPeriod" param
++ added forced update checking state into the "ChromiumCheckPeriod" param
 - increased startup speed
 - removed "--disable-component-update" from arguments (issue #35)
 - updated documentation
