@@ -5,6 +5,9 @@
 #define IDC_STATIC (-1)
 #endif
 
+// Acceleration
+#define IDA_MAIN 100
+
 // Menu Id
 #define IDM_MAIN 100
 #define IDM_TRAY 101

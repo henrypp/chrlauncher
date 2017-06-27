@@ -1,3 +1,15 @@
+v2.4 (27 Juny 2017)
++ added ChromiumWaitForDownloadEnd config (issue #68 & #65)
++ added ChroiumUpdateUrl config (issue #69)
++ added set of old configuration (v1.9.4)
+- replaced wininet with winhttp library
+- removed errors messages
+- changed http to https (issue #69)
+- updated documentation
+- fixed classic ui
+- fixed bugs
+- ui fixes
+
 v2.3 (14 February 2017)
 + added "ungoogled-chromium" support (issue #33)
 + added forced update checking state into the "ChromiumCheckPeriod" param

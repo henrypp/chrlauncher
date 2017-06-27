@@ -9,10 +9,10 @@ chrlauncher has feature to use portable Chromium as default browser and it will 
 
 Command line:
 There is list of arguments overrides .ini options.
-/a - auto download new version of Chromium if present
-/b - bring chrlauncher to front on download started
-/f - force update checking
-/q - no error messages will be shown (quiet)
+/autodownload - auto download update and install it!
+/bringtofront - bring chrlauncher window to front when download started
+/forcecheck - force update checking
+/wait - start browser only when check/download/install update complete
 
 Supported browser:
 - Launcher - Chromium and their clones (like Google Chrome, Yandex Browser and other legitimate trojans!).
@@ -27,9 +27,12 @@ chrlauncher has feature for use portable Flash Player PPAPI.
 Settings:
 [chrlauncher]
 
+# Custom Chromium update url (string):
+#ChroiumUpdateUrl=https://chromium.woolyss.com/api/v3/?os=windows&bit=%d&type=%s&out=string
+
 # Command line for Chromium (string):
 # See here: http://peter.sh/experiments/chromium-command-line-switches/
-ChromiumCommandLine=--user-data-dir=..\profile --no-default-browser-check --allow-outdated-plugins
+ChromiumCommandLine=--user-data-dir=..\profile --no-default-browser-check --allow-outdated-plugins --disable-logging --disable-breakpad
 
 # Chromium binary file name (string):
 ChromiumBinary=chrome.exe
@@ -62,11 +65,11 @@ ChromiumAutoDownload=true
 # true	-> bring chrlauncher window to front when download started
 ChromiumBringToFront=false
 
-# Set error mode (boolean):
+# Set download in foreground mode (boolean):
 #
-# false	-> show warning messages (default)
-# true	-> no error messages will be shown
-ChromiumIsSilent=false
+# false	-> start browser and check/download/install update in background
+# true	-> start browser only when check/download/install update complete (default)
+ChromiumWaitForDownloadEnd=true
 
 # Type of Chromium builds:
 #
@@ -84,15 +87,6 @@ ChromiumType=dev-codecs-sync
 # 0	-> disable update checking
 # -1	-> force update checking
 ChromiumCheckPeriod=1
-
-# Last cached founded build date of Chromium in unix-time format (integer):
-ChromiumLastBuild=0
-
-# Last cached update checking timestamp (integer):
-ChromiumLastCheck=0
-
-# Last cached founded version of Chromium (string):
-ChromiumLastVersion=
 
 Website: www.henrypp.org
 Support: support@henrypp.org
