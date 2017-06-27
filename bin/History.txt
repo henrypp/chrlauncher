@@ -1,3 +1,6 @@
+v2.4.1 (28 Juny 2017)
+- fixed always 32-bit downloading (issue #74)
+
 v2.4 (27 Juny 2017)
 + added ChromiumWaitForDownloadEnd config (issue #68 & #65)
 + added ChromiumUpdateUrl config (issue #69)
