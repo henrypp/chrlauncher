@@ -32,7 +32,7 @@ chrlauncher has feature for use portable Flash Player PPAPI.
 [chrlauncher]
 
 # Custom Chromium update url (string):
-#ChroiumUpdateUrl=https://chromium.woolyss.com/api/v3/?os=windows&bit=%d&type=%s&out=string
+#ChromiumUpdateUrl=https://chromium.woolyss.com/api/v3/?os=windows&bit=%d&type=%s&out=string
 
 # Command line for Chromium (string):
 # See here: http://peter.sh/experiments/chromium-command-line-switches/
