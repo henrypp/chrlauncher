@@ -61,9 +61,9 @@ ChromiumAutoDownload=true
 
 # Bring chrlauncher window when download started (boolean)
 #
-# false	-> don't bring main window to front automatically (default)
-# true	-> bring chrlauncher window to front when download started
-ChromiumBringToFront=false
+# false	-> don't bring main window to front automatically
+# true	-> bring chrlauncher window to front when download started (default)
+ChromiumBringToFront=true
 
 # Set download in foreground mode (boolean):
 #
