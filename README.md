@@ -1,6 +1,6 @@
 ## chrlauncher
 
-![chrlauncher](http://www.henrypp.org/images/chrlauncher.jpg)
+![chrlauncher](http://www.henrypp.org/images/chrlauncher.png?blya)
 
 Small and very fast portable launcher and updater for Chromium.
 
@@ -11,12 +11,11 @@ chrlauncher has feature to use portable Chromium as default browser and it will 
 
 #### Command line:
 There is list of arguments overrides .ini options
-```
-/autodownload - auto download update and install it!
-/bringtofront - bring chrlauncher window to front when download started
-/forcecheck - force update checking
-/wait - start browser only when check/download/install update complete
-```
+- /autodownload - auto download update and install it!
+- /bringtofront - bring chrlauncher window to front when download started
+- /forcecheck - force update checking
+- /wait - start browser only when check/download/install update complete
+
 #### Supported browser:
 - Launcher - Chromium and their clones (like Google Chrome, Yandex Browser and other legitimate trojans!).
 - Updater - Chromium only.
