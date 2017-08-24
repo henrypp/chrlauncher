@@ -91,7 +91,7 @@ ChromiumType=dev-codecs-sync
 # -1	-> force update checking
 ChromiumCheckPeriod=1
 ~~~
-Website: www.henrypp.org<br />
+Website: [www.henrypp.org](https://www.henrypp.org)<br />
 Support: support@henrypp.org<br />
 <br />
 (c) 2015-2017 Henry++
