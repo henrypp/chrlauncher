@@ -93,11 +93,11 @@ STRINGTABLE
 
 	IDS_STATUS_DOWNLOAD "Downloading update..."
 	IDS_STATUS_INSTALL "Installing update..."
-	IDS_STATUS_FOUND "Update was found. Open chrlauncher window and press download update."
-	IDS_STATUS_DOWNLOADED "Update have been downloaded, but not installed. Close Chromium and press install update."
-	IDS_STATUS_ERROR "%s() failed with %d error code."
+	IDS_STATUS_FOUND "An update was found. Open chrlauncher and press 'Download update'."
+	IDS_STATUS_DOWNLOADED "An update has been downloaded, but not installed. Close Chromium and press 'Install update'."
+	IDS_STATUS_ERROR "%s() failed with error code %d."
 
-	IDS_QUESTION_STOP "Are you sure you want to cancel Chromium update process?"
+	IDS_QUESTION_STOP "Are you sure you want to cancel the Chromium update process?"
 }
 
 //
