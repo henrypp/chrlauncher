@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <tchar.h>
-#include "unzip.h"
+#include "unzip.hpp"
 
 // THIS FILE is almost entirely based upon code by Jean-loup Gailly
 // and Mark Adler. It has been modified by Lucian Wischik.

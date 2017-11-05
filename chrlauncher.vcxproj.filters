@@ -32,25 +32,28 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\routine\routine.h">
+    <ClInclude Include="..\routine\routine.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\main.h">
+    <ClInclude Include="src\main.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\resource.h">
+    <ClInclude Include="src\app.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\unzip.h">
+    <ClInclude Include="src\resource.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\routine\rstring.h">
+    <ClInclude Include="src\include\unzip.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\routine\rconfig.h">
+    <ClInclude Include="..\routine\rstring.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\routine\rapp.h">
+    <ClInclude Include="..\routine\rconfig.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\routine\rapp.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
