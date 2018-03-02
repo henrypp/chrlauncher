@@ -1,5 +1,5 @@
 // chrlauncher
-// Copyright (c) 2015-2017 Henry++
+// Copyright (c) 2015-2018 Henry++
 
 #include <windows.h>
 
@@ -206,10 +206,10 @@ bool _app_checkupdate (HWND hwnd)
 	{
 		if (!is_exists || _wcsnicmp (result[L"version"], config.current_version, wcslen (config.current_version)) != 0)
 		{
-			SetDlgItemText (hwnd, IDC_BROWSER, _r_fmt (I18N (&app, IDS_BROWSER, 0), config.name_full));
-			SetDlgItemText (hwnd, IDC_CURRENTVERSION, _r_fmt (I18N (&app, IDS_CURRENTVERSION, 0), !config.current_version[0] ? L"<not found>" : config.current_version));
-			SetDlgItemText (hwnd, IDC_VERSION, _r_fmt (I18N (&app, IDS_VERSION, 0), result[L"version"].GetString ()));
-			SetDlgItemText (hwnd, IDC_DATE, _r_fmt (I18N (&app, IDS_DATE, 0), _r_fmt_date (result[L"timestamp"].AsLonglong (), FDTF_SHORTDATE | FDTF_SHORTTIME).GetString ()));
+			SetDlgItemText (hwnd, IDC_BROWSER, _r_fmt (app.LocaleString (IDS_BROWSER, nullptr), config.name_full));
+			SetDlgItemText (hwnd, IDC_CURRENTVERSION, _r_fmt (app.LocaleString (IDS_CURRENTVERSION, nullptr), !config.current_version[0] ? L"<not found>" : config.current_version));
+			SetDlgItemText (hwnd, IDC_VERSION, _r_fmt (app.LocaleString (IDS_VERSION, nullptr), result[L"version"].GetString ()));
+			SetDlgItemText (hwnd, IDC_DATE, _r_fmt (app.LocaleString (IDS_DATE, nullptr), _r_fmt_date (result[L"timestamp"].AsLonglong (), FDTF_SHORTDATE | FDTF_SHORTTIME).GetString ()));
 
 			StringCchCopy (config.download_url, _countof (config.download_url), result[L"download"]);
 
@@ -265,7 +265,7 @@ bool _app_downloadupdate (HWND hwnd, LPCWSTR url, LPCWSTR path)
 
 						total_written += written;
 
-						_app_setstatus (hwnd, I18N (&app, IDS_STATUS_DOWNLOAD, 0), total_written, total_length);
+						_app_setstatus (hwnd, app.LocaleString (IDS_STATUS_DOWNLOAD, nullptr), total_written, total_length);
 					}
 
 					config.is_isdownloading = false;
@@ -364,7 +364,7 @@ bool _app_installupdate (HWND hwnd, LPCWSTR path)
 
 			fpath.Format (L"%s\\%s", config.binary_dir, rstring (ze.name + title_length).Replace (L"/", L"\\").GetString ());
 
-			_app_setstatus (hwnd, I18N (&app, IDS_STATUS_INSTALL, 0), total_read, total_size);
+			_app_setstatus (hwnd, app.LocaleString (IDS_STATUS_INSTALL, nullptr), total_read, total_size);
 
 			if ((ze.attr & FILE_ATTRIBUTE_DIRECTORY) != 0)
 			{
@@ -449,7 +449,7 @@ UINT WINAPI _app_thread (LPVOID lparam)
 
 			if (_r_fs_exists (config.cache_path))
 			{
-				_r_ctrl_settext (hwnd, IDC_START_BTN, I18N (&app, IDS_ACTION_INSTALL, 0));
+				_r_ctrl_settext (hwnd, IDC_START_BTN, app.LocaleString (IDS_ACTION_INSTALL, nullptr));
 				app.TrayToggle (UID, true); // show tray icon
 
 				if (!_r_process_is_exists (config.binary_dir, wcslen (config.binary_dir)))
@@ -482,11 +482,11 @@ UINT WINAPI _app_thread (LPVOID lparam)
 					}
 					else
 					{
-						_r_ctrl_settext (hwnd, IDC_START_BTN, I18N (&app, IDS_ACTION_DOWNLOAD, 0));
+						_r_ctrl_settext (hwnd, IDC_START_BTN, app.LocaleString (IDS_ACTION_DOWNLOAD, nullptr));
 						_r_ctrl_enable (hwnd, IDC_START_BTN, true);
 
 						app.TrayToggle (UID, true); // show tray icon
-						app.TrayPopup (UID, NIIF_USER, APP_NAME, I18N (&app, IDS_STATUS_FOUND, 0)); // just inform user
+						app.TrayPopup (UID, NIIF_USER, APP_NAME, app.LocaleString (IDS_STATUS_FOUND, nullptr)); // just inform user
 					}
 				}
 				else
@@ -498,7 +498,7 @@ UINT WINAPI _app_thread (LPVOID lparam)
 		else if (state == WAIT_OBJECT_0 + 2) // download_evt
 		{
 			_r_ctrl_enable (hwnd, IDC_START_BTN, false);
-			_r_ctrl_settext (hwnd, IDC_START_BTN, I18N (&app, IDS_ACTION_DOWNLOAD, 0));
+			_r_ctrl_settext (hwnd, IDC_START_BTN, app.LocaleString (IDS_ACTION_DOWNLOAD, nullptr));
 
 			app.TrayToggle (UID, true); // show tray icon
 
@@ -524,10 +524,10 @@ UINT WINAPI _app_thread (LPVOID lparam)
 				}
 				else
 				{
-					app.TrayPopup (UID, NIIF_USER, APP_NAME, I18N (&app, IDS_STATUS_DOWNLOADED, 0)); // inform user
+					app.TrayPopup (UID, NIIF_USER, APP_NAME, app.LocaleString (IDS_STATUS_DOWNLOADED, nullptr)); // inform user
 
 					_r_ctrl_enable (hwnd, IDC_START_BTN, true);
-					_r_ctrl_settext (hwnd, IDC_START_BTN, I18N (&app, IDS_ACTION_INSTALL, 0));
+					_r_ctrl_settext (hwnd, IDC_START_BTN, app.LocaleString (IDS_ACTION_INSTALL, nullptr));
 				}
 			}
 			else
@@ -620,10 +620,10 @@ BOOL initializer_callback (HWND hwnd, DWORD msg, LPVOID, LPVOID)
 			StringCchCopy (config.current_version, _countof (config.current_version), _app_getversion (config.binary_path));
 
 			// set controls data
-			SetDlgItemText (hwnd, IDC_BROWSER, _r_fmt (I18N (&app, IDS_BROWSER, 0), config.name_full));
-			SetDlgItemText (hwnd, IDC_CURRENTVERSION, _r_fmt (I18N (&app, IDS_CURRENTVERSION, 0), !config.current_version[0] ? L"<not found>" : config.current_version));
-			SetDlgItemText (hwnd, IDC_VERSION, _r_fmt (I18N (&app, IDS_VERSION, 0), app.ConfigGet (L"ChromiumLastVersion", L"<not found>").GetString ()));
-			SetDlgItemText (hwnd, IDC_DATE, _r_fmt (I18N (&app, IDS_DATE, 0), _r_fmt_date (app.ConfigGet (L"ChromiumLastBuild", 0).AsLonglong (), FDTF_SHORTDATE | FDTF_SHORTTIME).GetString ()));
+			SetDlgItemText (hwnd, IDC_BROWSER, _r_fmt (app.LocaleString (IDS_BROWSER, nullptr), config.name_full));
+			SetDlgItemText (hwnd, IDC_CURRENTVERSION, _r_fmt (app.LocaleString (IDS_CURRENTVERSION, nullptr), !config.current_version[0] ? L"<not found>" : config.current_version));
+			SetDlgItemText (hwnd, IDC_VERSION, _r_fmt (app.LocaleString (IDS_VERSION, nullptr), app.ConfigGet (L"ChromiumLastVersion", L"<not found>").GetString ()));
+			SetDlgItemText (hwnd, IDC_DATE, _r_fmt (app.LocaleString (IDS_DATE, nullptr), _r_fmt_date (app.ConfigGet (L"ChromiumLastBuild", 0).AsLonglong (), FDTF_SHORTDATE | FDTF_SHORTTIME).GetString ()));
 
 			_r_wnd_addstyle (hwnd, IDC_START_BTN, app.IsClassicUI () ? WS_EX_STATICEDGE : 0, WS_EX_STATICEDGE, GWL_EXSTYLE);
 
@@ -713,15 +713,30 @@ BOOL initializer_callback (HWND hwnd, DWORD msg, LPVOID, LPVOID)
 			break;
 		}
 
-		case _RM_ARGUMENTS:
-		{
-			initializer_callback (nullptr, _RM_INITIALIZE, nullptr, nullptr);
-			break;
-		}
-
 		case _RM_UNINITIALIZE:
 		{
 			app.TrayDestroy (UID);
+			break;
+		}
+
+		case _RM_LOCALIZE:
+		{
+			// localize menu
+			const HMENU menu = GetMenu (hwnd);
+
+			app.LocaleMenu (menu, IDS_FILE, 0, true, nullptr);
+			app.LocaleMenu (menu, IDS_EXIT, IDM_EXIT, false, nullptr);
+			app.LocaleMenu (menu, IDS_HELP, 1, true, nullptr);
+			app.LocaleMenu (menu, IDS_WEBSITE, IDM_WEBSITE, false, nullptr);
+			app.LocaleMenu (menu, IDS_DONATE, IDM_DONATE, false, nullptr);
+			app.LocaleMenu (menu, IDS_ABOUT, IDM_ABOUT, false, L"\tF1");
+
+			break;
+		}
+
+		case _RM_ARGUMENTS:
+		{
+			initializer_callback (nullptr, _RM_INITIALIZE, nullptr, nullptr);
 			break;
 		}
 	}
@@ -751,7 +766,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 		case WM_CLOSE:
 		{
-			if ((config.is_isdownloading || config.is_isinstalling) && _r_msg (hwnd, MB_YESNO | MB_ICONQUESTION, APP_NAME, nullptr, I18N (&app, IDS_QUESTION_STOP, 0)) != IDYES)
+			if ((config.is_isdownloading || config.is_isinstalling) && _r_msg (hwnd, MB_YESNO | MB_ICONQUESTION, APP_NAME, nullptr, app.LocaleString (IDS_QUESTION_STOP, nullptr)) != IDYES)
 				return TRUE;
 
 			DestroyWindow (hwnd);
@@ -853,15 +868,21 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				{
 					SetForegroundWindow (hwnd); // don't touch
 
-					HMENU menu = LoadMenu (nullptr, MAKEINTRESOURCE (IDM_TRAY)), submenu = GetSubMenu (menu, 0);
+					const HMENU hmenu = LoadMenu (nullptr, MAKEINTRESOURCE (IDM_TRAY));
+					const HMENU hsubmenu = GetSubMenu (hmenu, 0);
+
+					// localize
+					app.LocaleMenu (hsubmenu, IDS_TRAY_SHOW, IDM_TRAY_SHOW, false, nullptr);
+					app.LocaleMenu (hsubmenu, IDS_WEBSITE, IDM_TRAY_WEBSITE, false, nullptr);
+					app.LocaleMenu (hsubmenu, IDS_ABOUT, IDM_TRAY_ABOUT, false, nullptr);
+					app.LocaleMenu (hsubmenu, IDS_EXIT, IDM_TRAY_EXIT, false, nullptr);
 
 					POINT pt = {0};
 					GetCursorPos (&pt);
 
-					TrackPopupMenuEx (submenu, TPM_RIGHTBUTTON | TPM_LEFTBUTTON, pt.x, pt.y, hwnd, nullptr);
+					TrackPopupMenuEx (hsubmenu, TPM_RIGHTBUTTON | TPM_LEFTBUTTON, pt.x, pt.y, hwnd, nullptr);
 
-					DestroyMenu (submenu);
-					DestroyMenu (menu);
+					DestroyMenu (hmenu);
 
 					break;
 				}
@@ -895,16 +916,10 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 					break;
 				}
 
-				case IDM_DONATE:
-				{
-					app.CreateDonateWindow ();
-					break;
-				}
-
 				case IDM_ABOUT:
 				case IDM_TRAY_ABOUT:
 				{
-					app.CreateAboutWindow ();
+					app.CreateAboutWindow (hwnd, app.LocaleString (IDS_DONATE, nullptr));
 					break;
 				}
 
@@ -924,7 +939,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 INT APIENTRY wWinMain (HINSTANCE, HINSTANCE, LPWSTR, INT)
 {
-	if (app.CreateMainWindow (&DlgProc, &initializer_callback))
+	if (app.CreateMainWindow (IDD_MAIN, IDI_MAIN, &DlgProc, &initializer_callback))
 	{
 		MSG msg = {0};
 

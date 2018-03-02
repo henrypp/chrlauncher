@@ -1,5 +1,5 @@
 // chrlauncher
-// Copyright (c) 2015-2017 Henry++
+// Copyright (c) 2015-2018 Henry++
 
 #ifndef __MAIN_H__
 #define __MAIN_H__

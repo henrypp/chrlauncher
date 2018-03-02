@@ -21,15 +21,15 @@ IDA_MAIN ACCELERATORS
 //
 IDM_MAIN MENU
 {
-	POPUP "File"
+	POPUP " "
 	{
-		MENUITEM "Exit", IDM_EXIT
+		MENUITEM " ", IDM_EXIT
 	}
-	POPUP "Help"
+	POPUP " "
 	{
-		MENUITEM "Website", IDM_WEBSITE
-		MENUITEM "Donate", IDM_DONATE
-		MENUITEM "About", IDM_ABOUT
+		MENUITEM " ", IDM_WEBSITE
+		MENUITEM " ", IDM_DONATE
+		MENUITEM " ", IDM_ABOUT
 	}
 }
 
@@ -37,12 +37,12 @@ IDM_TRAY MENU
 {
 	POPUP ""
 	{
-		MENUITEM "Show/Hide...", IDM_TRAY_SHOW
+		MENUITEM " ", IDM_TRAY_SHOW
 		MENUITEM SEPARATOR
-		MENUITEM "Website", IDM_TRAY_WEBSITE
-		MENUITEM "About", IDM_TRAY_ABOUT
+		MENUITEM " ", IDM_TRAY_WEBSITE
+		MENUITEM " ", IDM_TRAY_ABOUT
 		MENUITEM SEPARATOR
-		MENUITEM "Exit", IDM_TRAY_EXIT
+		MENUITEM " ", IDM_TRAY_EXIT
 	}
 }
 
@@ -77,11 +77,14 @@ FONT 8, "Ms Shell Dlg"
 //
 STRINGTABLE
 {
+	IDS_FILE "File"
+	IDS_EXIT "Exit"
+	IDS_HELP "Help"
+	IDS_WEBSITE "Website"
 	IDS_ABOUT "About"
+	IDS_DONATE "Give thanks!"
 
-	IDS_DONATE "Donate"
-	IDS_DONATE_TEXT "Development is powered by your donations!"
-	IDS_SHOWATSTARTUP_CHK "Show at startup"
+	IDS_TRAY_SHOW "Show/Hide"
 
 	IDS_BROWSER "Name: %s"
 	IDS_CURRENTVERSION "Current version: %s"

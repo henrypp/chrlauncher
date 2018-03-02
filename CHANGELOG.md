@@ -1,3 +1,7 @@
+v2.4.2 (2 March 2018)
+- fixed ssl certificates recognition (issue #95)
+- updated project sdk
+
 v2.4.1 (28 Juny 2017)
 - fixed always 32-bit downloading (issue #74)
 
