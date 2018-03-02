@@ -1,5 +1,6 @@
-v2.4.2 (2 March 2018)
-- fixed ssl certificates recognition (issue #95)
+v2.4.3 (2 March 2018)
+- fixed tls 1.2 certificates recognition (issue #95)
+- fixed downloading files
 - updated project sdk
 
 v2.4.1 (28 Juny 2017)
