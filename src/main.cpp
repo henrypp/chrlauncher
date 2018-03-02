@@ -93,7 +93,7 @@ rstring _app_getversion (LPCWSTR path)
 
 	if (verSize)
 	{
-		LPSTR verData = (LPSTR)malloc (verSize);
+		LPSTR verData = new CHAR[verSize];
 
 		if (verData)
 		{
@@ -120,7 +120,7 @@ rstring _app_getversion (LPCWSTR path)
 				}
 			}
 
-			free (verData);
+			delete[] verData;
 		}
 	}
 
@@ -153,7 +153,7 @@ bool _app_checkupdate (HWND hwnd)
 				{
 					const DWORD buffer_length = 2048;
 
-					LPSTR buffera = (LPSTR)malloc (buffer_length);
+					LPSTR buffera = new CHAR[buffer_length];
 					rstring bufferw;
 
 					if (buffera)
@@ -168,13 +168,13 @@ bool _app_checkupdate (HWND hwnd)
 								break;
 							}
 
-							if (!_r_inet_readrequest (hrequest, buffera, buffer_length - 1, &total_length))
+							if (!_r_inet_readrequest (hrequest, buffera, buffer_length - 1, nullptr, &total_length))
 								break;
 
 							bufferw.Append (buffera);
 						}
 
-						free (buffera);
+						delete[] buffera;
 					}
 
 					if (!is_stopped && !bufferw.IsEmpty ())
@@ -242,38 +242,40 @@ bool _app_downloadupdate (HWND hwnd, LPCWSTR url, LPCWSTR path)
 			WCHAR temp_file[MAX_PATH] = {0};
 			StringCchPrintf (temp_file, _countof (temp_file), L"%s.tmp", path);
 
-			HANDLE h = CreateFile (temp_file, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_FLAG_WRITE_THROUGH, nullptr);
+			HANDLE hfile = CreateFile (temp_file, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_FLAG_WRITE_THROUGH, nullptr);
 
-			if (h != INVALID_HANDLE_VALUE)
+			if (hfile != INVALID_HANDLE_VALUE)
 			{
 				DWORD retn = 0;
 
-				LPSTR buffera = (LPSTR)malloc (BUFFER_SIZE);
+				const DWORD buffer_size = BUFFER_SIZE;
+				LPSTR buffera = new CHAR[buffer_size];
 
 				if (buffera)
 				{
-					DWORD written = 0, notneed = 0;
+					DWORD notneed = 0;
+					DWORD written = 0;
 
 					config.is_isdownloading = true;
 
 					while ((retn = WaitForSingleObjectEx (config.stop_evt, 0, FALSE)) != WAIT_OBJECT_0)
 					{
-						if (!_r_inet_readrequest (hrequest, buffera, BUFFER_SIZE - 1, &written))
+						if (!_r_inet_readrequest (hrequest, buffera, buffer_size - 1, &written, &total_written))
 							break;
 
-						WriteFile (h, buffera, written, &notneed, nullptr);
-
-						total_written += written;
+						WriteFile (hfile, buffera, written, &notneed, nullptr);
 
 						_app_setstatus (hwnd, app.LocaleString (IDS_STATUS_DOWNLOAD, nullptr), total_written, total_length);
+
+						_r_sleep (1);
 					}
 
 					config.is_isdownloading = false;
 
-					free (buffera);
+					delete[] buffera;
 				}
 
-				CloseHandle (h);
+				CloseHandle (hfile);
 
 				if (retn != WAIT_OBJECT_0)
 				{
