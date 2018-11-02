@@ -27,14 +27,13 @@
 // Main Menu
 #define IDM_EXIT 109
 #define IDM_WEBSITE 110
-#define IDM_DONATE 111
-#define IDM_ABOUT 112
+#define IDM_ABOUT 111
 
 // Tray Menu
-#define IDM_TRAY_SHOW 113
-#define IDM_TRAY_WEBSITE 114
-#define IDM_TRAY_ABOUT 115
-#define IDM_TRAY_EXIT 116
+#define IDM_TRAY_SHOW 112
+#define IDM_TRAY_WEBSITE 113
+#define IDM_TRAY_ABOUT 114
+#define IDM_TRAY_EXIT 115
 
 // Icons
 #define IDI_MAIN 100
@@ -64,5 +63,7 @@
 #define IDS_STATUS_ERROR 18
 
 #define IDS_QUESTION_STOP 19
+
+#define IDS_CLOSE 20
 
 #endif // __RESOURCE_H__
