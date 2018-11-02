@@ -16,13 +16,6 @@
 // libs
 #pragma comment(lib, "version.lib")
 
-struct STATIC_DATA
-{
-	HANDLE hthread_check = nullptr;
-
-	HANDLE stop_evt = nullptr;
-};
-
 struct BROWSER_INFORMATION
 {
 	bool is_autodownload = false;
