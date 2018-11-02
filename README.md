@@ -94,4 +94,4 @@ ChromiumCheckPeriod=1
 Website: [www.henrypp.org](https://www.henrypp.org)<br />
 Support: support@henrypp.org<br />
 <br />
-(c) 2015-2017 Henry++
+(c) 2015-2018 Henry++

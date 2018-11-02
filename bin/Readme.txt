@@ -100,4 +100,4 @@ ChromiumLastVersion=
 Website: www.henrypp.org
 Support: support@henrypp.org
 
-(c) 2015-2017 Henry++
+(c) 2015-2018 Henry++
