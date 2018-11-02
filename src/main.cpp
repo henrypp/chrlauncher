@@ -15,76 +15,12 @@ rapp app (APP_NAME, APP_NAME_SHORT, APP_VERSION, APP_COPYRIGHT);
 #define CHROMIUM_UPDATE_URL L"https://chromium.woolyss.com/api/v3/?os=windows&bit=%d&type=%s&out=string"
 #define BUFFER_SIZE (_R_BUFFER_LENGTH * 4)
 
-STATIC_DATA config;
+HANDLE hthread_check = nullptr;
+BROWSER_INFORMATION browser_info;
 
-VOID _app_setstatus (HWND hwnd, LPCWSTR text, DWORDLONG v, DWORDLONG t)
-{
-	// primary part
-	_r_status_settext (hwnd, IDC_STATUSBAR, 0, text);
+_R_FASTLOCK lock_download;
 
-	// second part
-	rstring text2;
-	UINT percent = 0;
-
-	if (t)
-	{
-		percent = static_cast<UINT>((double (v) / double (t)) * 100.0);
-		text2.Format (L"%s/%s", _r_fmt_size64 (v).GetString (), _r_fmt_size64 (t).GetString ());
-	}
-
-	SendDlgItemMessage (hwnd, IDC_PROGRESS, PBM_SETPOS, percent, 0);
-
-	_r_status_settext (hwnd, IDC_STATUSBAR, 1, text2);
-
-	if (text)
-		app.TraySetInfo (UID, nullptr, _r_fmt (L"%s\r\n%s: %d%%", APP_NAME, text, percent));
-	else
-		app.TraySetInfo (UID, nullptr, APP_NAME);
-}
-
-VOID _app_cleanup (LPCWSTR version)
-{
-	WIN32_FIND_DATA wfd = {0};
-	const HANDLE h = FindFirstFile (_r_fmt (L"%s\\*.manifest", config.binary_dir), &wfd);
-
-	if (h != INVALID_HANDLE_VALUE)
-	{
-		const size_t len = wcslen (version);
-
-		do
-		{
-			if (_wcsnicmp (version, wfd.cFileName, len) != 0)
-				_r_fs_delete (_r_fmt (L"%s\\%s", config.binary_dir, wfd.cFileName), false);
-		}
-		while (FindNextFile (h, &wfd));
-
-		FindClose (h);
-	}
-}
-
-VOID _app_openbrowser (LPCWSTR url)
-{
-	if (!_r_fs_exists (config.binary_path))
-		return;
-
-	if (!url && _r_process_is_exists (config.binary_dir, wcslen (config.binary_dir)))
-		return;
-
-	WCHAR args[2048] = {0};
-
-	if (!ExpandEnvironmentStrings (config.args, args, _countof (config.args)))
-		StringCchCopy (args, _countof (args), config.args);
-
-	if (url)
-		StringCchCat (args, _countof (args), url);
-
-	rstring arg;
-	arg.Format (L"\"%s\" %s", config.binary_path, args);
-
-	_r_run (config.binary_path, arg, config.binary_dir);
-}
-
-rstring _app_getversion (LPCWSTR path)
+rstring _app_getbinaryversion (LPCWSTR path)
 {
 	rstring result;
 
@@ -102,7 +38,7 @@ rstring _app_getversion (LPCWSTR path)
 				LPBYTE buffer = nullptr;
 				UINT size = 0;
 
-				if (VerQueryValue (verData, L"\\", (VOID FAR* FAR*)&buffer, &size))
+				if (VerQueryValue (verData, L"\\", (void FAR* FAR*)&buffer, &size))
 				{
 					if (size)
 					{
@@ -127,224 +63,356 @@ rstring _app_getversion (LPCWSTR path)
 	return result;
 }
 
-bool _app_checkupdate (HWND hwnd)
+void update_browser_info (HWND hwnd, BROWSER_INFORMATION* pbi)
 {
-	HINTERNET hconnect = nullptr;
-	HINTERNET hrequest = nullptr;
+	SetDlgItemText (hwnd, IDC_BROWSER, _r_fmt (app.LocaleString (IDS_BROWSER, nullptr), pbi->name_full));
+	SetDlgItemText (hwnd, IDC_CURRENTVERSION, _r_fmt (app.LocaleString (IDS_CURRENTVERSION, nullptr), !pbi->current_version[0] ? L"<not found>" : pbi->current_version));
+	SetDlgItemText (hwnd, IDC_VERSION, _r_fmt (app.LocaleString (IDS_VERSION, nullptr), !pbi->new_version[0] ? L"<not found>" : pbi->new_version));
+	SetDlgItemText (hwnd, IDC_DATE, _r_fmt (app.LocaleString (IDS_DATE, nullptr), pbi->timestamp ? _r_fmt_date (pbi->timestamp, FDTF_SHORTDATE | FDTF_SHORTTIME).GetString () : L"<not found>"));
+}
 
-	rstring::map_one result;
+void init_browser_info (HWND, BROWSER_INFORMATION* pbi)
+{
+	// configure paths
+	GetTempPath (_countof (pbi->cache_path), pbi->cache_path);
+	StringCchCat (pbi->cache_path, _countof (pbi->cache_path), APP_NAME_SHORT L"Cache.ZIP");
 
-	const INT days = app.ConfigGet (L"ChromiumCheckPeriod", 1).AsInt ();
-	const bool is_exists = _r_fs_exists (config.binary_path);
-	bool is_stopped = false;
+	StringCchCopy (pbi->binary_dir, _countof (pbi->binary_dir), _r_path_expand (app.ConfigGet (L"ChromiumDirectory", L".\\bin")));
+	StringCchPrintf (pbi->binary_path, _countof (pbi->binary_path), L"%s\\%s", pbi->binary_dir, app.ConfigGet (L"ChromiumBinary", L"chrome.exe").GetString ());
 
-	if (days == -1) // there is .ini option to force update checking
-		config.is_forcecheck = true;
+	// get browser architecture...
+	if (_r_sys_validversion (5, 1, 0, VER_EQUAL) || _r_sys_validversion (5, 2, 0, VER_EQUAL))
+		pbi->architecture = 32; // winxp supports only 32-bit
 
-	if (config.is_forcecheck || (days > 0 || !is_exists))
+	else
+		pbi->architecture = app.ConfigGet (L"ChromiumArchitecture", 0).AsUint ();
+
+	if (!pbi->architecture || (pbi->architecture != 64 && pbi->architecture != 32))
 	{
-		if (config.is_forcecheck || !is_exists || (_r_unixtime_now () - app.ConfigGet (L"ChromiumLastCheck", 0).AsLonglong ()) >= (86400 * days))
+		pbi->architecture = 0;
+
+		// ...by executable
+		if (_r_fs_exists (pbi->binary_path))
 		{
-			HINTERNET hsession = _r_inet_createsession (app.GetUserAgent ());
+			DWORD exe_type = 0;
 
-			if (hsession)
+			if (GetBinaryType (pbi->binary_path, &exe_type))
 			{
-				if (_r_inet_openurl (hsession, _r_fmt (app.ConfigGet (L"ChromiumUpdateUrl", CHROMIUM_UPDATE_URL), config.architecture, config.type), &hconnect, &hrequest, nullptr))
+				if (exe_type == SCS_32BIT_BINARY)
+					pbi->architecture = 32;
+
+				else if (exe_type == SCS_64BIT_BINARY)
+					pbi->architecture = 64;
+			}
+		}
+
+		// ...by processor architecture
+		if (!pbi->architecture)
+		{
+			SYSTEM_INFO si = {0};
+			GetNativeSystemInfo (&si);
+
+			pbi->architecture = (si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64) ? 64 : 32;
+		}
+	}
+
+	if (!pbi->architecture || (pbi->architecture != 32 && pbi->architecture != 64))
+		pbi->architecture = 32; // default architecture
+
+	// set common data
+	StringCchCopy (pbi->type, _countof (pbi->type), app.ConfigGet (L"ChromiumType", L"dev-codecs-sync"));
+	StringCchPrintf (pbi->name_full, _countof (pbi->name_full), L"Chromium %d-bit (%s)", pbi->architecture, pbi->type);
+
+	StringCchCopy (pbi->args, _countof (pbi->args), app.ConfigGet (L"ChromiumCommandLine", L"--user-data-dir=..\\profile --no-default-browser-check --allow-outdated-plugins --disable-logging --disable-breakpad"));
+
+	StringCchCopy (pbi->current_version, _countof (pbi->current_version), _app_getbinaryversion (pbi->binary_path));
+
+	// parse command line
+	{
+		INT numargs = 0;
+		LPWSTR* arga = CommandLineToArgvW (GetCommandLine (), &numargs);
+
+		if (arga)
+		{
+			for (INT i = 1; i < numargs; i++)
+			{
+				if (wcslen (arga[i]) < 2)
+					continue;
+
+				if (arga[i][0] == L'/')
 				{
-					const DWORD buffer_length = 2048;
-
-					LPSTR buffera = new CHAR[buffer_length];
-					rstring bufferw;
-
-					if (buffera)
+					if (_wcsnicmp (arga[i], L"/a", 2) == 0 || _wcsnicmp (arga[i], L"/autodownload", 13) == 0)
 					{
-						DWORD total_length = 0;
-
-						while (true)
-						{
-							if (WaitForSingleObjectEx (config.stop_evt, 0, FALSE) == WAIT_OBJECT_0)
-							{
-								is_stopped = true;
-								break;
-							}
-
-							if (!_r_inet_readrequest (hrequest, buffera, buffer_length - 1, nullptr, &total_length))
-								break;
-
-							bufferw.Append (buffera);
-						}
-
-						delete[] buffera;
+						pbi->is_autodownload = true;
 					}
-
-					if (!is_stopped && !bufferw.IsEmpty ())
+					else if (_wcsnicmp (arga[i], L"/b", 2) == 0 || _wcsnicmp (arga[i], L"/bringtofront", 13) == 0)
 					{
-						rstring::rvector vc = bufferw.AsVector (L";");
-
-						for (size_t i = 0; i < vc.size (); i++)
-						{
-							const size_t pos = vc.at (i).Find (L'=');
-
-							if (pos != rstring::npos)
-								result[vc.at (i).Midded (0, pos)] = vc.at (i).Midded (pos + 1);
-						}
+						pbi->is_bringtofront = true;
+					}
+					else if (_wcsnicmp (arga[i], L"/f", 2) == 0 || _wcsnicmp (arga[i], L"/forcecheck", 11) == 0)
+					{
+						pbi->is_forcecheck = true;
+					}
+					else if (_wcsnicmp (arga[i], L"/w", 2) == 0 || _wcsnicmp (arga[i], L"/wait", 5) == 0)
+					{
+						pbi->is_waitdownloadend = true;
 					}
 				}
+				else if (arga[i][0] == L'-' && arga[i][1] == L'-')
+				{
+					// there is Chromium arguments
+					StringCchCat (pbi->args, _countof (pbi->args), L" ");
+					StringCchCat (pbi->args, _countof (pbi->args), arga[i]);
+				}
+				else
+				{
+					// there is Chromium url
+					StringCchCat (pbi->urls, _countof (pbi->urls), L" \"");
+					StringCchCat (pbi->urls, _countof (pbi->urls), arga[i]);
+					StringCchCat (pbi->urls, _countof (pbi->urls), L"\"");
+				}
+			}
 
-				if (hrequest)
-					_r_inet_close (hrequest);
+			LocalFree (arga);
+		}
+	}
 
-				if (hconnect)
-					_r_inet_close (hconnect);
+	pbi->check_period = app.ConfigGet (L"ChromiumCheckPeriod", 1).AsInt ();
 
-				_r_inet_close (hsession);
+	if (pbi->check_period == -1)
+		pbi->is_forcecheck = true;
+
+	// set default config
+	if (!pbi->is_autodownload)
+		pbi->is_autodownload = app.ConfigGet (L"ChromiumAutoDownload", false).AsBool ();
+
+	if (!pbi->is_bringtofront)
+		pbi->is_bringtofront = app.ConfigGet (L"ChromiumBringToFront", false).AsBool ();
+
+	if (!pbi->is_waitdownloadend)
+		pbi->is_waitdownloadend = app.ConfigGet (L"ChromiumWaitForDownloadEnd", false).AsBool ();
+
+	// set ppapi info
+	{
+		const rstring ppapi_path = _r_path_expand (app.ConfigGet (L"FlashPlayerPath", L".\\plugins\\pepflashplayer.dll"));
+
+		if (_r_fs_exists (ppapi_path))
+		{
+			StringCchCat (pbi->args, _countof (pbi->args), L" --ppapi-flash-path=\"");
+			StringCchCat (pbi->args, _countof (pbi->args), ppapi_path);
+			StringCchCat (pbi->args, _countof (pbi->args), L"\" --ppapi-flash-version=\"");
+			StringCchCat (pbi->args, _countof (pbi->args), _app_getbinaryversion (ppapi_path));
+			StringCchCat (pbi->args, _countof (pbi->args), L"\"");
+		}
+	}
+}
+
+void _app_setstatus (HWND hwnd, LPCWSTR text, DWORDLONG v, DWORDLONG t)
+{
+	// primary part
+	_r_status_settext (hwnd, IDC_STATUSBAR, 0, text);
+
+	// second part
+	rstring text2;
+	UINT percent = 0;
+
+	if (t)
+	{
+		percent = static_cast<UINT>((double (v) / double (t)) * 100.0);
+		text2.Format (L"%s/%s", _r_fmt_size64 (v).GetString (), _r_fmt_size64 (t).GetString ());
+	}
+
+	SendDlgItemMessage (hwnd, IDC_PROGRESS, PBM_SETPOS, percent, 0);
+
+	_r_status_settext (hwnd, IDC_STATUSBAR, 1, text2);
+
+	app.TraySetInfo (hwnd, UID, nullptr, nullptr, text ? _r_fmt (L"%s\r\n%s: %d%%", APP_NAME, text, percent) : APP_NAME);
+}
+
+void _app_cleanup (BROWSER_INFORMATION* pbi, LPCWSTR current_version)
+{
+	WIN32_FIND_DATA wfd = {0};
+
+	const HANDLE hfile = FindFirstFile (_r_fmt (L"%s\\*.manifest", pbi->binary_dir), &wfd);
+
+	if (hfile != INVALID_HANDLE_VALUE)
+	{
+		const size_t len = wcslen (current_version);
+
+		do
+		{
+			if (_wcsnicmp (current_version, wfd.cFileName, len) != 0)
+				_r_fs_delete (_r_fmt (L"%s\\%s", pbi->binary_dir, wfd.cFileName), false);
+		}
+		while (FindNextFile (hfile, &wfd));
+
+		FindClose (hfile);
+	}
+}
+
+bool _app_browserisrunning (BROWSER_INFORMATION* pbi)
+{
+	const HANDLE hfile = CreateFile (pbi->binary_path, GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, nullptr);
+
+	bool result = false;
+
+	if (hfile != INVALID_HANDLE_VALUE)
+		CloseHandle (hfile);
+
+	else
+		result = (GetLastError () == ERROR_SHARING_VIOLATION);
+
+	return result;
+}
+
+void _app_openbrowser (BROWSER_INFORMATION* pbi)
+{
+	if (!_r_fs_exists (pbi->binary_path))
+		return;
+
+	if (!pbi->urls[0] && _app_browserisrunning (pbi))
+		return;
+
+	WCHAR args[2048] = {0};
+
+	if (!ExpandEnvironmentStrings (pbi->args, args, _countof (pbi->args)))
+		StringCchCopy (args, _countof (args), pbi->args);
+
+	if (pbi->urls[0])
+	{
+		StringCchCat (args, _countof (args), pbi->urls);
+		pbi->urls[0] = 0; // reset
+	}
+
+	rstring arg;
+	arg.Format (L"\"%s\" %s", pbi->binary_path, args);
+
+	_r_run (pbi->binary_path, arg, pbi->binary_dir);
+}
+
+bool _app_checkupdate (HWND hwnd, BROWSER_INFORMATION* pbi)
+{
+	rstring::map_one result;
+
+	const bool is_exists = _r_fs_exists (pbi->binary_path);
+
+	if (!is_exists || pbi->is_forcecheck || pbi->check_period > 0)
+	{
+		if (!is_exists || pbi->is_forcecheck || (_r_unixtime_now () - app.ConfigGet (L"ChromiumLastCheck", 0).AsLonglong ()) >= _R_SECONDSCLOCK_DAY (pbi->check_period))
+		{
+			rstring content;
+
+			if (app.DownloadURL (_r_fmt (app.ConfigGet (L"ChromiumUpdateUrl", CHROMIUM_UPDATE_URL), pbi->architecture, pbi->type), &content, false, nullptr, 0))
+			{
+				if (!content.IsEmpty ())
+				{
+					const rstring::rvector vc = content.AsVector (L";");
+
+					for (size_t i = 0; i < vc.size (); i++)
+					{
+						const size_t pos = vc.at (i).Find (L'=');
+
+						if (pos != rstring::npos)
+							result[vc.at (i).Midded (0, pos)] = vc.at (i).Midded (pos + 1);
+					}
+				}
 			}
 		}
 	}
 
-	if (!is_stopped && !result.empty ())
+	if (!result.empty ())
 	{
-		if (!is_exists || _wcsnicmp (result[L"version"], config.current_version, wcslen (config.current_version)) != 0)
+		StringCchCopy (pbi->download_url, _countof (pbi->download_url), result[L"download"]);
+		StringCchCopy (pbi->new_version, _countof (pbi->new_version), result[L"version"]);
+
+		pbi->timestamp = result[L"timestamp"].AsLonglong ();
+
+		update_browser_info (hwnd, &browser_info);
+
+		if (!is_exists || _wcsnicmp (pbi->new_version, pbi->current_version, wcslen (pbi->current_version)) != 0)
 		{
-			SetDlgItemText (hwnd, IDC_BROWSER, _r_fmt (app.LocaleString (IDS_BROWSER, nullptr), config.name_full));
-			SetDlgItemText (hwnd, IDC_CURRENTVERSION, _r_fmt (app.LocaleString (IDS_CURRENTVERSION, nullptr), !config.current_version[0] ? L"<not found>" : config.current_version));
-			SetDlgItemText (hwnd, IDC_VERSION, _r_fmt (app.LocaleString (IDS_VERSION, nullptr), result[L"version"].GetString ()));
-			SetDlgItemText (hwnd, IDC_DATE, _r_fmt (app.LocaleString (IDS_DATE, nullptr), _r_fmt_date (result[L"timestamp"].AsLonglong (), FDTF_SHORTDATE | FDTF_SHORTTIME).GetString ()));
-
-			StringCchCopy (config.download_url, _countof (config.download_url), result[L"download"]);
-
-			app.ConfigSet (L"ChromiumLastBuild", result[L"timestamp"]);
-			app.ConfigSet (L"ChromiumLastVersion", result[L"version"]);
-
 			return true;
+		}
+		else
+		{
+			app.ConfigSet (L"ChromiumLastCheck", _r_unixtime_now ());
 		}
 	}
 
 	return false;
 }
 
-bool _app_downloadupdate (HWND hwnd, LPCWSTR url, LPCWSTR path)
+bool _app_downloadupdate_callback (DWORD total_written, DWORD total_length, LONG_PTR lpdata)
+{
+	const HWND hwnd = (HWND)lpdata;
+
+	if (lpdata)
+		_app_setstatus (hwnd, app.LocaleString (IDS_STATUS_DOWNLOAD, nullptr), total_written, total_length);
+
+	return true;
+}
+
+bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi)
 {
 	bool result = false;
 
-	HINTERNET hconnect = nullptr;
-	HINTERNET hrequest = nullptr;
+	WCHAR temp_file[MAX_PATH] = {0};
+	StringCchPrintf (temp_file, _countof (temp_file), L"%s.tmp", pbi->cache_path);
 
-	HINTERNET hsession = _r_inet_createsession (app.GetUserAgent ());
+	_r_fastlock_acquireexclusive (&lock_download);
 
-	if (hsession)
+	if (app.DownloadURL (pbi->download_url, temp_file, true, &_app_downloadupdate_callback, (LONG_PTR)hwnd))
 	{
-		DWORD total_length = 0;
-		DWORD total_written = 0;
-
-		if (_r_inet_openurl (hsession, url, &hconnect, &hrequest, &total_length))
-		{
-			WCHAR temp_file[MAX_PATH] = {0};
-			StringCchPrintf (temp_file, _countof (temp_file), L"%s.tmp", path);
-
-			HANDLE hfile = CreateFile (temp_file, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_FLAG_WRITE_THROUGH, nullptr);
-
-			if (hfile != INVALID_HANDLE_VALUE)
-			{
-				DWORD retn = 0;
-
-				const DWORD buffer_size = BUFFER_SIZE;
-				LPSTR buffera = new CHAR[buffer_size];
-
-				if (buffera)
-				{
-					DWORD notneed = 0;
-					DWORD written = 0;
-
-					config.is_isdownloading = true;
-
-					while ((retn = WaitForSingleObjectEx (config.stop_evt, 0, FALSE)) != WAIT_OBJECT_0)
-					{
-						if (!_r_inet_readrequest (hrequest, buffera, buffer_size - 1, &written, &total_written))
-							break;
-
-						WriteFile (hfile, buffera, written, &notneed, nullptr);
-
-						_app_setstatus (hwnd, app.LocaleString (IDS_STATUS_DOWNLOAD, nullptr), total_written, total_length);
-
-						_r_sleep (1);
-					}
-
-					config.is_isdownloading = false;
-
-					delete[] buffera;
-				}
-
-				CloseHandle (hfile);
-
-				if (retn != WAIT_OBJECT_0)
-				{
-					_r_fs_move (temp_file, path);
-					result = true;
-				}
-				else
-				{
-					//_r_fs_delete (temp_file, FALSE);
-				}
-			}
-		}
-
-		if (hrequest)
-			_r_inet_close (hrequest);
-
-		if (hconnect)
-			_r_inet_close (hconnect);
-
-		_r_inet_close (hsession);
+		_r_fs_move (temp_file, pbi->cache_path);
+		result = true;
 	}
+	else
+	{
+		_r_fs_delete (temp_file, FALSE);
+	}
+
+	_r_fastlock_releaseexclusive (&lock_download);
 
 	_app_setstatus (hwnd, nullptr, 0, 0);
 
 	return result;
 }
 
-bool _app_installupdate (HWND hwnd, LPCWSTR path)
+bool _app_installupdate (HWND hwnd, BROWSER_INFORMATION* pbi)
 {
-	config.is_isinstalling = true;
+	_r_fastlock_acquireexclusive (&lock_download);
 
-	if (!_r_fs_exists (config.binary_dir))
-		_r_fs_mkdir (config.binary_dir);
+	if (!_r_fs_exists (pbi->binary_dir))
+		_r_fs_mkdir (pbi->binary_dir);
 
 	bool result = false;
-	bool is_stopped = false;
+
 	ZIPENTRY ze = {0};
 
-	HZIP hz = OpenZip (path, nullptr);
+	const HZIP hzip = OpenZip (pbi->cache_path, nullptr);
 
-	if (IsZipHandleU (hz))
+	if (IsZipHandleU (hzip))
 	{
-		INT start_idx = 0;
-		size_t title_length = wcslen (L"chrome-win32");
+		const INT start_idx = 1; // most zip packages has root directory
+		size_t title_length = 0;
 
 		// check archive is official package or not
-		GetZipItem (hz, 0, &ze);
+		GetZipItem (hzip, 0, &ze);
 
-		if (_wcsnicmp (ze.name, L"chrome-win32", title_length) == 0)
-		{
-			start_idx = 1;
-			title_length += 1;
-		}
-		else
-		{
-			title_length = 0;
-		}
+		if ((ze.attr & FILE_ATTRIBUTE_DIRECTORY) != 0)
+			title_length = rstring (ze.name).Find (L'/') + 1;
 
 		DWORDLONG total_size = 0;
 		DWORDLONG total_read = 0; // this is our progress so far
 
 		// count total files
-		GetZipItem (hz, -1, &ze);
+		GetZipItem (hzip, -1, &ze);
 		const INT total_files = ze.index;
 
 		// count total size of unpacked files
 		for (INT i = start_idx; i < total_files; i++)
 		{
-			GetZipItem (hz, i, &ze);
+			GetZipItem (hzip, i, &ze);
 
 			total_size += ze.unc_size;
 		}
@@ -356,15 +424,9 @@ bool _app_installupdate (HWND hwnd, LPCWSTR path)
 
 		for (INT i = start_idx; i < total_files; i++)
 		{
-			if (WaitForSingleObjectEx (config.stop_evt, 0, FALSE) == WAIT_OBJECT_0)
-			{
-				is_stopped = true;
-				break;
-			}
+			GetZipItem (hzip, i, &ze);
 
-			GetZipItem (hz, i, &ze);
-
-			fpath.Format (L"%s\\%s", config.binary_dir, rstring (ze.name + title_length).Replace (L"/", L"\\").GetString ());
+			fpath.Format (L"%s\\%s", pbi->binary_dir, rstring (ze.name + title_length).Replace (L"/", L"\\").GetString ());
 
 			_app_setstatus (hwnd, app.LocaleString (IDS_STATUS_INSTALL, nullptr), total_read, total_size);
 
@@ -375,15 +437,15 @@ bool _app_installupdate (HWND hwnd, LPCWSTR path)
 			else
 			{
 				{
-					rstring dir = _r_path_extractdir (fpath);
+					const rstring dir = _r_path_extractdir (fpath);
 
 					if (!_r_fs_exists (dir))
 						_r_fs_mkdir (dir);
 				}
 
-				const HANDLE h = CreateFile (fpath, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_FLAG_WRITE_THROUGH, nullptr);
+				const HANDLE hfile = CreateFile (fpath, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_FLAG_WRITE_THROUGH, nullptr);
 
-				if (h != INVALID_HANDLE_VALUE)
+				if (hfile != INVALID_HANDLE_VALUE)
 				{
 					DWORD total_read_file = 0;
 
@@ -391,359 +453,169 @@ bool _app_installupdate (HWND hwnd, LPCWSTR path)
 					{
 						DWORD bufsize = BUFFER_SIZE;
 
-						zr = UnzipItem (hz, i, buffer, bufsize);
+						zr = UnzipItem (hzip, i, buffer, bufsize);
 
 						if (zr == ZR_OK)
 							bufsize = ze.unc_size - total_read_file;
 
 						buffer[bufsize] = 0;
 
-						WriteFile (h, buffer, bufsize, &written, nullptr);
+						WriteFile (hfile, buffer, bufsize, &written, nullptr);
 
 						total_read_file += bufsize;
 						total_read += bufsize;
 					}
 
-					CloseHandle (h);
+					CloseHandle (hfile);
 				}
 			}
 		}
 
-		if (!is_stopped)
-			result = true;
+		result = true;
 
-		CloseZip (hz);
+		CloseZip (hzip);
 	}
 	else
 	{
-		_r_fs_delete (path, false); // remove cache file when zip cannot be opened
+		_r_fs_delete (pbi->cache_path, false); // remove cache file when zip cannot be opened
 	}
 
 	if (result)
 	{
-		_app_cleanup (_app_getversion (config.binary_path));
-		_r_fs_delete (path, false); // remove cache file on installation finished
+		_app_cleanup (pbi, _app_getbinaryversion (pbi->binary_path));
+		_r_fs_delete (pbi->cache_path, false); // remove cache file on installation finished
 	}
 
-	_app_setstatus (hwnd, nullptr, 0, 0);
+	_r_fastlock_releaseexclusive (&lock_download);
 
-	config.is_isinstalling = false;
+	_app_setstatus (hwnd, nullptr, 0, 0);
 
 	return result;
 }
 
-UINT WINAPI _app_thread (LPVOID lparam)
+UINT WINAPI _app_thread_check (LPVOID lparam)
 {
-	const HWND hwnd = (HWND)lparam;
-	const HANDLE evts[] = {config.stop_evt, config.check_evt, config.download_evt};
+	BROWSER_INFORMATION* pbi = (BROWSER_INFORMATION*)lparam;
+	const HWND hwnd = app.GetHWND ();
+	bool is_stillopen = false;
 
-	while (true)
+	_r_ctrl_enable (hwnd, IDC_START_BTN, false);
+
+	_r_status_pbsetmarquee (hwnd, IDC_PROGRESS, true);
+
+	if (_r_fs_exists (pbi->cache_path))
 	{
-		const DWORD state = WaitForMultipleObjectsEx (_countof (evts), evts, FALSE, INFINITE, FALSE);
+		_r_ctrl_settext (hwnd, IDC_START_BTN, app.LocaleString (IDS_ACTION_INSTALL, nullptr));
 
-		if (state == WAIT_OBJECT_0) // stop_evt
+		app.TrayToggle (hwnd, UID, nullptr, true); // show tray icon
+
+		pbi->is_isdownloaded = true;
+		pbi->is_isinstalled = false;
+
+		if (!_app_browserisrunning (pbi))
 		{
-			break;
-		}
-		else if (state == WAIT_OBJECT_0 + 1) // check_evt
-		{
-			_r_ctrl_enable (hwnd, IDC_START_BTN, false);
-
-			if (_r_fs_exists (config.cache_path))
-			{
-				_r_ctrl_settext (hwnd, IDC_START_BTN, app.LocaleString (IDS_ACTION_INSTALL, nullptr));
-				app.TrayToggle (UID, true); // show tray icon
-
-				if (!_r_process_is_exists (config.binary_dir, wcslen (config.binary_dir)))
-				{
-					if (config.is_bringtofront)
-						_r_wnd_toggle (hwnd, true); // show window
-
-					if (_app_installupdate (hwnd, config.cache_path))
-					{
-						app.ConfigSet (L"ChromiumLastCheck", _r_unixtime_now ());
-						config.is_isinstalled = true;
-					}
-				}
-				else
-				{
-					_r_ctrl_enable (hwnd, IDC_START_BTN, true);
-				}
-			}
-
-			if (!config.is_isinstalled)
-			{
-				if (!config.is_waitdownloadend)
-					_app_openbrowser (nullptr);
-
-				if (_app_checkupdate (hwnd))
-				{
-					if (!_r_fs_exists (config.binary_path) || config.is_autodownload)
-					{
-						SetEvent (config.download_evt);
-					}
-					else
-					{
-						_r_ctrl_settext (hwnd, IDC_START_BTN, app.LocaleString (IDS_ACTION_DOWNLOAD, nullptr));
-						_r_ctrl_enable (hwnd, IDC_START_BTN, true);
-
-						app.TrayToggle (UID, true); // show tray icon
-						app.TrayPopup (UID, NIIF_USER, APP_NAME, app.LocaleString (IDS_STATUS_FOUND, nullptr)); // just inform user
-					}
-				}
-				else
-				{
-					break; // update not found
-				}
-			}
-		}
-		else if (state == WAIT_OBJECT_0 + 2) // download_evt
-		{
-			_r_ctrl_enable (hwnd, IDC_START_BTN, false);
-			_r_ctrl_settext (hwnd, IDC_START_BTN, app.LocaleString (IDS_ACTION_DOWNLOAD, nullptr));
-
-			app.TrayToggle (UID, true); // show tray icon
-
-			if (config.is_bringtofront)
+			if (pbi->is_bringtofront)
 				_r_wnd_toggle (hwnd, true); // show window
 
-			if (!config.is_isdownloaded && !config.is_waitdownloadend)
-				_app_openbrowser (nullptr);
+			_r_status_pbsetmarquee (hwnd, IDC_PROGRESS, false);
 
-			if (config.is_isdownloaded || _app_downloadupdate (hwnd, config.download_url, config.cache_path))
+			if (_app_installupdate (hwnd, pbi))
 			{
-				config.is_isdownloaded = true;
+				pbi->is_isinstalled = true;
 
-				if (!_r_process_is_exists (config.binary_dir, wcslen (config.binary_dir)))
-				{
-					_r_ctrl_enable (hwnd, IDC_START_BTN, false);
+				init_browser_info (hwnd, pbi);
+				update_browser_info (hwnd, pbi);
 
-					if (_app_installupdate (hwnd, config.cache_path))
-					{
-						app.ConfigSet (L"ChromiumLastCheck", _r_unixtime_now ());
-						config.is_isinstalled = true;
-					}
-				}
-				else
-				{
-					app.TrayPopup (UID, NIIF_USER, APP_NAME, app.LocaleString (IDS_STATUS_DOWNLOADED, nullptr)); // inform user
-
-					_r_ctrl_enable (hwnd, IDC_START_BTN, true);
-					_r_ctrl_settext (hwnd, IDC_START_BTN, app.LocaleString (IDS_ACTION_INSTALL, nullptr));
-				}
-			}
-			else
-			{
-				_r_ctrl_enable (hwnd, IDC_START_BTN, true);
-			}
-
-			if (config.is_isinstalled)
-			{
-				_app_openbrowser (nullptr);
-				break;
+				app.ConfigSet (L"ChromiumLastCheck", _r_unixtime_now ());
 			}
 		}
 		else
 		{
-			break; // stop or error
+			_r_ctrl_enable (hwnd, IDC_START_BTN, true);
+			is_stillopen = true;
 		}
 	}
 
-	SetEvent (config.end_evt);
+	const bool is_exists = _r_fs_exists (pbi->binary_path);
 
-	PostMessage (hwnd, WM_DESTROY, 0, 0);
+	if (!pbi->is_isinstalled)
+	{
+		_r_status_pbsetmarquee (hwnd, IDC_PROGRESS, true);
+
+		_app_setstatus (hwnd, app.LocaleString (IDS_STATUS_CHECK, nullptr), 0, 0);
+
+		// it's like "first run"
+		if (!is_exists || (pbi->is_waitdownloadend && pbi->is_bringtofront))
+		{
+			app.TrayToggle (hwnd, UID, nullptr, true); // show tray icon
+			_r_wnd_toggle (hwnd, true);
+		}
+
+		if (is_exists && !pbi->is_waitdownloadend)
+			_app_openbrowser (pbi);
+
+		if (_app_checkupdate (hwnd, pbi))
+		{
+			app.TrayToggle (hwnd, UID, nullptr, true); // show tray icon
+
+			if (!is_exists || pbi->is_autodownload)
+			{
+				if (pbi->is_bringtofront)
+					_r_wnd_toggle (hwnd, true); // show window
+
+				if (is_exists && !pbi->is_isdownloaded && !pbi->is_waitdownloadend)
+					_app_openbrowser (pbi);
+
+				_r_status_pbsetmarquee (hwnd, IDC_PROGRESS, false);
+
+				if (pbi->is_isdownloaded || _app_downloadupdate (hwnd, pbi))
+				{
+					pbi->is_isdownloaded = true;
+
+					if (!_app_browserisrunning (pbi))
+					{
+						_r_ctrl_enable (hwnd, IDC_START_BTN, false);
+
+						if (_app_installupdate (hwnd, pbi))
+						{
+							app.ConfigSet (L"ChromiumLastCheck", _r_unixtime_now ());
+							pbi->is_isinstalled = true;
+						}
+					}
+					else
+					{
+						app.TrayPopup (hwnd, UID, nullptr, NIIF_USER, APP_NAME, app.LocaleString (IDS_STATUS_DOWNLOADED, nullptr)); // inform user
+
+						_r_ctrl_settext (hwnd, IDC_START_BTN, app.LocaleString (IDS_ACTION_INSTALL, nullptr));
+						_r_ctrl_enable (hwnd, IDC_START_BTN, true);
+
+						is_stillopen = true;
+					}
+				}
+				else
+				{
+					app.TrayPopup (hwnd, UID, nullptr, NIIF_USER, APP_NAME, app.LocaleString (IDS_STATUS_FOUND, nullptr)); // just inform user
+
+					_r_ctrl_settext (hwnd, IDC_START_BTN, app.LocaleString (IDS_ACTION_DOWNLOAD, nullptr));
+					_r_ctrl_enable (hwnd, IDC_START_BTN, true);
+
+					is_stillopen = true;
+				}
+			}
+		}
+	}
+
+	if (pbi->is_isinstalled)
+		_app_openbrowser (pbi);
+
+	_r_status_pbsetmarquee (hwnd, IDC_PROGRESS, false);
+
+	if (!is_stillopen)
+		PostMessage (hwnd, WM_DESTROY, 0, 0);
+
+	_endthreadex (ERROR_SUCCESS);
 
 	return ERROR_SUCCESS;
-}
-
-BOOL initializer_callback (HWND hwnd, DWORD msg, LPVOID, LPVOID)
-{
-	switch (msg)
-	{
-		case _RM_INITIALIZE:
-		{
-			app.TrayCreate (hwnd, UID, WM_TRAYICON, _r_loadicon (app.GetHINSTANCE (), MAKEINTRESOURCE (IDI_MAIN), GetSystemMetrics (SM_CXSMICON)), (config.is_isdownloading || config.is_isinstalling || config.is_isdownloaded) ? false : true);
-
-			SetCurrentDirectory (app.GetDirectory ());
-
-			// configure paths
-			GetTempPath (_countof (config.cache_path), config.cache_path);
-			StringCchCat (config.cache_path, _countof (config.cache_path), APP_NAME_SHORT L"Cache.ZIP");
-
-			StringCchCopy (config.binary_dir, _countof (config.binary_dir), _r_path_expand (app.ConfigGet (L"ChromiumDirectory", L".\\bin")));
-			StringCchPrintf (config.binary_path, _countof (config.binary_path), L"%s\\%s", config.binary_dir, app.ConfigGet (L"ChromiumBinary", L"chrome.exe").GetString ());
-
-			// get browser architecture...
-			if (_r_sys_validversion (5, 1, 0, VER_EQUAL) || _r_sys_validversion (5, 2, 0, VER_EQUAL))
-				config.architecture = 32; // on XP only 32-bit supported
-			else
-				config.architecture = app.ConfigGet (L"ChromiumArchitecture", 0).AsUint ();
-
-			if (!config.architecture || (config.architecture != 64 && config.architecture != 32))
-			{
-				config.architecture = 0;
-
-				// ...by executable
-				if (_r_fs_exists (config.binary_path))
-				{
-					DWORD exe_type = 0;
-
-					if (GetBinaryType (config.binary_path, &exe_type))
-					{
-						if (exe_type == SCS_32BIT_BINARY)
-							config.architecture = 32;
-						else if (exe_type == SCS_64BIT_BINARY)
-							config.architecture = 64;
-					}
-				}
-
-				// ...by processor architecture
-				if (!config.architecture)
-				{
-					SYSTEM_INFO si = {0};
-					GetNativeSystemInfo (&si);
-
-					if (si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64)
-						config.architecture = 64;
-					else
-						config.architecture = 32;
-				}
-			}
-
-			if (!config.architecture || (config.architecture != 32 && config.architecture != 64))
-				config.architecture = 32; // default architecture
-
-			// set common data
-			StringCchCopy (config.type, _countof (config.type), app.ConfigGet (L"ChromiumType", L"dev-codecs-sync"));
-			StringCchPrintf (config.name_full, _countof (config.name_full), L"Chromium %d-bit (%s)", config.architecture, config.type);
-
-			StringCchCopy (config.args, _countof (config.args), app.ConfigGet (L"ChromiumCommandLine", L"--user-data-dir=..\\profile --no-default-browser-check --allow-outdated-plugins --disable-logging --disable-breakpad"));
-
-			StringCchCopy (config.current_version, _countof (config.current_version), _app_getversion (config.binary_path));
-
-			// set controls data
-			SetDlgItemText (hwnd, IDC_BROWSER, _r_fmt (app.LocaleString (IDS_BROWSER, nullptr), config.name_full));
-			SetDlgItemText (hwnd, IDC_CURRENTVERSION, _r_fmt (app.LocaleString (IDS_CURRENTVERSION, nullptr), !config.current_version[0] ? L"<not found>" : config.current_version));
-			SetDlgItemText (hwnd, IDC_VERSION, _r_fmt (app.LocaleString (IDS_VERSION, nullptr), app.ConfigGet (L"ChromiumLastVersion", L"<not found>").GetString ()));
-			SetDlgItemText (hwnd, IDC_DATE, _r_fmt (app.LocaleString (IDS_DATE, nullptr), _r_fmt_date (app.ConfigGet (L"ChromiumLastBuild", 0).AsLonglong (), FDTF_SHORTDATE | FDTF_SHORTTIME).GetString ()));
-
-			_r_wnd_addstyle (hwnd, IDC_START_BTN, app.IsClassicUI () ? WS_EX_STATICEDGE : 0, WS_EX_STATICEDGE, GWL_EXSTYLE);
-
-			// parse command line
-			{
-				INT numargs = 0;
-				LPWSTR* arga = CommandLineToArgvW (GetCommandLine (), &numargs);
-
-				if (arga)
-				{
-					for (INT i = 1; i < numargs; i++)
-					{
-						if (wcslen (arga[i]) < 2)
-							continue;
-
-						if (arga[i][0] == L'/')
-						{
-							if (_wcsnicmp (arga[i], L"/a", 2) == 0 || _wcsnicmp (arga[i], L"/autodownload", 13) == 0)
-							{
-								config.is_autodownload = true;
-							}
-							else if (_wcsnicmp (arga[i], L"/b", 2) == 0 || _wcsnicmp (arga[i], L"/bringtofront", 13) == 0)
-							{
-								config.is_bringtofront = true;
-							}
-							else if (_wcsnicmp (arga[i], L"/f", 2) == 0 || _wcsnicmp (arga[i], L"/forcecheck", 11) == 0)
-							{
-								config.is_forcecheck = true;
-							}
-							else if (_wcsnicmp (arga[i], L"/w", 2) == 0 || _wcsnicmp (arga[i], L"/wait", 5) == 0)
-							{
-								config.is_waitdownloadend = true;
-							}
-						}
-						else if (arga[i][0] == L'-' && arga[i][1] == L'-')
-						{
-							// there is Chromium arguments
-							StringCchCat (config.args, _countof (config.args), L" ");
-							StringCchCat (config.args, _countof (config.args), arga[i]);
-						}
-						else
-						{
-							// there is Chromium url
-							StringCchCat (config.urls, _countof (config.urls), L" \"");
-							StringCchCat (config.urls, _countof (config.urls), arga[i]);
-							StringCchCat (config.urls, _countof (config.urls), L"\"");
-						}
-					}
-
-					LocalFree (arga);
-				}
-			}
-
-			// set default config
-			if (!config.is_autodownload)
-				config.is_autodownload = app.ConfigGet (L"ChromiumAutoDownload", false).AsBool ();
-
-			if (!config.is_bringtofront)
-				config.is_bringtofront = app.ConfigGet (L"ChromiumBringToFront", false).AsBool ();
-
-			if (!config.is_waitdownloadend)
-				config.is_waitdownloadend = app.ConfigGet (L"ChromiumWaitForDownloadEnd", false).AsBool ();
-
-			// set ppapi info
-			{
-				rstring ppapi_path = _r_path_expand (app.ConfigGet (L"FlashPlayerPath", L".\\plugins\\pepflashplayer.dll"));
-
-				if (_r_fs_exists (ppapi_path))
-				{
-					StringCchCat (config.args, _countof (config.args), L" --ppapi-flash-path=\"");
-					StringCchCat (config.args, _countof (config.args), ppapi_path);
-					StringCchCat (config.args, _countof (config.args), L"\" --ppapi-flash-version=\"");
-					StringCchCat (config.args, _countof (config.args), _app_getversion (ppapi_path));
-					StringCchCat (config.args, _countof (config.args), L"\"");
-				}
-			}
-
-			if (hwnd)
-			{
-				SetEvent (config.check_evt);
-			}
-			else
-			{
-				_app_openbrowser (config.urls);
-			}
-
-			break;
-		}
-
-		case _RM_UNINITIALIZE:
-		{
-			app.TrayDestroy (UID);
-			break;
-		}
-
-		case _RM_LOCALIZE:
-		{
-			// localize menu
-			const HMENU menu = GetMenu (hwnd);
-
-			app.LocaleMenu (menu, IDS_FILE, 0, true, nullptr);
-			app.LocaleMenu (menu, IDS_EXIT, IDM_EXIT, false, nullptr);
-			app.LocaleMenu (menu, IDS_HELP, 1, true, nullptr);
-			app.LocaleMenu (menu, IDS_WEBSITE, IDM_WEBSITE, false, nullptr);
-			app.LocaleMenu (menu, IDS_DONATE, IDM_DONATE, false, nullptr);
-			app.LocaleMenu (menu, IDS_ABOUT, IDM_ABOUT, false, L"\tF1");
-
-			break;
-		}
-
-		case _RM_ARGUMENTS:
-		{
-			initializer_callback (nullptr, _RM_INITIALIZE, nullptr, nullptr);
-			break;
-		}
-	}
-
-	return FALSE;
 }
 
 INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
@@ -752,23 +624,75 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 	{
 		case WM_INITDIALOG:
 		{
+			_r_fastlock_initialize (&lock_download);
+
 			// configure statusbar
 			const INT parts[] = {app.GetDPI (228), -1};
 			SendDlgItemMessage (hwnd, IDC_STATUSBAR, SB_SETPARTS, 2, (LPARAM)parts);
 
-			config.stop_evt = CreateEvent (nullptr, FALSE, FALSE, nullptr);
-			config.end_evt = CreateEvent (nullptr, FALSE, FALSE, nullptr);
-			config.check_evt = CreateEvent (nullptr, FALSE, FALSE, nullptr);
-			config.download_evt = CreateEvent (nullptr, FALSE, FALSE, nullptr);
+			break;
+		}
 
-			config.thread = (HANDLE)_beginthreadex (nullptr, 0, &_app_thread, hwnd, 0, nullptr);
+		case RM_INITIALIZE:
+		{
+			SetCurrentDirectory (app.GetDirectory ());
+
+			init_browser_info (hwnd, &browser_info);
+
+			app.TrayCreate (hwnd, UID, nullptr, WM_TRAYICON, app.GetSharedIcon (app.GetHINSTANCE (), IDI_MAIN, GetSystemMetrics (SM_CXSMICON)), (_r_fastlock_islocked (&lock_download) || browser_info.is_isdownloaded) ? false : true);
+
+			if (!hthread_check || WaitForSingleObject (hthread_check, 0) == WAIT_OBJECT_0)
+			{
+				if (hthread_check)
+				{
+					CloseHandle (hthread_check);
+					hthread_check = nullptr;
+				}
+
+				hthread_check = (HANDLE)_beginthreadex (nullptr, 0, &_app_thread_check, &browser_info, 0, nullptr);
+			}
+
+			if (!browser_info.is_waitdownloadend && _r_fs_exists (browser_info.binary_path))
+				_app_openbrowser (&browser_info);
 
 			break;
 		}
 
+		case RM_UNINITIALIZE:
+		{
+			app.TrayDestroy (hwnd, UID, nullptr);
+			break;
+		}
+
+		case RM_LOCALIZE:
+		{
+			// localize menu
+			const HMENU hmenu = GetMenu (hwnd);
+
+			app.LocaleMenu (hmenu, IDS_FILE, 0, true, nullptr);
+			app.LocaleMenu (hmenu, IDS_EXIT, IDM_EXIT, false, L"\tAlt+F4");
+			app.LocaleMenu (hmenu, IDS_HELP, 1, true, nullptr);
+			app.LocaleMenu (hmenu, IDS_WEBSITE, IDM_WEBSITE, false, nullptr);
+			app.LocaleMenu (hmenu, IDS_ABOUT, IDM_ABOUT, false, L"\tF1");
+
+			update_browser_info (hwnd, &browser_info);
+
+			SetDlgItemText (hwnd, IDC_START_BTN, app.LocaleString (browser_info.is_isdownloaded ? IDS_ACTION_INSTALL : IDS_ACTION_DOWNLOAD, nullptr));
+
+			_r_wnd_addstyle (hwnd, IDC_START_BTN, app.IsClassicUI () ? WS_EX_STATICEDGE : 0, WS_EX_STATICEDGE, GWL_EXSTYLE);
+
+			break;
+		}
+
+		//case RM_ARGUMENTS:
+		//{
+		//	initializer_callback (nullptr, RM_INITIALIZE, nullptr, nullptr);
+		//	break;
+		//}
+
 		case WM_CLOSE:
 		{
-			if ((config.is_isdownloading || config.is_isinstalling) && _r_msg (hwnd, MB_YESNO | MB_ICONQUESTION, APP_NAME, nullptr, app.LocaleString (IDS_QUESTION_STOP, nullptr)) != IDYES)
+			if (_r_fastlock_islocked (&lock_download) && _r_msg (hwnd, MB_YESNO | MB_ICONQUESTION, APP_NAME, nullptr, app.LocaleString (IDS_QUESTION_STOP, nullptr)) != IDYES)
 				return TRUE;
 
 			DestroyWindow (hwnd);
@@ -778,30 +702,16 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 		case WM_DESTROY:
 		{
-			app.TrayDestroy (UID);
+			app.TrayDestroy (hwnd, UID, nullptr);
 
-			if (config.is_waitdownloadend)
-				_app_openbrowser (nullptr);
+			if (browser_info.is_waitdownloadend)
+				_app_openbrowser (&browser_info);
 
-			SetEvent (config.stop_evt);
+			if (_r_fastlock_islocked (&lock_download))
+				WaitForSingleObjectEx (hthread_check, 15000, FALSE);
 
-			if (config.is_isdownloading || config.is_isinstalling)
-				WaitForSingleObjectEx (config.end_evt, 5000, FALSE);
-
-			if (config.end_evt)
-				CloseHandle (config.end_evt);
-
-			if (config.stop_evt)
-				CloseHandle (config.stop_evt);
-
-			if (config.check_evt)
-				CloseHandle (config.check_evt);
-
-			if (config.download_evt)
-				CloseHandle (config.download_evt);
-
-			if (config.thread)
-				CloseHandle (config.thread);
+			if (hthread_check)
+				CloseHandle (hthread_check);
 
 			PostQuitMessage (0);
 
@@ -921,13 +831,23 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				case IDM_ABOUT:
 				case IDM_TRAY_ABOUT:
 				{
-					app.CreateAboutWindow (hwnd, app.LocaleString (IDS_DONATE, nullptr));
+					app.CreateAboutWindow (hwnd);
 					break;
 				}
 
 				case IDC_START_BTN:
 				{
-					SetEvent (config.download_evt);
+					if (!hthread_check || WaitForSingleObject (hthread_check, 0) == WAIT_OBJECT_0)
+					{
+						if (hthread_check)
+						{
+							CloseHandle (hthread_check);
+							hthread_check = nullptr;
+						}
+
+						hthread_check = (HANDLE)_beginthreadex (nullptr, 0, &_app_thread_check, &browser_info, 0, nullptr);
+					}
+
 					break;
 				}
 			}
@@ -939,29 +859,50 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 	return FALSE;
 }
 
-INT APIENTRY wWinMain (HINSTANCE, HINSTANCE, LPWSTR, INT)
+INT APIENTRY wWinMain (HINSTANCE, HINSTANCE, LPWSTR args, INT)
 {
-	if (app.CreateMainWindow (IDD_MAIN, IDI_MAIN, &DlgProc, &initializer_callback))
-	{
-		MSG msg = {0};
+	MSG msg = {0};
 
+	UNREFERENCED_PARAMETER (args);
+
+	//if (wcsstr (args, L"/uninstall"))
+	//{
+	//	const bool is_enabled = _wfp_isfiltersinstalled ();
+
+	//	if (is_enabled)
+	//	{
+	//		if (_app_installmessage (nullptr, false))
+	//		{
+	//			if (_wfp_initialize (false))
+	//				_wfp_destroyfilters (true);
+
+	//			_wfp_uninitialize (true);
+	//		}
+	//	}
+
+	//	return ERROR_SUCCESS;
+	//}
+
+	if (app.CreateMainWindow (IDD_MAIN, IDI_MAIN, &DlgProc))
+	{
 		const HACCEL haccel = LoadAccelerators (app.GetHINSTANCE (), MAKEINTRESOURCE (IDA_MAIN));
 
-		while (GetMessage (&msg, nullptr, 0, 0) > 0)
+		if (haccel)
 		{
-			if (haccel)
+			while (GetMessage (&msg, nullptr, 0, 0) > 0)
+			{
 				TranslateAccelerator (app.GetHWND (), haccel, &msg);
 
-			if (!IsDialogMessage (app.GetHWND (), &msg))
-			{
-				TranslateMessage (&msg);
-				DispatchMessage (&msg);
+				if (!IsDialogMessage (app.GetHWND (), &msg))
+				{
+					TranslateMessage (&msg);
+					DispatchMessage (&msg);
+				}
 			}
-		}
 
-		if (haccel)
 			DestroyAcceleratorTable (haccel);
+		}
 	}
 
-	return ERROR_SUCCESS;
+	return (INT)msg.wParam;
 }
