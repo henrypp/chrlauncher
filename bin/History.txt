@@ -1,3 +1,13 @@
+v2.5 (x November 2018)
+- added localization support (please use example.txt, not chrlaunher.lng file)
+- added proxy support (issue #108)
+- fixed unpacking some zip packages (issue #107 & #100)
+- fixed wow64 related bugs
+- updated project sdk
+- updated windows sdk
+- cosmetics fixes
+- fixed bugs
+
 v2.4.3 (2 March 2018)
 - fixed tls 1.2 certificates recognition (issue #95)
 - fixed downloading files
