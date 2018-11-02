@@ -3751,7 +3751,7 @@ FILETIME dosdatetime2filetime(WORD dosdate,WORD dostime)
 
 class TUnzip
 { public:
-  TUnzip(const char *pwd) : uf(0), unzbuf(0), currentfile(-1), czei(-1), password(0) {if (pwd!=0) {password=new char[strlen(pwd)+1]; strcpy(password,pwd);}}
+  TUnzip(const char *pwd) : uf(0), unzbuf(0), currentfile(-1), czei(-1), password(0) {if (pwd!=0) {password=new char[strlen(pwd)+1]; strcpy_s(password, strlen (pwd) + 1, pwd);}}
   ~TUnzip() {if (password!=0) delete[] password; password=0; if (unzbuf!=0) delete[] unzbuf; unzbuf=0;}
 
   unzFile uf; int currentfile; ZIPENTRY cze; int czei;
@@ -3774,10 +3774,10 @@ ZRESULT TUnzip::Open(void *z,unsigned int len,DWORD flags)
 #ifdef GetCurrentDirectory
   GetCurrentDirectory(MAX_PATH,rootdir);
 #else
-  _tcscpy(rootdir,_T("\\"));
+  _tcscpy_s(rootdir,_T("\\"));
 #endif
   TCHAR lastchar = rootdir[_tcslen(rootdir)-1];
-  if (lastchar!='\\' && lastchar!='/') _tcscat(rootdir,_T("\\"));
+  if (lastchar!='\\' && lastchar!='/') _tcscat_s(rootdir,_T("\\"));
   //
   if (flags==ZIP_HANDLE)
   { // test if we can seek on it. We can't use GetFileType(h)==FILE_TYPE_DISK since it's not on CE.
@@ -3793,9 +3793,9 @@ ZRESULT TUnzip::Open(void *z,unsigned int len,DWORD flags)
 }
 
 ZRESULT TUnzip::SetUnzipBaseDir(const TCHAR *dir)
-{ _tcscpy(rootdir,dir);
+{ _tcscpy_s(rootdir,dir);
   TCHAR lastchar = rootdir[_tcslen(rootdir)-1];
-  if (lastchar!='\\' && lastchar!='/') _tcscat(rootdir,_T("\\"));
+  if (lastchar!='\\' && lastchar!='/') _tcscat_s(rootdir,_T("\\"));
   return ZR_OK;
 }
 
@@ -3852,7 +3852,7 @@ ZRESULT TUnzip::Get(int index,ZIPENTRY *ze)
     c=_tcsstr(sfn,_T("/..\\")); if (c!=0) {sfn=c+4; continue;}
     break;
   }
-  _tcscpy(ze->name, sfn);
+  _tcscpy_s(ze->name, sfn);
 
 
   // zip has an 'attribute' 32bit value. Its lower half is windows stuff
@@ -3957,7 +3957,7 @@ void EnsureDirectory(const TCHAR *rootdir, const TCHAR *dir)
     EnsureDirectory(rootdir,tmp);
     name++;
   }
-  TCHAR cd[MAX_PATH]; *cd=0; if (rootdir!=0) _tcscpy(cd,rootdir); _tcscat(cd,dir);
+  TCHAR cd[MAX_PATH]; *cd=0; if (rootdir!=0) _tcscpy_s(cd,rootdir); _tcscat_s(cd,dir);
   if (GetFileAttributes(cd)==0xFFFFFFFF) CreateDirectory(cd,NULL);
 }
 
@@ -4008,7 +4008,7 @@ ZRESULT TUnzip::Unzip(int index,void *dst,unsigned int len,DWORD flags)
     // a malicious zip could unzip itself into c:\windows. Our solution is that GetZipItem (which
     // is how the user retrieve's the file's name within the zip) never returns absolute paths.
     const TCHAR *name=ufn; const TCHAR *c=name; while (*c!=0) {if (*c=='/' || *c=='\\') name=c+1; c++;}
-    TCHAR dir[MAX_PATH]; _tcscpy(dir,ufn); if (name==ufn) *dir=0; else dir[name-ufn]=0;
+    TCHAR dir[MAX_PATH]; _tcscpy_s(dir,ufn); if (name==ufn) *dir=0; else dir[name-ufn]=0;
     TCHAR fn[MAX_PATH]; 
     bool isabsolute = (dir[0]=='/' || dir[0]=='\\' || (dir[0]!=0 && dir[1]==':'));
     if (isabsolute) {wsprintf(fn,_T("%s%s"),dir,name); EnsureDirectory(0,dir);}
@@ -4079,7 +4079,7 @@ unsigned int FormatZipMessageU(ZRESULT code, TCHAR *buf,unsigned int len)
   unsigned int mlen=(unsigned int)_tcslen(msg);
   if (buf==0 || len==0) return mlen;
   unsigned int n=mlen; if (n+1>len) n=len-1;
-  _tcsncpy(buf,msg,n); buf[n]=0;
+  _tcsncpy_s(buf, n,msg,n); buf[n]=0;
   return mlen;
 }
 
