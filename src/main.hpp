@@ -18,26 +18,28 @@
 
 struct STATIC_DATA
 {
-	HANDLE thread = nullptr;
-	HANDLE end_evt = nullptr;
-	HANDLE stop_evt = nullptr;
-	HANDLE check_evt = nullptr;
-	HANDLE download_evt = nullptr;
+	HANDLE hthread_check = nullptr;
 
+	HANDLE stop_evt = nullptr;
+};
+
+struct BROWSER_INFORMATION
+{
 	bool is_autodownload = false;
 	bool is_bringtofront = false;
 	bool is_forcecheck = false;
 	bool is_waitdownloadend = false;
 
-	bool is_isdownloading = false;
-	bool is_isinstalling = false;
-
 	bool is_isdownloaded = false;
 	bool is_isinstalled = false;
 
+	time_t timestamp = 0;
+
+	INT check_period = 0;
 	UINT architecture = 0;
 
 	WCHAR current_version[32] = {0};
+	WCHAR new_version[32] = {0};
 
 	WCHAR name[64] = {0};
 	WCHAR name_full[64] = {0};
