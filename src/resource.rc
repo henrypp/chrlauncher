@@ -28,7 +28,6 @@ IDM_MAIN MENU
 	POPUP " "
 	{
 		MENUITEM " ", IDM_WEBSITE
-		MENUITEM " ", IDM_DONATE
 		MENUITEM " ", IDM_ABOUT
 	}
 }
@@ -56,7 +55,7 @@ CAPTION APP_NAME
 MENU IDM_MAIN
 FONT 8, "Ms Shell Dlg"
 {
-	CONTROL			"", IDC_PROGRESS, PROGRESS_CLASS, 0, 12, 12, 214, 12
+	CONTROL			"", IDC_PROGRESS, PROGRESS_CLASS, PBS_MARQUEE, 12, 12, 214, 12
 
 	LTEXT			"", IDC_BROWSER, 12, 36, 214 10
 	LTEXT			"", IDC_CURRENTVERSION, 12, 48, 214, 10
@@ -101,6 +100,8 @@ STRINGTABLE
 	IDS_STATUS_ERROR "%s() failed with error code %d."
 
 	IDS_QUESTION_STOP "Are you sure you want to cancel the Chromium update process?"
+
+	IDS_CLOSE "Close"
 }
 
 //
