@@ -545,7 +545,7 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 		_app_setstatus (hwnd, app.LocaleString (IDS_STATUS_CHECK, nullptr), 0, 0);
 
 		// it's like "first run"
-		if (!is_exists || (pbi->is_waitdownloadend && pbi->is_bringtofront))
+		if (!is_exists || (pbi->is_waitdownloadend && pbi->is_bringtofront && pbi->check_period != 0))
 		{
 			app.TrayToggle (hwnd, UID, nullptr, true); // show tray icon
 			_r_wnd_toggle (hwnd, true);
@@ -670,10 +670,15 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			const HMENU hmenu = GetMenu (hwnd);
 
 			app.LocaleMenu (hmenu, IDS_FILE, 0, true, nullptr);
+			app.LocaleMenu (hmenu, IDS_RUN, IDM_RUN, false, _r_fmt (L" \"%s\"", _r_path_extractfile (browser_info.binary_path).GetString ()));
 			app.LocaleMenu (hmenu, IDS_EXIT, IDM_EXIT, false, L"\tAlt+F4");
-			app.LocaleMenu (hmenu, IDS_HELP, 1, true, nullptr);
+			app.LocaleMenu (hmenu, IDS_SETTINGS, 1, true, nullptr);
+			app.LocaleMenu (GetSubMenu (hmenu, 1), IDS_LANGUAGE, LANG_MENU, true, L" (Language)");
+			app.LocaleMenu (hmenu, IDS_HELP, 2, true, nullptr);
 			app.LocaleMenu (hmenu, IDS_WEBSITE, IDM_WEBSITE, false, nullptr);
 			app.LocaleMenu (hmenu, IDS_ABOUT, IDM_ABOUT, false, L"\tF1");
+
+			app.LocaleEnum ((HWND)GetSubMenu (hmenu, 1), LANG_MENU, true, IDX_LANGUAGE); // enum localizations
 
 			update_browser_info (hwnd, &browser_info);
 
@@ -785,9 +790,13 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 					// localize
 					app.LocaleMenu (hsubmenu, IDS_TRAY_SHOW, IDM_TRAY_SHOW, false, nullptr);
+					app.LocaleMenu (hsubmenu, IDS_RUN, IDM_TRAY_RUN, false, _r_fmt (L" \"%s\"", _r_path_extractfile (browser_info.binary_path).GetString ()));
 					app.LocaleMenu (hsubmenu, IDS_WEBSITE, IDM_TRAY_WEBSITE, false, nullptr);
 					app.LocaleMenu (hsubmenu, IDS_ABOUT, IDM_TRAY_ABOUT, false, nullptr);
 					app.LocaleMenu (hsubmenu, IDS_EXIT, IDM_TRAY_EXIT, false, nullptr);
+
+					if (!_r_fs_exists (browser_info.binary_path))
+						EnableMenuItem (hsubmenu, IDM_TRAY_RUN, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 
 					POINT pt = {0};
 					GetCursorPos (&pt);
@@ -805,6 +814,12 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 		case WM_COMMAND:
 		{
+			if (HIWORD (wparam) == 0 && LOWORD (wparam) >= IDX_LANGUAGE && LOWORD (wparam) <= IDX_LANGUAGE + app.LocaleGetCount ())
+			{
+				app.LocaleApplyFromMenu (GetSubMenu (GetSubMenu (GetMenu (hwnd), 1), LANG_MENU), LOWORD (wparam), IDX_LANGUAGE);
+				return FALSE;
+			}
+
 			switch (LOWORD (wparam))
 			{
 				case IDCANCEL: // process Esc key
@@ -818,6 +833,13 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				case IDM_TRAY_EXIT:
 				{
 					PostMessage (hwnd, WM_CLOSE, 0, 0);
+					break;
+				}
+
+				case IDM_RUN:
+				case IDM_TRAY_RUN:
+				{
+					_app_openbrowser (&browser_info);
 					break;
 				}
 
