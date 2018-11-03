@@ -26,16 +26,18 @@
 
 // Main Menu
 #define IDM_RUN 109
-#define IDM_EXIT 110
-#define IDM_WEBSITE 111
-#define IDM_ABOUT 112
+#define IDM_OPEN 110
+#define IDM_EXIT 111
+#define IDM_WEBSITE 112
+#define IDM_ABOUT 113
 
 // Tray Menu
-#define IDM_TRAY_SHOW 113
-#define IDM_TRAY_RUN 114
-#define IDM_TRAY_WEBSITE 115
-#define IDM_TRAY_ABOUT 116
-#define IDM_TRAY_EXIT 117
+#define IDM_TRAY_SHOW 114
+#define IDM_TRAY_RUN 115
+#define IDM_TRAY_OPEN 116
+#define IDM_TRAY_WEBSITE 117
+#define IDM_TRAY_ABOUT 118
+#define IDM_TRAY_EXIT 119
 
 #define IDX_LANGUAGE 1000
 
@@ -45,32 +47,33 @@
 // Strings
 #define IDS_FILE 1
 #define IDS_RUN 2
-#define IDS_EXIT 3
-#define IDS_SETTINGS 4
-#define IDS_LANGUAGE 5
-#define IDS_HELP 6
-#define IDS_WEBSITE 7
-#define IDS_ABOUT 8
-#define IDS_DONATE 9
+#define IDS_OPEN 3
+#define IDS_EXIT 4
+#define IDS_SETTINGS 5
+#define IDS_LANGUAGE 6
+#define IDS_HELP 7
+#define IDS_WEBSITE 8
+#define IDS_ABOUT 9
+#define IDS_DONATE 10
 
-#define IDS_TRAY_SHOW 10
+#define IDS_TRAY_SHOW 11
 
-#define IDS_BROWSER 11
-#define IDS_CURRENTVERSION 12
-#define IDS_VERSION 13
-#define IDS_DATE 14
+#define IDS_BROWSER 12
+#define IDS_CURRENTVERSION 13
+#define IDS_VERSION 14
+#define IDS_DATE 15
 
-#define IDS_ACTION_DOWNLOAD 15
-#define IDS_ACTION_INSTALL 16
+#define IDS_ACTION_DOWNLOAD 16
+#define IDS_ACTION_INSTALL 17
 
-#define IDS_STATUS_CHECK 17
-#define IDS_STATUS_DOWNLOAD 18
-#define IDS_STATUS_INSTALL 19
-#define IDS_STATUS_FOUND 20
-#define IDS_STATUS_DOWNLOADED 21
+#define IDS_STATUS_CHECK 18
+#define IDS_STATUS_DOWNLOAD 19
+#define IDS_STATUS_INSTALL 20
+#define IDS_STATUS_FOUND 21
+#define IDS_STATUS_DOWNLOADED 22
 
-#define IDS_QUESTION_STOP 22
+#define IDS_QUESTION_STOP 23
 
-#define IDS_CLOSE 23
+#define IDS_CLOSE 24
 
 #endif // __RESOURCE_H__
