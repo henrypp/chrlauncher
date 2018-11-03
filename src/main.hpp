@@ -13,6 +13,8 @@
 #define WM_TRAYICON WM_APP + 1
 #define UID 2008
 
+#define LANG_MENU 0
+
 // libs
 #pragma comment(lib, "version.lib")
 
