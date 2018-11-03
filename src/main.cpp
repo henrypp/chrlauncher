@@ -71,8 +71,10 @@ void update_browser_info (HWND hwnd, BROWSER_INFORMATION* pbi)
 	SetDlgItemText (hwnd, IDC_DATE, _r_fmt (app.LocaleString (IDS_DATE, nullptr), pbi->timestamp ? _r_fmt_date (pbi->timestamp, FDTF_SHORTDATE | FDTF_SHORTTIME).GetString () : L"<not found>"));
 }
 
-void init_browser_info (HWND, BROWSER_INFORMATION* pbi)
+void init_browser_info (BROWSER_INFORMATION* pbi)
 {
+	pbi->urls[0] = 0; // reset
+
 	// configure paths
 	GetTempPath (_countof (pbi->cache_path), pbi->cache_path);
 	StringCchCat (pbi->cache_path, _countof (pbi->cache_path), APP_NAME_SHORT L"Cache.ZIP");
@@ -523,7 +525,7 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 			{
 				pbi->is_isinstalled = true;
 
-				init_browser_info (hwnd, pbi);
+				init_browser_info (pbi);
 				update_browser_info (hwnd, pbi);
 
 				app.ConfigSet (L"ChromiumLastCheck", _r_unixtime_now ());
@@ -637,7 +639,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		{
 			SetCurrentDirectory (app.GetDirectory ());
 
-			init_browser_info (hwnd, &browser_info);
+			init_browser_info (&browser_info);
 
 			app.TrayCreate (hwnd, UID, nullptr, WM_TRAYICON, app.GetSharedIcon (app.GetHINSTANCE (), IDI_MAIN, GetSystemMetrics (SM_CXSMICON)), (_r_fastlock_islocked (&lock_download) || browser_info.is_isdownloaded) ? false : true);
 
@@ -688,12 +690,6 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 			break;
 		}
-
-		//case RM_ARGUMENTS:
-		//{
-		//	initializer_callback (nullptr, RM_INITIALIZE, nullptr, nullptr);
-		//	break;
-		//}
 
 		case WM_CLOSE:
 		{
@@ -885,25 +881,19 @@ INT APIENTRY wWinMain (HINSTANCE, HINSTANCE, LPWSTR args, INT)
 {
 	MSG msg = {0};
 
-	UNREFERENCED_PARAMETER (args);
+	if (args)
+	{
+		SetCurrentDirectory (app.GetDirectory ());
 
-	//if (wcsstr (args, L"/uninstall"))
-	//{
-	//	const bool is_enabled = _wfp_isfiltersinstalled ();
+		init_browser_info (&browser_info);
 
-	//	if (is_enabled)
-	//	{
-	//		if (_app_installmessage (nullptr, false))
-	//		{
-	//			if (_wfp_initialize (false))
-	//				_wfp_destroyfilters (true);
+		if (browser_info.urls[0] && _r_fs_exists (browser_info.binary_path))
+		{
+			_app_openbrowser (&browser_info);
 
-	//			_wfp_uninitialize (true);
-	//		}
-	//	}
-
-	//	return ERROR_SUCCESS;
-	//}
+			return ERROR_SUCCESS;
+		}
+	}
 
 	if (app.CreateMainWindow (IDD_MAIN, IDI_MAIN, &DlgProc))
 	{
