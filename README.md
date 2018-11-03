@@ -30,14 +30,14 @@ chrlauncher has feature for use portable Flash Player PPAPI.
 ~~~ini
 [chrlauncher]
 
-# Custom Chromium update url (string):
+# Custom Chromium update URL (string):
 #ChromiumUpdateUrl=https://chromium.woolyss.com/api/v3/?os=windows&bit=%d&type=%s&out=string
 
 # Command line for Chromium (string):
 # See here: http://peter.sh/experiments/chromium-command-line-switches/
 ChromiumCommandLine=--user-data-dir=..\profile --no-default-browser-check --allow-outdated-plugins --disable-logging --disable-breakpad
 
-# Chromium binary file name (string):
+# Chromium executable file name (string):
 ChromiumBinary=chrome.exe
 
 # Chromium binaries directory (string):
@@ -86,10 +86,26 @@ ChromiumType=dev-codecs-sync
 
 # Check for new Chromium version once in X days (integer):
 #
-# 1	-> check updates once in a X day (default)
+# 2	-> check updates once in a X days (default)
 # 0	-> disable update checking
 # -1	-> force update checking
-ChromiumCheckPeriod=1
+ChromiumCheckPeriod=2
+
+# Last cached update checking timestamp (integer):
+ChromiumLastCheck=0
+
+##########################
+# Internal settings (SDK)
+##########################
+
+# Enable classic theme UI (boolean):
+#ClassicUI=true
+
+# Set custom useragent (string):
+#UserAgent=Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36
+
+# Set proxy configuration (string):
+#Proxy=127.0.0.1:80
 ~~~
 Website: [www.henrypp.org](https://www.henrypp.org)<br />
 Support: support@henrypp.org<br />

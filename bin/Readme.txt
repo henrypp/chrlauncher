@@ -88,14 +88,21 @@ ChromiumType=dev-codecs-sync
 # -1	-> force update checking
 ChromiumCheckPeriod=2
 
-# Last cached founded build date of Chromium in unix-time format (integer):
-ChromiumLastBuild=0
-
 # Last cached update checking timestamp (integer):
 ChromiumLastCheck=0
 
-# Last cached founded version of Chromium (string):
-ChromiumLastVersion=
+##########################
+# Internal settings (SDK)
+##########################
+
+# Enable classic theme UI (boolean):
+#ClassicUI=true
+
+# Set custom useragent (string):
+#UserAgent=Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36
+
+# Set proxy configuration (string):
+#Proxy=127.0.0.1:80
 
 Website: www.henrypp.org
 Support: support@henrypp.org
