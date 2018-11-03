@@ -23,7 +23,15 @@ IDM_MAIN MENU
 {
 	POPUP " "
 	{
+		MENUITEM " ", IDM_RUN
 		MENUITEM " ", IDM_EXIT
+	}
+	POPUP " "
+	{
+		POPUP " "
+		{
+			MENUITEM " ", IDX_LANGUAGE
+		}
 	}
 	POPUP " "
 	{
@@ -37,6 +45,8 @@ IDM_TRAY MENU
 	POPUP ""
 	{
 		MENUITEM " ", IDM_TRAY_SHOW
+		MENUITEM SEPARATOR
+		MENUITEM " ", IDM_TRAY_RUN
 		MENUITEM SEPARATOR
 		MENUITEM " ", IDM_TRAY_WEBSITE
 		MENUITEM " ", IDM_TRAY_ABOUT
@@ -77,7 +87,10 @@ FONT 8, "Ms Shell Dlg"
 STRINGTABLE
 {
 	IDS_FILE "File"
+	IDS_RUN "Run"
 	IDS_EXIT "Exit"
+	IDS_SETTINGS "Settings"
+	IDS_LANGUAGE "Language"
 	IDS_HELP "Help"
 	IDS_WEBSITE "Website"
 	IDS_ABOUT "About"
@@ -98,7 +111,6 @@ STRINGTABLE
 	IDS_STATUS_INSTALL "Unpacking update..."
 	IDS_STATUS_FOUND "An update was found. Open chrlauncher and press 'Download update'."
 	IDS_STATUS_DOWNLOADED "An update has been downloaded, but not installed. Close Chromium and press 'Install update'."
-	IDS_STATUS_ERROR "%s() failed with error code %d."
 
 	IDS_QUESTION_STOP "Are you sure you want to cancel the Chromium update process?"
 
