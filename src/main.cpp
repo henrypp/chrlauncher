@@ -292,11 +292,25 @@ void _app_openbrowser (BROWSER_INFORMATION* pbi)
 	_r_run (pbi->binary_path, arg, pbi->binary_dir);
 }
 
+bool _app_ishaveupdate (BROWSER_INFORMATION* pbi)
+{
+	if (pbi->download_url[0] && pbi->new_version[0])
+		return true;
+
+	return false;
+}
+
 bool _app_checkupdate (HWND hwnd, BROWSER_INFORMATION* pbi)
 {
+	if (_app_ishaveupdate (pbi))
+		return true;
+
 	rstring::map_one result;
 
 	const bool is_exists = _r_fs_exists (pbi->binary_path);
+	bool result2 = false;
+
+	_app_setstatus (hwnd, app.LocaleString (IDS_STATUS_CHECK, nullptr), 0, 0);
 
 	if (!is_exists || pbi->is_forcecheck || pbi->check_period > 0)
 	{
@@ -333,7 +347,7 @@ bool _app_checkupdate (HWND hwnd, BROWSER_INFORMATION* pbi)
 
 		if (!is_exists || _r_str_versioncompare (pbi->current_version, pbi->new_version) == -1)
 		{
-			return true;
+			result2 = true;
 		}
 		else
 		{
@@ -341,7 +355,9 @@ bool _app_checkupdate (HWND hwnd, BROWSER_INFORMATION* pbi)
 		}
 	}
 
-	return false;
+	_app_setstatus (hwnd, nullptr, 0, 0);
+
+	return result2;
 }
 
 bool _app_downloadupdate_callback (DWORD total_written, DWORD total_length, LONG_PTR lpdata)
@@ -356,10 +372,15 @@ bool _app_downloadupdate_callback (DWORD total_written, DWORD total_length, LONG
 
 bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi)
 {
+	if (pbi->is_isdownloaded)
+		return true;
+
 	bool result = false;
 
 	WCHAR temp_file[MAX_PATH] = {0};
 	StringCchPrintf (temp_file, _countof (temp_file), L"%s.tmp", pbi->cache_path);
+
+	_app_setstatus (hwnd, app.LocaleString (IDS_STATUS_DOWNLOAD, nullptr), 0, 0);
 
 	_r_fastlock_acquireexclusive (&lock_download);
 
@@ -372,6 +393,8 @@ bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi)
 	{
 		_r_fs_delete (temp_file, FALSE);
 	}
+
+	pbi->is_isdownloaded = result;
 
 	_r_fastlock_releaseexclusive (&lock_download);
 
@@ -488,6 +511,8 @@ bool _app_installupdate (HWND hwnd, BROWSER_INFORMATION* pbi)
 		_r_fs_delete (pbi->cache_path, false); // remove cache file on installation finished
 	}
 
+	pbi->is_isinstalled = result;
+
 	_r_fastlock_releaseexclusive (&lock_download);
 
 	_app_setstatus (hwnd, nullptr, 0, 0);
@@ -505,26 +530,23 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 
 	_r_status_pbsetmarquee (hwnd, IDC_PROGRESS, true);
 
+	// install downloaded package
 	if (_r_fs_exists (pbi->cache_path))
 	{
 		_r_ctrl_settext (hwnd, IDC_START_BTN, app.LocaleString (IDS_ACTION_INSTALL, nullptr));
+		_r_status_pbsetmarquee (hwnd, IDC_PROGRESS, false);
 
 		app.TrayToggle (hwnd, UID, nullptr, true); // show tray icon
 
 		pbi->is_isdownloaded = true;
-		pbi->is_isinstalled = false;
 
 		if (!_app_browserisrunning (pbi))
 		{
 			if (pbi->is_bringtofront)
 				_r_wnd_toggle (hwnd, true); // show window
 
-			_r_status_pbsetmarquee (hwnd, IDC_PROGRESS, false);
-
 			if (_app_installupdate (hwnd, pbi))
 			{
-				pbi->is_isinstalled = true;
-
 				init_browser_info (pbi);
 				update_browser_info (hwnd, pbi);
 
@@ -544,13 +566,16 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 	{
 		_r_status_pbsetmarquee (hwnd, IDC_PROGRESS, true);
 
-		_app_setstatus (hwnd, app.LocaleString (IDS_STATUS_CHECK, nullptr), 0, 0);
+		if (pbi->check_period != 0)
+			app.TrayToggle (hwnd, UID, nullptr, true); // show tray icon
 
 		// it's like "first run"
-		if (!is_exists || (pbi->is_waitdownloadend && pbi->is_bringtofront && pbi->check_period != 0))
+		if (!is_exists || (pbi->is_waitdownloadend && pbi->check_period != 0))
 		{
 			app.TrayToggle (hwnd, UID, nullptr, true); // show tray icon
-			_r_wnd_toggle (hwnd, true);
+
+			if (!is_exists || pbi->is_bringtofront)
+				_r_wnd_toggle (hwnd, true);
 		}
 
 		if (is_exists && !pbi->is_waitdownloadend)
@@ -560,7 +585,7 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 		{
 			app.TrayToggle (hwnd, UID, nullptr, true); // show tray icon
 
-			if (!is_exists || pbi->is_autodownload)
+			if (!is_exists || pbi->is_autodownload || (!pbi->is_autodownload && pbi->is_ischecked))
 			{
 				if (pbi->is_bringtofront)
 					_r_wnd_toggle (hwnd, true); // show window
@@ -570,10 +595,8 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 
 				_r_status_pbsetmarquee (hwnd, IDC_PROGRESS, false);
 
-				if (pbi->is_isdownloaded || _app_downloadupdate (hwnd, pbi))
+				if (_app_downloadupdate (hwnd, pbi))
 				{
-					pbi->is_isdownloaded = true;
-
 					if (!_app_browserisrunning (pbi))
 					{
 						_r_ctrl_enable (hwnd, IDC_START_BTN, false);
@@ -604,6 +627,16 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 					is_stillopen = true;
 				}
 			}
+
+			if (!pbi->is_autodownload && !pbi->is_isdownloaded)
+			{
+				app.TrayPopup (hwnd, UID, nullptr, NIIF_USER, APP_NAME, app.LocaleString (IDS_STATUS_FOUND, nullptr)); // just inform user
+
+				_r_ctrl_settext (hwnd, IDC_START_BTN, app.LocaleString (IDS_ACTION_DOWNLOAD, nullptr));
+				_r_ctrl_enable (hwnd, IDC_START_BTN, true);
+
+				is_stillopen = true;
+			}
 		}
 	}
 
@@ -611,6 +644,8 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 		_app_openbrowser (pbi);
 
 	_r_status_pbsetmarquee (hwnd, IDC_PROGRESS, false);
+
+	pbi->is_ischecked = true;
 
 	if (!is_stillopen)
 		PostMessage (hwnd, WM_DESTROY, 0, 0);
@@ -673,6 +708,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 			app.LocaleMenu (hmenu, IDS_FILE, 0, true, nullptr);
 			app.LocaleMenu (hmenu, IDS_RUN, IDM_RUN, false, _r_fmt (L" \"%s\"", _r_path_extractfile (browser_info.binary_path).GetString ()));
+			app.LocaleMenu (hmenu, IDS_OPEN, IDM_OPEN, false, _r_fmt (L" \"%s\"\tF2", _r_path_extractfile (app.GetConfigPath ()).GetString ()));
 			app.LocaleMenu (hmenu, IDS_EXIT, IDM_EXIT, false, L"\tAlt+F4");
 			app.LocaleMenu (hmenu, IDS_SETTINGS, 1, true, nullptr);
 			app.LocaleMenu (GetSubMenu (hmenu, 1), IDS_LANGUAGE, LANG_MENU, true, L" (Language)");
@@ -787,6 +823,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 					// localize
 					app.LocaleMenu (hsubmenu, IDS_TRAY_SHOW, IDM_TRAY_SHOW, false, nullptr);
 					app.LocaleMenu (hsubmenu, IDS_RUN, IDM_TRAY_RUN, false, _r_fmt (L" \"%s\"", _r_path_extractfile (browser_info.binary_path).GetString ()));
+					app.LocaleMenu (hsubmenu, IDS_OPEN, IDM_TRAY_OPEN, false, _r_fmt (L" \"%s\"", _r_path_extractfile (app.GetConfigPath ()).GetString ()));
 					app.LocaleMenu (hsubmenu, IDS_WEBSITE, IDM_TRAY_WEBSITE, false, nullptr);
 					app.LocaleMenu (hsubmenu, IDS_ABOUT, IDM_TRAY_ABOUT, false, nullptr);
 					app.LocaleMenu (hsubmenu, IDS_EXIT, IDM_TRAY_EXIT, false, nullptr);
@@ -836,6 +873,13 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				case IDM_TRAY_RUN:
 				{
 					_app_openbrowser (&browser_info);
+					break;
+				}
+
+				case IDM_OPEN:
+				case IDM_TRAY_OPEN:
+				{
+					ShellExecute (hwnd, nullptr, app.GetConfigPath (), nullptr, nullptr, SW_SHOWDEFAULT);
 					break;
 				}
 

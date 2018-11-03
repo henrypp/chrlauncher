@@ -25,6 +25,7 @@ struct BROWSER_INFORMATION
 	bool is_forcecheck = false;
 	bool is_waitdownloadend = false;
 
+	bool is_ischecked = false;
 	bool is_isdownloaded = false;
 	bool is_isinstalled = false;
 
