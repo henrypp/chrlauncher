@@ -331,7 +331,7 @@ bool _app_checkupdate (HWND hwnd, BROWSER_INFORMATION* pbi)
 
 		update_browser_info (hwnd, &browser_info);
 
-		if (!is_exists || _wcsnicmp (pbi->new_version, pbi->current_version, wcslen (pbi->current_version)) != 0)
+		if (!is_exists || _r_str_versioncompare (pbi->current_version, pbi->new_version) == -1)
 		{
 			return true;
 		}
