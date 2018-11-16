@@ -16,6 +16,7 @@ There is list of arguments overrides .ini options
 - /bringtofront - bring chrlauncher window to front when download started
 - /forcecheck - force update checking
 - /wait - start browser only when check/download/install update complete
+- /ini .\chrlauncher.ini - start chrlauncher with custom configuration
 
 #### Supported browser:
 - Launcher - Chromium and their clones (like Google Chrome, Yandex Browser and other legitimate trojans!).
@@ -108,6 +109,17 @@ ChromiumLastCheck=0
 # Set proxy configuration (string):
 #Proxy=127.0.0.1:80
 ~~~
+#### FAQ:
+- [How to force check for an update every chrlauncher start?](https://github.com/henrypp/chrlauncher/issues/92#issuecomment-343274418)
+- [Disable annoying chrlauncher window popup](https://github.com/henrypp/chrlauncher/issues/96#issuecomment-439294915)
+- [Fix for duplicated taskbar icons creation](https://github.com/henrypp/chrlauncher/issues/49#issuecomment-289285155)
+- [Set proxy configuration for a chrlauncher](https://github.com/henrypp/chrlauncher/issues/61#issuecomment-439295515)
+- [Pass on chrlauncher arguments into Chromium](https://github.com/henrypp/chrlauncher/issues/76#issuecomment-312444105)
+- [Update flash PPAPI plugin](https://github.com/henrypp/chrlauncher/issues/21#issuecomment-232352687)
+- [Fix for flash PPAPI plugin loading](https://github.com/henrypp/chrlauncher/issues/24#issuecomment-242173325)
+- [Host the Chromium package zip on custom network?](https://github.com/henrypp/chrlauncher/issues/86)
+- [How to uninstall chrlauncher?](https://github.com/henrypp/chrlauncher/issues/25#issuecomment-242338818)
+
 Website: [www.henrypp.org](https://www.henrypp.org)<br />
 Support: support@henrypp.org<br />
 <br />
