@@ -330,8 +330,6 @@ bool _app_checkupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 				}
 
 				*pis_error = false;
-
-				pbi->is_ischecked = true;
 			}
 			else
 			{
@@ -630,7 +628,7 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 				}
 				else
 				{
-					app.TrayPopup (hwnd, UID, nullptr, NIIF_USER, APP_NAME, app.LocaleString (IDS_STATUS_FOUND, nullptr)); // just inform user
+					app.TrayPopup (hwnd, UID, nullptr, NIIF_USER, APP_NAME, _r_fmt (app.LocaleString (IDS_STATUS_FOUND, nullptr), pbi->new_version)); // just inform user
 
 					_r_ctrl_settext (hwnd, IDC_START_BTN, app.LocaleString (IDS_ACTION_DOWNLOAD, nullptr));
 					_r_ctrl_enable (hwnd, IDC_START_BTN, true);
@@ -641,19 +639,23 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 
 			if (!pbi->is_autodownload && !pbi->is_isdownloaded)
 			{
-				app.TrayPopup (hwnd, UID, nullptr, NIIF_USER, APP_NAME, app.LocaleString (IDS_STATUS_FOUND, nullptr)); // just inform user
+				app.TrayPopup (hwnd, UID, nullptr, NIIF_USER, APP_NAME, _r_fmt (app.LocaleString (IDS_STATUS_FOUND, nullptr), pbi->new_version)); // just inform user
 
 				_r_ctrl_settext (hwnd, IDC_START_BTN, app.LocaleString (IDS_ACTION_DOWNLOAD, nullptr));
 				_r_ctrl_enable (hwnd, IDC_START_BTN, true);
 
 				is_stayopen = true;
 			}
+
+			pbi->is_ischecked = true;
 		}
 	}
 
 	if (is_haveerror)
 	{
 		app.TrayPopup (hwnd, UID, nullptr, NIIF_USER, APP_NAME, app.LocaleString (IDS_STATUS_ERROR, nullptr)); // just inform user
+
+		_app_setstatus (hwnd, app.LocaleString (IDS_STATUS_ERROR, nullptr), 0, 0);
 
 		_r_ctrl_settext (hwnd, IDC_START_BTN, app.LocaleString (IDS_ACTION_DOWNLOAD, nullptr));
 		_r_ctrl_enable (hwnd, IDC_START_BTN, true);
