@@ -76,4 +76,6 @@
 
 #define IDS_CLOSE 24
 
+#define IDS_STATUS_ERROR 25
+
 #endif // __RESOURCE_H__
