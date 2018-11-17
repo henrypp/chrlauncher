@@ -828,6 +828,14 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 					break;
 				}
 
+				case WM_MBUTTONUP:
+				{
+					if (_r_fs_exists (browser_info.binary_dir))
+						ShellExecute (hwnd, nullptr, browser_info.binary_dir, nullptr, nullptr, SW_SHOWDEFAULT);
+
+					break;
+				}
+
 				case WM_LBUTTONDBLCLK:
 				{
 					_r_wnd_toggle (hwnd, false);
