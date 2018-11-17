@@ -54,7 +54,7 @@ if not exist "%CHRLAUNCHER_PATH%" (
 		reg add "HKLM\Software\Clients\StartMenuInternet\%CHRLAUNCHER_NAME_SHORT%\Capabilities\FileAssociations" /v ".xht" /t REG_SZ /d "%CHRLAUNCHER_NAME_SHORT%HTML" /f
 		reg add "HKLM\Software\Clients\StartMenuInternet\%CHRLAUNCHER_NAME_SHORT%\Capabilities\FileAssociations" /v ".xhtml" /t REG_SZ /d "%CHRLAUNCHER_NAME_SHORT%HTML" /f
 
-		reg add "HKLM\Software\Clients\StartMenuInternet\%CHRLAUNCHER_NAME_SHORT%\Capabilities\StartMenu" /v "StartMenuInternet" /t REG_SZ /d "%CHRLAUNCHER_NAME%" /f
+		reg add "HKLM\Software\Clients\StartMenuInternet\%CHRLAUNCHER_NAME_SHORT%\Capabilities\StartMenu" /v "StartMenuInternet" /t REG_SZ /d "%CHRLAUNCHER_NAME_SHORT%" /f
 
 		reg add "HKLM\Software\Clients\StartMenuInternet\%CHRLAUNCHER_NAME_SHORT%\Capabilities\URLAssociations" /v "ftp" /t REG_SZ /d "%CHRLAUNCHER_NAME_SHORT%URL" /f
 		reg add "HKLM\Software\Clients\StartMenuInternet\%CHRLAUNCHER_NAME_SHORT%\Capabilities\URLAssociations" /v "http" /t REG_SZ /d "%CHRLAUNCHER_NAME_SHORT%URL" /f
