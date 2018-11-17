@@ -100,11 +100,7 @@ void init_browser_info (BROWSER_INFORMATION* pbi)
 
 			if (GetBinaryType (pbi->binary_path, &exe_type))
 			{
-				if (exe_type == SCS_32BIT_BINARY)
-					pbi->architecture = 32;
-
-				else if (exe_type == SCS_64BIT_BINARY)
-					pbi->architecture = 64;
+				pbi->architecture = (exe_type == SCS_64BIT_BINARY) ? 64 : 32;
 			}
 		}
 
@@ -125,9 +121,9 @@ void init_browser_info (BROWSER_INFORMATION* pbi)
 	StringCchCopy (pbi->type, _countof (pbi->type), app.ConfigGet (L"ChromiumType", L"dev-codecs-sync"));
 	StringCchPrintf (pbi->name_full, _countof (pbi->name_full), L"Chromium %d-bit (%s)", pbi->architecture, pbi->type);
 
-	StringCchCopy (pbi->args, _countof (pbi->args), app.ConfigGet (L"ChromiumCommandLine", L"--user-data-dir=..\\profile --no-default-browser-check --allow-outdated-plugins --disable-logging --disable-breakpad"));
-
 	StringCchCopy (pbi->current_version, _countof (pbi->current_version), _app_getbinaryversion (pbi->binary_path));
+
+	StringCchCopy (pbi->args, _countof (pbi->args), app.ConfigGet (L"ChromiumCommandLine", L"--user-data-dir=..\\profile --no-default-browser-check --allow-outdated-plugins --disable-logging --disable-breakpad"));
 
 	// parse command line
 	{
@@ -300,7 +296,7 @@ bool _app_ishaveupdate (BROWSER_INFORMATION* pbi)
 	return false;
 }
 
-bool _app_checkupdate (HWND hwnd, BROWSER_INFORMATION* pbi)
+bool _app_checkupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 {
 	if (_app_ishaveupdate (pbi))
 		return true;
@@ -332,6 +328,14 @@ bool _app_checkupdate (HWND hwnd, BROWSER_INFORMATION* pbi)
 							result[vc.at (i).Midded (0, pos)] = vc.at (i).Midded (pos + 1);
 					}
 				}
+
+				*pis_error = false;
+
+				pbi->is_ischecked = true;
+			}
+			else
+			{
+				*pis_error = true;
 			}
 		}
 	}
@@ -370,7 +374,7 @@ bool _app_downloadupdate_callback (DWORD total_written, DWORD total_length, LONG
 	return true;
 }
 
-bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi)
+bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 {
 	if (pbi->is_isdownloaded)
 		return true;
@@ -388,10 +392,14 @@ bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi)
 	{
 		_r_fs_move (temp_file, pbi->cache_path);
 		result = true;
+
+		*pis_error = false;
 	}
 	else
 	{
 		_r_fs_delete (temp_file, FALSE);
+
+		*pis_error = true;
 	}
 
 	pbi->is_isdownloaded = result;
@@ -403,7 +411,7 @@ bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi)
 	return result;
 }
 
-bool _app_installupdate (HWND hwnd, BROWSER_INFORMATION* pbi)
+bool _app_installupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 {
 	_r_fastlock_acquireexclusive (&lock_download);
 
@@ -511,6 +519,7 @@ bool _app_installupdate (HWND hwnd, BROWSER_INFORMATION* pbi)
 		_r_fs_delete (pbi->cache_path, false); // remove cache file on installation finished
 	}
 
+	*pis_error = !result;
 	pbi->is_isinstalled = result;
 
 	_r_fastlock_releaseexclusive (&lock_download);
@@ -524,7 +533,9 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 {
 	BROWSER_INFORMATION* pbi = (BROWSER_INFORMATION*)lparam;
 	const HWND hwnd = app.GetHWND ();
-	bool is_stillopen = false;
+
+	bool is_stayopen = false;
+	bool is_haveerror = false;
 
 	_r_ctrl_enable (hwnd, IDC_START_BTN, false);
 
@@ -545,7 +556,7 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 			if (pbi->is_bringtofront)
 				_r_wnd_toggle (hwnd, true); // show window
 
-			if (_app_installupdate (hwnd, pbi))
+			if (_app_installupdate (hwnd, pbi, &is_haveerror))
 			{
 				init_browser_info (pbi);
 				update_browser_info (hwnd, pbi);
@@ -556,7 +567,7 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 		else
 		{
 			_r_ctrl_enable (hwnd, IDC_START_BTN, true);
-			is_stillopen = true;
+			is_stayopen = true;
 		}
 	}
 
@@ -581,7 +592,7 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 		if (is_exists && !pbi->is_waitdownloadend)
 			_app_openbrowser (pbi);
 
-		if (_app_checkupdate (hwnd, pbi))
+		if (_app_checkupdate (hwnd, pbi, &is_haveerror))
 		{
 			app.TrayToggle (hwnd, UID, nullptr, true); // show tray icon
 
@@ -595,13 +606,13 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 
 				_r_status_pbsetmarquee (hwnd, IDC_PROGRESS, false);
 
-				if (_app_downloadupdate (hwnd, pbi))
+				if (_app_downloadupdate (hwnd, pbi, &is_haveerror))
 				{
 					if (!_app_browserisrunning (pbi))
 					{
 						_r_ctrl_enable (hwnd, IDC_START_BTN, false);
 
-						if (_app_installupdate (hwnd, pbi))
+						if (_app_installupdate (hwnd, pbi, &is_haveerror))
 						{
 							app.ConfigSet (L"ChromiumLastCheck", _r_unixtime_now ());
 							pbi->is_isinstalled = true;
@@ -614,7 +625,7 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 						_r_ctrl_settext (hwnd, IDC_START_BTN, app.LocaleString (IDS_ACTION_INSTALL, nullptr));
 						_r_ctrl_enable (hwnd, IDC_START_BTN, true);
 
-						is_stillopen = true;
+						is_stayopen = true;
 					}
 				}
 				else
@@ -624,7 +635,7 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 					_r_ctrl_settext (hwnd, IDC_START_BTN, app.LocaleString (IDS_ACTION_DOWNLOAD, nullptr));
 					_r_ctrl_enable (hwnd, IDC_START_BTN, true);
 
-					is_stillopen = true;
+					is_stayopen = true;
 				}
 			}
 
@@ -635,9 +646,19 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 				_r_ctrl_settext (hwnd, IDC_START_BTN, app.LocaleString (IDS_ACTION_DOWNLOAD, nullptr));
 				_r_ctrl_enable (hwnd, IDC_START_BTN, true);
 
-				is_stillopen = true;
+				is_stayopen = true;
 			}
 		}
+	}
+
+	if (is_haveerror)
+	{
+		app.TrayPopup (hwnd, UID, nullptr, NIIF_USER, APP_NAME, app.LocaleString (IDS_STATUS_ERROR, nullptr)); // just inform user
+
+		_r_ctrl_settext (hwnd, IDC_START_BTN, app.LocaleString (IDS_ACTION_DOWNLOAD, nullptr));
+		_r_ctrl_enable (hwnd, IDC_START_BTN, true);
+
+		is_stayopen = true;
 	}
 
 	if (pbi->is_isinstalled)
@@ -645,9 +666,7 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 
 	_r_status_pbsetmarquee (hwnd, IDC_PROGRESS, false);
 
-	pbi->is_ischecked = true;
-
-	if (!is_stillopen)
+	if (!is_stayopen)
 		PostMessage (hwnd, WM_DESTROY, 0, 0);
 
 	_endthreadex (ERROR_SUCCESS);
@@ -686,7 +705,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 					hthread_check = nullptr;
 				}
 
-				hthread_check = (HANDLE)_beginthreadex (nullptr, 0, &_app_thread_check, &browser_info, 0, nullptr);
+				hthread_check = _r_createthread (&_app_thread_check, &browser_info);
 			}
 
 			if (!browser_info.is_waitdownloadend && _r_fs_exists (browser_info.binary_path))
@@ -907,7 +926,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 							hthread_check = nullptr;
 						}
 
-						hthread_check = (HANDLE)_beginthreadex (nullptr, 0, &_app_thread_check, &browser_info, 0, nullptr);
+						hthread_check = _r_createthread (&_app_thread_check, &browser_info);
 					}
 
 					break;
