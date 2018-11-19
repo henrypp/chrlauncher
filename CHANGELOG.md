@@ -1,7 +1,8 @@
-v2.5.1 (17 November 2018)
+v2.5.1 (18 November 2018)
 - added custom configuration settings and removed mutex (issue #59)
 - fixed destroying main window when error occurs
-- fixed proxy support for win8+ (issue #110)
+- fixed proxy credentials parsing (issue #110)
+- fixed proxy support for win81+ (issue #110)
 - updated chromium types description (issue #109)
 - updated install script
 
