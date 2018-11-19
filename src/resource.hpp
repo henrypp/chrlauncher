@@ -26,18 +26,19 @@
 
 // Main Menu
 #define IDM_RUN 109
-#define IDM_OPEN 110
-#define IDM_EXIT 111
-#define IDM_WEBSITE 112
-#define IDM_ABOUT 113
+#define IDM_EXPLORE 110
+#define IDM_OPEN 111
+#define IDM_EXIT 112
+#define IDM_WEBSITE 113
+#define IDM_ABOUT 114
 
 // Tray Menu
-#define IDM_TRAY_SHOW 114
-#define IDM_TRAY_RUN 115
-#define IDM_TRAY_OPEN 116
-#define IDM_TRAY_WEBSITE 117
-#define IDM_TRAY_ABOUT 118
-#define IDM_TRAY_EXIT 119
+#define IDM_TRAY_SHOW 115
+#define IDM_TRAY_RUN 116
+#define IDM_TRAY_OPEN 117
+#define IDM_TRAY_WEBSITE 118
+#define IDM_TRAY_ABOUT 119
+#define IDM_TRAY_EXIT 120
 
 #define IDX_LANGUAGE 1000
 
