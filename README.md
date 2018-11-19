@@ -60,9 +60,9 @@ ChromiumArchitecture=0
 
 # Auto download updates if founded (boolean)
 #
-# false	-> show tray tip if update found, downloading manually
-# true	-> auto download update and install it! (default)
-ChromiumAutoDownload=true
+# false	-> show tray tip if update found, downloading manually (default)
+# true	-> auto download update and install it!
+ChromiumAutoDownload=false
 
 # Bring chrlauncher window when download started (boolean)
 #
@@ -78,12 +78,24 @@ ChromiumWaitForDownloadEnd=true
 
 # Type of Chromium builds:
 #
-# dev-official		-> official development builds from snapshots repository "commondatastorage.googleapis.com/chromium-browser-snapshots/index.html"
-# dev-codecs-sync	-> unofficial development builds with codecs "github.com/henrypp/chromium/releases" (default)
-# stable-codecs-sync	-> unofficial stable builds with codecs "github.com/henrypp/chromium/releases"
-# dev-codecs-nosync	-> unofficial development builds with codecs and without google services "github.com/henrypp/chromium/releases"
-# stable-codecs-nosync	-> unofficial stable builds with codecs and without google services "github.com/henrypp/chromium/releases"
-# ungoogled-chromium	-> unofficial builds without google integration and enhanced privacy "github.com/Eloston/ungoogled-chromium"
+# dev-official		-> Official development builds from snapshots repository "commondatastorage.googleapis.com/chromium-browser-snapshots/index.html"
+#
+# dev-codecs-sync	-> Unofficial development builds with codecs "github.com/henrypp/chromium/releases" (default)
+#
+# dev-clang-nosync	-> Unofficial development builds without Google services "github.com/henrypp/chromium/releases"
+#
+# stable-codecs-sync	-> Unofficial stable builds with codecs "github.com/henrypp/chromium/releases"
+#
+# ungoogled-chromium	-> Unofficial builds without google integration and enhanced privacy "github.com/Eloston/ungoogled-chromium"
+#
+# dev-codecs-nosync	-> !!! DISCONTINUED since June 2018 !!!
+# Unofficial development builds with codecs and without Google services
+#
+# stable-codecs-nosync	-> !!! DISCONTINUED since June 2018 !!!
+# Unofficial stable builds with codecs and without google services
+#
+# dev-codecs-nosync-experimental -> !!! EXPERIMENTAL !!!
+# Unofficial development builds with codecs and without Google services "github.com/macchrome/winchrome/releases"
 ChromiumType=dev-codecs-sync
 
 # Check for new Chromium version once in X days (integer):
