@@ -20,6 +20,11 @@ BROWSER_INFORMATION browser_info;
 
 _R_FASTLOCK lock_download;
 
+void _app_logerror (LPCWSTR fn, DWORD code, LPCWSTR desc)
+{
+	_r_dbg_write (APP_NAME_SHORT, APP_VERSION, fn, code, desc);
+}
+
 rstring _app_getbinaryversion (LPCWSTR path)
 {
 	rstring result;
@@ -185,10 +190,10 @@ void init_browser_info (BROWSER_INFORMATION* pbi)
 		pbi->is_autodownload = app.ConfigGet (L"ChromiumAutoDownload", false).AsBool ();
 
 	if (!pbi->is_bringtofront)
-		pbi->is_bringtofront = app.ConfigGet (L"ChromiumBringToFront", false).AsBool ();
+		pbi->is_bringtofront = app.ConfigGet (L"ChromiumBringToFront", true).AsBool ();
 
 	if (!pbi->is_waitdownloadend)
-		pbi->is_waitdownloadend = app.ConfigGet (L"ChromiumWaitForDownloadEnd", false).AsBool ();
+		pbi->is_waitdownloadend = app.ConfigGet (L"ChromiumWaitForDownloadEnd", true).AsBool ();
 
 	// set ppapi info
 	{
@@ -313,8 +318,11 @@ bool _app_checkupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 		if (!is_exists || pbi->is_forcecheck || (_r_unixtime_now () - app.ConfigGet (L"ChromiumLastCheck", 0).AsLonglong ()) >= _R_SECONDSCLOCK_DAY (pbi->check_period))
 		{
 			rstring content;
+			rstring url;
 
-			if (app.DownloadURL (_r_fmt (app.ConfigGet (L"ChromiumUpdateUrl", CHROMIUM_UPDATE_URL), pbi->architecture, pbi->type), &content, false, nullptr, 0))
+			url.Format (app.ConfigGet (L"ChromiumUpdateUrl", CHROMIUM_UPDATE_URL), pbi->architecture, pbi->type);
+
+			if (app.DownloadURL (url, &content, false, nullptr, 0))
 			{
 				if (!content.IsEmpty ())
 				{
@@ -333,6 +341,8 @@ bool _app_checkupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 			}
 			else
 			{
+				_app_logerror (TEXT (__FUNCTION__), GetLastError (), url);
+
 				*pis_error = true;
 			}
 		}
@@ -395,6 +405,8 @@ bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 	}
 	else
 	{
+		_app_logerror (TEXT (__FUNCTION__), GetLastError (), pbi->download_url);
+
 		_r_fs_delete (temp_file, FALSE);
 
 		*pis_error = true;
@@ -499,6 +511,10 @@ bool _app_installupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 
 					CloseHandle (hfile);
 				}
+				else
+				{
+					_app_logerror (L"CreateFile", GetLastError (), fpath);
+				}
 			}
 		}
 
@@ -508,6 +524,7 @@ bool _app_installupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 	}
 	else
 	{
+		_app_logerror (TEXT (__FUNCTION__), GetLastError (), pbi->cache_path);
 		_r_fs_delete (pbi->cache_path, false); // remove cache file when zip cannot be opened
 	}
 
@@ -766,7 +783,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				_app_openbrowser (&browser_info);
 
 			if (_r_fastlock_islocked (&lock_download))
-				WaitForSingleObjectEx (hthread_check, 15000, FALSE);
+				WaitForSingleObjectEx (hthread_check, 7500, FALSE);
 
 			if (hthread_check)
 				CloseHandle (hthread_check);
@@ -830,9 +847,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 				case WM_MBUTTONUP:
 				{
-					if (_r_fs_exists (browser_info.binary_dir))
-						ShellExecute (hwnd, nullptr, browser_info.binary_dir, nullptr, nullptr, SW_SHOWDEFAULT);
-
+					SendMessage (hwnd, WM_COMMAND, MAKEWPARAM (IDM_EXPLORE, 0), 0);
 					break;
 				}
 
@@ -908,7 +923,17 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				case IDM_OPEN:
 				case IDM_TRAY_OPEN:
 				{
+					if (_r_fs_exists (app.GetConfigPath ()))
 					ShellExecute (hwnd, nullptr, app.GetConfigPath (), nullptr, nullptr, SW_SHOWDEFAULT);
+
+					break;
+				}
+
+				case IDM_EXPLORE:
+				{
+					if (_r_fs_exists (browser_info.binary_dir))
+						ShellExecute (hwnd, nullptr, browser_info.binary_dir, nullptr, nullptr, SW_SHOWDEFAULT);
+
 					break;
 				}
 
