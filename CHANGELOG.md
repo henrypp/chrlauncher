@@ -1,3 +1,7 @@
+v2.5.2 (22 November 2018)
+- fixed unpacking some zip packages (issue #113)
+- updated locale
+
 v2.5.1 (18 November 2018)
 - added custom configuration settings and removed mutex (issue #59)
 - fixed destroying main window when error occurs
