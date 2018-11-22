@@ -71,9 +71,9 @@ rstring _app_getbinaryversion (LPCWSTR path)
 void update_browser_info (HWND hwnd, BROWSER_INFORMATION* pbi)
 {
 	SetDlgItemText (hwnd, IDC_BROWSER, _r_fmt (app.LocaleString (IDS_BROWSER, nullptr), pbi->name_full));
-	SetDlgItemText (hwnd, IDC_CURRENTVERSION, _r_fmt (app.LocaleString (IDS_CURRENTVERSION, nullptr), !pbi->current_version[0] ? L"<not found>" : pbi->current_version));
-	SetDlgItemText (hwnd, IDC_VERSION, _r_fmt (app.LocaleString (IDS_VERSION, nullptr), !pbi->new_version[0] ? L"<not found>" : pbi->new_version));
-	SetDlgItemText (hwnd, IDC_DATE, _r_fmt (app.LocaleString (IDS_DATE, nullptr), pbi->timestamp ? _r_fmt_date (pbi->timestamp, FDTF_SHORTDATE | FDTF_SHORTTIME).GetString () : L"<not found>"));
+	SetDlgItemText (hwnd, IDC_CURRENTVERSION, _r_fmt (app.LocaleString (IDS_CURRENTVERSION, nullptr), !pbi->current_version[0] ? app.LocaleString (IDS_STATUS_NOTFOUND, nullptr).GetString () : pbi->current_version));
+	SetDlgItemText (hwnd, IDC_VERSION, _r_fmt (app.LocaleString (IDS_VERSION, nullptr), !pbi->new_version[0] ? app.LocaleString (IDS_STATUS_NOTFOUND, nullptr).GetString () : pbi->new_version));
+	SetDlgItemText (hwnd, IDC_DATE, _r_fmt (app.LocaleString (IDS_DATE, nullptr), pbi->timestamp ? _r_fmt_date (pbi->timestamp, FDTF_SHORTDATE | FDTF_SHORTTIME).GetString () : app.LocaleString (IDS_STATUS_NOTFOUND, nullptr).GetString ()));
 }
 
 void init_browser_info (BROWSER_INFORMATION* pbi)
