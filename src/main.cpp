@@ -444,8 +444,6 @@ bool _app_installupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 		{
 			const size_t pos = rstring (ze.name).Find (L'/');
 
-			RDBG (L"%d %s", start_idx, ze.name);
-
 			if ((ze.attr & FILE_ATTRIBUTE_DIRECTORY) != 0)
 			{
 				title_length = pos + 1;
@@ -483,8 +481,6 @@ bool _app_installupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 		{
 			if (GetZipItem (hzip, i, &ze) != ZR_OK)
 				continue;
-
-			RDBG (L"%d %s", i, ze.name);
 
 			fpath.Format (L"%s\\%s", pbi->binary_dir, rstring (ze.name + title_length).Replace (L"/", L"\\").GetString ());
 
