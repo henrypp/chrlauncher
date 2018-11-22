@@ -436,28 +436,42 @@ bool _app_installupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 
 	if (IsZipHandleU (hzip))
 	{
-		const INT start_idx = 1; // most zip packages has root directory
+		INT start_idx = 0; // most zip packages has root directory
 		size_t title_length = 0;
 
 		// check archive is official package or not
-		GetZipItem (hzip, 0, &ze);
+		if (GetZipItem (hzip, start_idx, &ze) == ZR_OK)
+		{
+			const size_t pos = rstring (ze.name).Find (L'/');
 
-		if ((ze.attr & FILE_ATTRIBUTE_DIRECTORY) != 0)
-			title_length = rstring (ze.name).Find (L'/') + 1;
+			RDBG (L"%d %s", start_idx, ze.name);
 
+			if ((ze.attr & FILE_ATTRIBUTE_DIRECTORY) != 0)
+			{
+				title_length = pos + 1;
+				start_idx = 1;
+			}
+			else if (pos != rstring::npos)
+			{
+				title_length = pos + 1;
+			}
+		}
+
+		INT total_files = 0;
 		DWORDLONG total_size = 0;
 		DWORDLONG total_read = 0; // this is our progress so far
 
 		// count total files
-		GetZipItem (hzip, -1, &ze);
-		const INT total_files = ze.index;
-
-		// count total size of unpacked files
-		for (INT i = start_idx; i < total_files; i++)
+		if (GetZipItem (hzip, -1, &ze) == ZR_OK)
 		{
-			GetZipItem (hzip, i, &ze);
+			total_files = ze.index;
 
-			total_size += ze.unc_size;
+			// count total size of unpacked files
+			for (INT i = start_idx; i < total_files; i++)
+			{
+				GetZipItem (hzip, i, &ze);
+				total_size += ze.unc_size;
+			}
 		}
 
 		rstring fpath;
@@ -467,7 +481,10 @@ bool _app_installupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 
 		for (INT i = start_idx; i < total_files; i++)
 		{
-			GetZipItem (hzip, i, &ze);
+			if (GetZipItem (hzip, i, &ze) != ZR_OK)
+				continue;
+
+			RDBG (L"%d %s", i, ze.name);
 
 			fpath.Format (L"%s\\%s", pbi->binary_dir, rstring (ze.name + title_length).Replace (L"/", L"\\").GetString ());
 
@@ -924,7 +941,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				case IDM_TRAY_OPEN:
 				{
 					if (_r_fs_exists (app.GetConfigPath ()))
-					ShellExecute (hwnd, nullptr, app.GetConfigPath (), nullptr, nullptr, SW_SHOWDEFAULT);
+						ShellExecute (hwnd, nullptr, app.GetConfigPath (), nullptr, nullptr, SW_SHOWDEFAULT);
 
 					break;
 				}
