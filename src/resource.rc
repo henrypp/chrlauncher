@@ -118,6 +118,7 @@ STRINGTABLE
 	IDS_STATUS_FOUND "New version ""%s"" is available!"
 	IDS_STATUS_DOWNLOADED "An update has been downloaded, but not installed. Close Chromium and press 'Install update'."
 	IDS_STATUS_ERROR "Error while checking update..."
+	IDS_STATUS_NOTFOUND "<not found>"
 
 	IDS_QUESTION_STOP "Are you sure you want to cancel the Chromium update process?"
 
