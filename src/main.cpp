@@ -163,11 +163,14 @@ void init_browser_info (BROWSER_INFORMATION* pbi)
 				}
 				else if (arga[i][0] == L'-' && arga[i][1] == L'-')
 				{
+					if (_wcsnicmp (arga[i], L"--new-window", 12) == 0)
+						pbi->is_opennewwindow = true;
+
 					// there is Chromium arguments
 					StringCchCat (pbi->args, _countof (pbi->args), L" ");
 					StringCchCat (pbi->args, _countof (pbi->args), arga[i]);
 				}
-				else
+				else if (PathIsURL (arga[i]))
 				{
 					// there is Chromium url
 					StringCchCat (pbi->urls, _countof (pbi->urls), L" \"");
@@ -273,7 +276,9 @@ void _app_openbrowser (BROWSER_INFORMATION* pbi)
 	if (!_r_fs_exists (pbi->binary_path))
 		return;
 
-	if (!pbi->urls[0] && _app_browserisrunning (pbi))
+	const bool is_running = _app_browserisrunning (pbi);
+
+	if (is_running  && !pbi->urls[0] && !pbi->is_opennewwindow)
 		return;
 
 	WCHAR args[2048] = {0};
@@ -286,6 +291,8 @@ void _app_openbrowser (BROWSER_INFORMATION* pbi)
 		StringCchCat (args, _countof (args), pbi->urls);
 		pbi->urls[0] = 0; // reset
 	}
+
+	pbi->is_opennewwindow = false;
 
 	rstring arg;
 	arg.Format (L"\"%s\" %s", pbi->binary_path, args);

@@ -24,6 +24,7 @@ struct BROWSER_INFORMATION
 	bool is_bringtofront = false;
 	bool is_forcecheck = false;
 	bool is_waitdownloadend = false;
+	bool is_opennewwindow = false;
 
 	bool is_ischecked = false;
 	bool is_isdownloaded = false;
