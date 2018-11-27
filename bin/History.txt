@@ -1,3 +1,7 @@
+v2.5.3 (27 November 2018)
+- fixed loading custom configuration (issue #114)
+- fixed opening new Chromium window
+
 v2.5.2 (22 November 2018)
 - fixed unpacking some zip packages (issue #113)
 - updated locale
