@@ -161,10 +161,16 @@ void init_browser_info (BROWSER_INFORMATION* pbi)
 						pbi->is_waitdownloadend = true;
 					}
 				}
-				else if (arga[i][0] == L'-' && arga[i][1] == L'-')
+				else if (arga[i][0] == L'-')
 				{
-					if (_wcsnicmp (arga[i], L"--new-window", 12) == 0)
+					if (
+						_wcsnicmp (arga[i], L"-new-tab", 8) == 0 ||
+						_wcsnicmp (arga[i], L"-new-window", 11) == 0 ||
+						_wcsnicmp (arga[i], L"--new-window", 12) == 0 ||
+						_wcsnicmp (arga[i], L"-new-instance", 13) == 0)
+					{
 						pbi->is_opennewwindow = true;
+					}
 
 					// there is Chromium arguments
 					StringCchCat (pbi->args, _countof (pbi->args), L" ");
@@ -278,7 +284,7 @@ void _app_openbrowser (BROWSER_INFORMATION* pbi)
 
 	const bool is_running = _app_browserisrunning (pbi);
 
-	if (is_running  && !pbi->urls[0] && !pbi->is_opennewwindow)
+	if (is_running && !pbi->urls[0] && !pbi->is_opennewwindow)
 		return;
 
 	WCHAR args[2048] = {0};
