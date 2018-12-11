@@ -122,15 +122,17 @@ ChromiumLastCheck=0
 #Proxy=127.0.0.1:80
 ~~~
 #### FAQ:
+- [If you lost all setting and extensions when copy Chromium to another PC (answer)](https://github.com/henrypp/chrlauncher/issues/116#issuecomment-444426692)
 - [How to force check for an update every chrlauncher start?](https://github.com/henrypp/chrlauncher/issues/92#issuecomment-343274418)
+- [How to host the Chromium package zip on custom network?](https://github.com/henrypp/chrlauncher/issues/86)
+- [Can't sign-in to Chromium](https://github.com/henrypp/chrlauncher/issues/115#issuecomment-444268533)
+- [Set proxy configuration for a chrlauncher](https://github.com/henrypp/chrlauncher/issues/61#issuecomment-439295515)
+- [Pass on chrlauncher arguments into Chromium](https://github.com/henrypp/chrlauncher/issues/76#issuecomment-312444105)
 - [Disable annoying chrlauncher window popup](https://github.com/henrypp/chrlauncher/issues/96#issuecomment-439294915)
 - [Is it possible to downgrade Chromium version?](https://github.com/henrypp/chrlauncher/issues/112#issuecomment-440940865)
 - [Fix for duplicated taskbar icons creation](https://github.com/henrypp/chrlauncher/issues/49#issuecomment-289285155)
-- [Set proxy configuration for a chrlauncher](https://github.com/henrypp/chrlauncher/issues/61#issuecomment-439295515)
-- [Pass on chrlauncher arguments into Chromium](https://github.com/henrypp/chrlauncher/issues/76#issuecomment-312444105)
 - [Update flash PPAPI plugin](https://github.com/henrypp/chrlauncher/issues/21#issuecomment-232352687)
 - [Fix for flash PPAPI plugin loading](https://github.com/henrypp/chrlauncher/issues/24#issuecomment-242173325)
-- [Host the Chromium package zip on custom network?](https://github.com/henrypp/chrlauncher/issues/86)
 
 Website: [www.henrypp.org](https://www.henrypp.org)<br />
 Support: support@henrypp.org<br />
