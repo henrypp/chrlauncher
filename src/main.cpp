@@ -666,7 +666,6 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR* pnames, siz
 
 					rstring destPath;
 					destPath.Format (L"%s\\%s", pbi->binary_dir, (LPWSTR)temp + root_dir_name.GetLength ());
-					destPath.Replace (L"/", L"\\");
 
 					if (isDir)
 					{
@@ -699,7 +698,7 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR* pnames, siz
 						}
 						else
 						{
-							res=OutFile_OpenW (&outFile, destPath);
+							res = OutFile_OpenW (&outFile, destPath);
 
 							if (res != SZ_OK)
 							{
@@ -878,6 +877,9 @@ bool _app_unpack_zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR* pnames, size
 					CloseHandle (hfile);
 
 					SetFileAttributes (fpath, ze.attr);
+
+					if (!result)
+						result = true;
 				}
 				else
 				{
@@ -886,11 +888,8 @@ bool _app_unpack_zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR* pnames, size
 			}
 		}
 
-		result = true;
-
 		CloseZip (hzip);
 	}
-
 
 	return result;
 }
@@ -1040,7 +1039,6 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 						if (_app_installupdate (hwnd, pbi, &is_haveerror))
 						{
 							app.ConfigSet (L"ChromiumLastCheck", _r_unixtime_now ());
-							pbi->is_isinstalled = true;
 						}
 					}
 					else

@@ -43,9 +43,10 @@ struct BROWSER_INFORMATION
 	WCHAR name_full[64] = {0};
 	WCHAR type[64] = {0};
 
-	WCHAR cache_path[512] = {0};
-	WCHAR binary_dir[512] = {0};
-	WCHAR binary_path[512] = {0};
+	WCHAR cache_path[MAX_PATH] = {0};
+	WCHAR binary_dir[MAX_PATH] = {0};
+	WCHAR binary_path[MAX_PATH] = {0};
+
 	WCHAR download_url[512] = {0};
 
 	WCHAR urls[1024] = {0};
