@@ -8,6 +8,15 @@
 #include "routine.hpp"
 #include "unzip.hpp"
 
+#include "CpuArch.h"
+
+#include "7z.h"
+#include "7zAlloc.h"
+#include "7zBuf.h"
+#include "7zCrc.h"
+#include "7zFile.h"
+#include "7zVersion.h"
+
 #include "resource.hpp"
 
 rapp app (APP_NAME, APP_NAME_SHORT, APP_VERSION, APP_COPYRIGHT);
@@ -68,6 +77,65 @@ rstring _app_getbinaryversion (LPCWSTR path)
 	return result;
 }
 
+BOOL CALLBACK activate_browser_window_callback (HWND hwnd, LPARAM lparam)
+{
+	if (!lparam)
+		return FALSE;
+
+	BROWSER_INFORMATION* pbi = (BROWSER_INFORMATION*)lparam;
+
+	DWORD pid = 0;
+	GetWindowThreadProcessId (hwnd, &pid);
+
+	if (GetCurrentProcessId () == pid)
+		return TRUE;
+
+	if (!IsWindowVisible (hwnd))
+		return TRUE;
+
+	WCHAR buffer[MAX_PATH] = {0};
+	DWORD length = _countof (buffer);
+
+	const HANDLE hproc = OpenProcess (app.IsVistaOrLater () ? PROCESS_QUERY_LIMITED_INFORMATION : PROCESS_QUERY_INFORMATION, false, pid);
+
+	if (hproc)
+	{
+		const HMODULE hlib = GetModuleHandle (L"kernel32.dll");
+
+		if (hlib)
+		{
+			typedef BOOL (WINAPI *QFPIN) (HANDLE, DWORD, LPWSTR, PDWORD); // QueryFullProcessImageName
+			const QFPIN _QueryFullProcessImageName = (QFPIN)GetProcAddress (hlib, "QueryFullProcessImageNameW");
+
+			if (_QueryFullProcessImageName)
+				_QueryFullProcessImageName (hproc, 0, buffer, &length);
+		}
+
+		if (!buffer[0])
+		{
+			WCHAR path[_R_BYTESIZE_KB] = {0};
+
+			if (GetProcessImageFileName (hproc, path, _countof (path))) // winxp fallback
+				StringCchCopy (buffer, length, _r_path_dospathfromnt (path));
+		}
+
+		CloseHandle (hproc);
+	}
+
+	if (buffer[0] && _wcsnicmp (buffer, pbi->binary_path, wcslen (pbi->binary_path)) == 0)
+	{
+		_r_wnd_toggle (hwnd, true);
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+void activate_browser_window (BROWSER_INFORMATION* pbi)
+{
+	EnumWindows (&activate_browser_window_callback, (LPARAM)pbi);
+}
+
 void update_browser_info (HWND hwnd, BROWSER_INFORMATION* pbi)
 {
 	SetDlgItemText (hwnd, IDC_BROWSER, _r_fmt (app.LocaleString (IDS_BROWSER, nullptr), pbi->name_full));
@@ -82,7 +150,7 @@ void init_browser_info (BROWSER_INFORMATION* pbi)
 
 	// configure paths
 	GetTempPath (_countof (pbi->cache_path), pbi->cache_path);
-	StringCchCat (pbi->cache_path, _countof (pbi->cache_path), APP_NAME_SHORT L"Cache.ZIP");
+	StringCchCat (pbi->cache_path, _countof (pbi->cache_path), APP_NAME_SHORT L"Cache.bin");
 
 	StringCchCopy (pbi->binary_dir, _countof (pbi->binary_dir), _r_path_expand (app.ConfigGet (L"ChromiumDirectory", L".\\bin")));
 	StringCchPrintf (pbi->binary_path, _countof (pbi->binary_path), L"%s\\%s", pbi->binary_dir, app.ConfigGet (L"ChromiumBinary", L"chrome.exe").GetString ());
@@ -285,7 +353,10 @@ void _app_openbrowser (BROWSER_INFORMATION* pbi)
 	const bool is_running = _app_browserisrunning (pbi);
 
 	if (is_running && !pbi->urls[0] && !pbi->is_opennewwindow)
+	{
+		activate_browser_window (pbi);
 		return;
+	}
 
 	WCHAR args[2048] = {0};
 
@@ -434,13 +505,258 @@ bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 	return result;
 }
 
-bool _app_installupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
+void normallize_dir_name (LPWSTR name)
 {
-	_r_fastlock_acquireexclusive (&lock_download);
+	for (size_t i = 0; i < wcslen (name); i++)
+	{
+		if (name[i] == L'/')
+			name[i] = L'\\';
+	}
+}
 
-	if (!_r_fs_exists (pbi->binary_dir))
-		_r_fs_mkdir (pbi->binary_dir);
+bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR* pnames, size_t names_count)
+{
+#define kInputBufSize ((size_t)1 << 18)
 
+	static const ISzAlloc g_Alloc = {SzAlloc, SzFree};
+
+	bool result = false;
+
+	ISzAlloc allocImp = g_Alloc;
+	ISzAlloc allocTempImp = g_Alloc;
+
+	CFileInStream archiveStream;
+	CLookToRead2 lookStream;
+	CSzArEx db;
+	UInt16 *temp = nullptr;
+	size_t tempSize = 0;
+
+	SRes res = InFile_OpenW (&archiveStream.file, pbi->cache_path);
+
+	if (res != ERROR_SUCCESS)
+	{
+		_app_logerror (L"InFile_OpenW", res, pbi->cache_path);
+		return false;
+	}
+
+	FileInStream_CreateVTable (&archiveStream);
+	LookToRead2_CreateVTable (&lookStream, 0);
+
+	lookStream.buf = (byte*)ISzAlloc_Alloc (&allocImp, kInputBufSize);
+
+	if (!lookStream.buf)
+	{
+		_app_logerror (L"ISzAlloc_Alloc", SZ_ERROR_MEM, 0);
+	}
+	else
+	{
+		lookStream.bufSize = kInputBufSize;
+		lookStream.realStream = &archiveStream.vt;
+		LookToRead2_Init (&lookStream);
+
+		CrcGenerateTable ();
+
+		SzArEx_Init (&db);
+
+		res = SzArEx_Open (&db, &lookStream.vt, &allocImp, &allocTempImp);
+
+		if (res != SZ_OK)
+		{
+			_app_logerror (L"SzArEx_Open", res, pbi->cache_path);
+		}
+		else
+		{
+			/*
+				if you need cache, use these 3 variables.
+				if you use external function, you can make these variable as static.
+			*/
+			UInt32 blockIndex = 0xFFFFFFFF; // it can have any value before first call (if outBuffer = 0)
+			Byte *outBuffer = nullptr; // it must be 0 before first call for each new archive.
+			size_t outBufferSize = 0; // it can have any value before first call (if outBuffer = 0)
+
+			rstring root_dir_name;
+
+			UInt64 total_size = 0;
+			UInt64 total_read = 0;
+
+			// find root directory which contains main executable
+			for (UInt32 i = 0; i < db.NumFiles; i++)
+			{
+				if (SzArEx_IsDir (&db, i))
+					continue;
+
+				const size_t len = SzArEx_GetFileNameUtf16 (&db, i, nullptr);
+
+				total_size += SzArEx_GetFileSize (&db, i);
+
+				if (len > tempSize)
+				{
+					SzFree (nullptr, temp);
+					tempSize = len;
+					temp = (UInt16 *)SzAlloc (nullptr, tempSize * sizeof (UInt16));
+
+					if (!temp)
+					{
+						_app_logerror (L"SzAlloc", SZ_ERROR_MEM, 0);
+						break;
+					}
+				}
+
+				if (root_dir_name.IsEmpty () && SzArEx_GetFileNameUtf16 (&db, i, temp))
+				{
+					LPCWSTR destPath = (LPCWSTR)temp;
+					LPCWSTR fname = _r_path_extractfile (destPath);
+
+					if (!fname || !pnames)
+						continue;
+
+					for (size_t j = 0; j < names_count; j++)
+					{
+						if (!pnames[j])
+							continue;
+
+						const size_t fname_len = wcslen (fname);
+
+						if (_wcsnicmp (fname, pnames[j], fname_len) == 0)
+						{
+							const size_t root_dir_len = wcslen (destPath) - fname_len;
+
+							normallize_dir_name ((LPWSTR)destPath);
+
+							root_dir_name = destPath;
+							root_dir_name.SetLength (root_dir_len);
+							root_dir_name.Trim (L"\\");
+
+							break;
+						}
+					}
+				}
+			}
+
+			for (UInt32 i = 0; i < db.NumFiles; i++)
+			{
+				const bool isDir = SzArEx_IsDir (&db, i);
+
+				const size_t len = SzArEx_GetFileNameUtf16 (&db, i, nullptr);
+
+				if (len > tempSize)
+				{
+					SzFree (nullptr, temp);
+					tempSize = len;
+					temp = (UInt16*)SzAlloc (nullptr, tempSize * sizeof (UInt16));
+
+					if (!temp)
+					{
+						_app_logerror (L"SzAlloc", SZ_ERROR_MEM, 0);
+						break;
+					}
+				}
+
+				if (SzArEx_GetFileNameUtf16 (&db, i, temp))
+				{
+					normallize_dir_name ((LPWSTR)temp);
+
+					LPCWSTR dirname = _r_path_extractdir ((LPCWSTR)temp).Trim (L"\\").GetString ();
+
+					// skip non-root dirs
+					if (!root_dir_name.IsEmpty () && (wcslen ((LPCWSTR)temp) <= root_dir_name.GetLength () || _wcsnicmp (root_dir_name, dirname, root_dir_name.GetLength ()) != 0))
+						continue;
+
+					CSzFile outFile;
+
+					rstring destPath;
+					destPath.Format (L"%s\\%s", pbi->binary_dir, (LPWSTR)temp + root_dir_name.GetLength ());
+					destPath.Replace (L"/", L"\\");
+
+					if (isDir)
+					{
+						_r_fs_mkdir (destPath);
+					}
+					else
+					{
+						total_read += SzArEx_GetFileSize (&db, i);
+
+						_app_setstatus (hwnd, app.LocaleString (IDS_STATUS_INSTALL, nullptr), total_read, total_size);
+
+						{
+							const rstring dir = _r_path_extractdir (destPath);
+
+							if (!_r_fs_exists (dir))
+								_r_fs_mkdir (dir);
+						}
+
+						size_t offset = 0;
+						size_t outSizeProcessed = 0;
+
+						res = SzArEx_Extract (&db, &lookStream.vt, i,
+							&blockIndex, &outBuffer, &outBufferSize,
+							&offset, &outSizeProcessed,
+							&allocImp, &allocTempImp);
+
+						if (res != SZ_OK)
+						{
+							_app_logerror (L"SzArEx_Extract", res, 0);
+						}
+						else
+						{
+							res=OutFile_OpenW (&outFile, destPath);
+
+							if (res != SZ_OK)
+							{
+								_app_logerror (L"OutFile_OpenW", res, destPath);
+							}
+							else
+							{
+								size_t processedSize = outSizeProcessed;
+
+								if (File_Write (&outFile, outBuffer + offset, &processedSize) != SZ_OK || processedSize != outSizeProcessed)
+								{
+									_app_logerror (L"File_Write", res, destPath);
+								}
+								else
+								{
+									if (SzBitWithVals_Check (&db.Attribs, i))
+									{
+										UInt32 attrib = db.Attribs.Vals[i];
+
+										/*
+											p7zip stores posix attributes in high 16 bits and adds 0x8000 as marker.
+											We remove posix bits, if we detect posix mode field
+										*/
+
+										if ((attrib & 0xF0000000) != 0)
+											attrib &= 0x7FFF;
+
+										SetFileAttributes (destPath, attrib);
+									}
+								}
+
+								if (!result)
+									result = true;
+
+								File_Close (&outFile);
+							}
+						}
+					}
+				}
+			}
+
+			ISzAlloc_Free (&allocImp, outBuffer);
+		}
+	}
+
+	SzFree (nullptr, temp);
+	SzArEx_Free (&db, &allocImp);
+
+	ISzAlloc_Free (&allocImp, lookStream.buf);
+
+	File_Close (&archiveStream.file);
+
+	return result;
+}
+
+bool _app_unpack_zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR* pnames, size_t names_count)
+{
 	bool result = false;
 
 	ZIPENTRY ze = {0};
@@ -449,39 +765,55 @@ bool _app_installupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 
 	if (IsZipHandleU (hzip))
 	{
-		INT start_idx = 0; // most zip packages has root directory
-		size_t title_length = 0;
-
-		// check archive is official package or not
-		if (GetZipItem (hzip, start_idx, &ze) == ZR_OK)
-		{
-			const size_t pos = rstring (ze.name).Find (L'/');
-
-			if ((ze.attr & FILE_ATTRIBUTE_DIRECTORY) != 0)
-			{
-				title_length = pos + 1;
-				start_idx = 1;
-			}
-			else if (pos != rstring::npos)
-			{
-				title_length = pos + 1;
-			}
-		}
-
 		INT total_files = 0;
 		DWORDLONG total_size = 0;
 		DWORDLONG total_read = 0; // this is our progress so far
 
 		// count total files
 		if (GetZipItem (hzip, -1, &ze) == ZR_OK)
-		{
 			total_files = ze.index;
 
+		rstring root_dir_name;
+
+		// find root directory which contains main executable
+		for (INT i = 0; i < total_files; i++)
+		{
+			if (GetZipItem (hzip, i, &ze) != ZR_OK)
+				continue;
+
+			if (((ze.attr & FILE_ATTRIBUTE_DIRECTORY) != 0))
+				continue;
+
 			// count total size of unpacked files
-			for (INT i = start_idx; i < total_files; i++)
+			total_size += ze.unc_size;
+
+			if (root_dir_name.IsEmpty () && pnames)
 			{
-				GetZipItem (hzip, i, &ze);
-				total_size += ze.unc_size;
+				LPCWSTR fname = _r_path_extractfile (ze.name);
+
+				if (!fname)
+					continue;
+
+				for (size_t j = 0; j < names_count; j++)
+				{
+					if (!pnames[j])
+						continue;
+
+					const size_t fname_len = wcslen (fname);
+
+					if (_wcsnicmp (fname, pnames[j], fname_len) == 0)
+					{
+						const size_t root_dir_len = wcslen (ze.name) - fname_len;
+
+						normallize_dir_name (ze.name);
+
+						root_dir_name = ze.name;
+						root_dir_name.SetLength (root_dir_len);
+						root_dir_name.Trim (L"\\");
+
+						break;
+					}
+				}
 			}
 		}
 
@@ -490,12 +822,20 @@ bool _app_installupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 		CHAR buffer[BUFFER_SIZE] = {0};
 		DWORD written = 0;
 
-		for (INT i = start_idx; i < total_files; i++)
+		for (INT i = 0; i < total_files; i++)
 		{
 			if (GetZipItem (hzip, i, &ze) != ZR_OK)
 				continue;
 
-			fpath.Format (L"%s\\%s", pbi->binary_dir, rstring (ze.name + title_length).Replace (L"/", L"\\").GetString ());
+			normallize_dir_name (ze.name);
+
+			LPCWSTR dirname = _r_path_extractdir (ze.name).Trim (L"\\").GetString ();
+
+			// skip non-root dirs
+			if (!root_dir_name.IsEmpty () && (wcslen (ze.name) <= root_dir_name.GetLength () || _wcsnicmp (root_dir_name, dirname, root_dir_name.GetLength ()) != 0))
+				continue;
+
+			fpath.Format (L"%s\\%s", pbi->binary_dir, rstring (ze.name + root_dir_name.GetLength ()).GetString ());
 
 			_app_setstatus (hwnd, app.LocaleString (IDS_STATUS_INSTALL, nullptr), total_read, total_size);
 
@@ -536,6 +876,8 @@ bool _app_installupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 					}
 
 					CloseHandle (hfile);
+
+					SetFileAttributes (fpath, ze.attr);
 				}
 				else
 				{
@@ -548,16 +890,58 @@ bool _app_installupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 
 		CloseZip (hzip);
 	}
+
+
+	return result;
+}
+
+bool _app_installupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
+{
+	_r_fastlock_acquireexclusive (&lock_download);
+
+	if (!_r_fs_exists (pbi->binary_dir))
+		_r_fs_mkdir (pbi->binary_dir);
+
+	bool result = false;
+
+	rstring origName = _r_path_extractfile (pbi->binary_path);
+
+	LPCWSTR binNames[] = {
+		origName.GetString (),
+		L"chrome.exe",
+		L"dragon.exe",
+		L"firefox.exe",
+		L"iridium.exe",
+		L"iron.exe",
+		L"slimjet.exe",
+		L"vivaldi.exe",
+		L"waterfox.exe",
+	};
+
+	const HZIP hzip = OpenZip (pbi->cache_path, nullptr);
+
+	if (IsZipHandleU (hzip))
+	{
+		CloseZip (hzip);
+
+		result = _app_unpack_zip (hwnd, pbi, binNames, _countof (binNames));
+	}
 	else
 	{
-		_app_logerror (TEXT (__FUNCTION__), GetLastError (), pbi->cache_path);
-		_r_fs_delete (pbi->cache_path, false); // remove cache file when zip cannot be opened
+		result = _app_unpack_7zip (hwnd, pbi, binNames, _countof (binNames));
 	}
 
 	if (result)
 	{
 		_app_cleanup (pbi, _app_getbinaryversion (pbi->binary_path));
 		_r_fs_delete (pbi->cache_path, false); // remove cache file on installation finished
+	}
+	else
+	{
+		RemoveDirectory (pbi->binary_dir); // no recurse
+
+		_app_logerror (TEXT (__FUNCTION__), GetLastError (), pbi->cache_path);
+		_r_fs_delete (pbi->cache_path, false); // remove cache file when zip cannot be opened
 	}
 
 	*pis_error = !result;

@@ -16,6 +16,7 @@
 #define LANG_MENU 0
 
 // libs
+#pragma comment(lib, "ntdll.lib")
 #pragma comment(lib, "version.lib")
 
 struct BROWSER_INFORMATION
