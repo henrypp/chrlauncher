@@ -1,3 +1,8 @@
+v2.5.4 (20 December 2018)
+- added 7zip packages support (fix #120)
+- activate browser window when browser is running
+- fixed bugs
+
 v2.5.3 (27 November 2018)
 - fixed loading custom configuration (issue #114)
 - fixed opening new Chromium window
