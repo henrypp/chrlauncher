@@ -122,7 +122,7 @@ BOOL CALLBACK activate_browser_window_callback (HWND hwnd, LPARAM lparam)
 		CloseHandle (hproc);
 	}
 
-	if (buffer[0] && _wcsnicmp (buffer, pbi->binary_path, wcslen (pbi->binary_path)) == 0)
+	if (buffer[0] && _wcsnicmp (buffer, pbi->binary_path, _r_str_length (pbi->binary_path)) == 0)
 	{
 		_r_wnd_toggle (hwnd, true);
 		return FALSE;
@@ -207,7 +207,7 @@ void init_browser_info (BROWSER_INFORMATION* pbi)
 		{
 			for (INT i = 1; i < numargs; i++)
 			{
-				if (wcslen (arga[i]) < 2)
+				if (_r_str_length (arga[i]) < 2)
 					continue;
 
 				if (arga[i][0] == L'/')
@@ -317,7 +317,7 @@ void _app_cleanup (BROWSER_INFORMATION* pbi, LPCWSTR current_version)
 
 	if (hfile != INVALID_HANDLE_VALUE)
 	{
-		const size_t len = wcslen (current_version);
+		const size_t len = _r_str_length (current_version);
 
 		do
 		{
@@ -507,7 +507,7 @@ bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 
 void normallize_dir_name (LPWSTR name)
 {
-	for (size_t i = 0; i < wcslen (name); i++)
+	for (size_t i = 0; i < _r_str_length (name); i++)
 	{
 		if (name[i] == L'/')
 			name[i] = L'\\';
@@ -615,11 +615,11 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR* pnames, siz
 						if (!pnames[j])
 							continue;
 
-						const size_t fname_len = wcslen (fname);
+						const size_t fname_len = _r_str_length (fname);
 
 						if (_wcsnicmp (fname, pnames[j], fname_len) == 0)
 						{
-							const size_t root_dir_len = wcslen (destPath) - fname_len;
+							const size_t root_dir_len = _r_str_length (destPath) - fname_len;
 
 							normallize_dir_name ((LPWSTR)destPath);
 
@@ -659,7 +659,7 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR* pnames, siz
 					LPCWSTR dirname = _r_path_extractdir ((LPCWSTR)temp).Trim (L"\\").GetString ();
 
 					// skip non-root dirs
-					if (!root_dir_name.IsEmpty () && (wcslen ((LPCWSTR)temp) <= root_dir_name.GetLength () || _wcsnicmp (root_dir_name, dirname, root_dir_name.GetLength ()) != 0))
+					if (!root_dir_name.IsEmpty () && (_r_str_length ((LPCWSTR)temp) <= root_dir_name.GetLength () || _wcsnicmp (root_dir_name, dirname, root_dir_name.GetLength ()) != 0))
 						continue;
 
 					CSzFile outFile;
@@ -798,11 +798,11 @@ bool _app_unpack_zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR* pnames, size
 					if (!pnames[j])
 						continue;
 
-					const size_t fname_len = wcslen (fname);
+					const size_t fname_len = _r_str_length (fname);
 
 					if (_wcsnicmp (fname, pnames[j], fname_len) == 0)
 					{
-						const size_t root_dir_len = wcslen (ze.name) - fname_len;
+						const size_t root_dir_len = _r_str_length (ze.name) - fname_len;
 
 						normallize_dir_name (ze.name);
 
@@ -831,7 +831,7 @@ bool _app_unpack_zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR* pnames, size
 			LPCWSTR dirname = _r_path_extractdir (ze.name).Trim (L"\\").GetString ();
 
 			// skip non-root dirs
-			if (!root_dir_name.IsEmpty () && (wcslen (ze.name) <= root_dir_name.GetLength () || _wcsnicmp (root_dir_name, dirname, root_dir_name.GetLength ()) != 0))
+			if (!root_dir_name.IsEmpty () && (_r_str_length (ze.name) <= root_dir_name.GetLength () || _wcsnicmp (root_dir_name, dirname, root_dir_name.GetLength ()) != 0))
 				continue;
 
 			fpath.Format (L"%s\\%s", pbi->binary_dir, rstring (ze.name + root_dir_name.GetLength ()).GetString ());
