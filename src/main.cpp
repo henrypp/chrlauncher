@@ -244,7 +244,7 @@ void init_browser_info (BROWSER_INFORMATION* pbi)
 					StringCchCat (pbi->args, _countof (pbi->args), L" ");
 					StringCchCat (pbi->args, _countof (pbi->args), arga[i]);
 				}
-				else if (PathIsURL (arga[i]))
+				else if (PathIsURL (arga[i]) || PathIsHTMLFile (arga[i]))
 				{
 					// there is Chromium url
 					StringCchCat (pbi->urls, _countof (pbi->urls), L" \"");
