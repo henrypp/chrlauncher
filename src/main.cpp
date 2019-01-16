@@ -253,7 +253,7 @@ void init_browser_info (BROWSER_INFORMATION* pbi)
 				}
 			}
 
-			LocalFree (arga);
+			SAFE_LOCAL_FREE (arga);
 		}
 	}
 
