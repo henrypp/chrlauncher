@@ -75,13 +75,13 @@ ChromiumWaitForDownloadEnd=true
 #
 # dev-official		-> Official development builds from snapshots repository "commondatastorage.googleapis.com/chromium-browser-snapshots/index.html"
 #
-# dev-codecs-sync	-> Unofficial development builds with codecs "github.com/henrypp/chromium/releases" (default)
+# dev-codecs-sync	-> Unofficial development builds with codecs "github.com/henrypp/chromium" (default)
 #
-# dev-clang-nosync	-> Unofficial development builds without Google services "github.com/henrypp/chromium/releases"
+# dev-clang-nosync	-> Unofficial development builds without Google services "github.com/henrypp/chromium"
 #
-# stable-codecs-sync	-> Unofficial stable builds with codecs "github.com/henrypp/chromium/releases"
+# stable-codecs-sync	-> Unofficial stable builds with codecs "github.com/henrypp/chromium"
 #
-# ungoogled-chromium	-> Unofficial builds without google integration and enhanced privacy "github.com/Eloston/ungoogled-chromium"
+# ungoogled-chromium	-> Unofficial builds without google integration and enhanced privacy "github.com/macchrome/winchrome"
 #
 # dev-codecs-nosync	-> !!! DISCONTINUED since June 2018 !!!
 # Unofficial development builds with codecs and without Google services
@@ -90,7 +90,7 @@ ChromiumWaitForDownloadEnd=true
 # Unofficial stable builds with codecs and without google services
 #
 # dev-codecs-nosync-experimental -> !!! EXPERIMENTAL !!!
-# Unofficial development builds with codecs and without Google services "github.com/macchrome/winchrome/releases"
+# Unofficial development builds with codecs and without Google services "github.com/macchrome/chromium"
 ChromiumType=dev-codecs-sync
 
 # Check for new Chromium version once in X days (integer):
