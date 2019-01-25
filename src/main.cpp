@@ -1132,7 +1132,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 					hthread_check = nullptr;
 				}
 
-				hthread_check = _r_createthread (&_app_thread_check, &browser_info);
+				hthread_check = _r_createthread (&_app_thread_check, &browser_info, false);
 			}
 
 			if (!browser_info.is_waitdownloadend && _r_fs_exists (browser_info.binary_path))
@@ -1369,7 +1369,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 							hthread_check = nullptr;
 						}
 
-						hthread_check = _r_createthread (&_app_thread_check, &browser_info);
+						hthread_check = _r_createthread (&_app_thread_check, &browser_info, false);
 					}
 
 					break;
