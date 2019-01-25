@@ -1,3 +1,9 @@
+v2.5.5 (x February 2019)
+- added more file formats recognition
+- updated project sdks
+- updated lzma sdk
+- cosmetics fixes
+
 v2.5.4 (20 December 2018)
 - added 7zip packages support (fix #120)
 - activate browser window when browser is running
@@ -24,7 +30,7 @@ v2.5 (3 November 2018)
 - added proxy support (issue #108)
 - fixed unpacking some zip packages (issue #107 & #100)
 - fixed wow64 related bugs
-- updated project sdk
+
 - updated windows sdk
 - cosmetics fixes
 - fixed bugs
