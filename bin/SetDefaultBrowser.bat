@@ -49,8 +49,11 @@ if not exist "%CHRLAUNCHER_PATH%" (
 		reg add "HKLM\Software\Clients\StartMenuInternet\%CHRLAUNCHER_NAME_SHORT%\Capabilities" /v "ApplicationDescription" /t REG_SZ /d "%CHRLAUNCHER_DESCRIPTION%" /f
 
 		reg add "HKLM\Software\Clients\StartMenuInternet\%CHRLAUNCHER_NAME_SHORT%\Capabilities\FileAssociations" /v ".htm" /t REG_SZ /d "%CHRLAUNCHER_NAME_SHORT%HTML" /f
-		reg add "HKLM\Software\Clients\StartMenuInternet\%CHRLAUNCHER_NAME_SHORT%\Capabilities\FileAssociations" /v ".html" /t REG_SZ /d "%CHRLAUNCHER_NAME_SHORT%HTML" /f	
+		reg add "HKLM\Software\Clients\StartMenuInternet\%CHRLAUNCHER_NAME_SHORT%\Capabilities\FileAssociations" /v ".html" /t REG_SZ /d "%CHRLAUNCHER_NAME_SHORT%HTML" /f
+		reg add "HKLM\Software\Clients\StartMenuInternet\%CHRLAUNCHER_NAME_SHORT%\Capabilities\FileAssociations" /v ".pdf" /t REG_SZ /d "%CHRLAUNCHER_NAME_SHORT%HTML" /f
 		reg add "HKLM\Software\Clients\StartMenuInternet\%CHRLAUNCHER_NAME_SHORT%\Capabilities\FileAssociations" /v ".shtml" /t REG_SZ /d "%CHRLAUNCHER_NAME_SHORT%HTML" /f
+		reg add "HKLM\Software\Clients\StartMenuInternet\%CHRLAUNCHER_NAME_SHORT%\Capabilities\FileAssociations" /v ".svg" /t REG_SZ /d "%CHRLAUNCHER_NAME_SHORT%HTML" /f
+		reg add "HKLM\Software\Clients\StartMenuInternet\%CHRLAUNCHER_NAME_SHORT%\Capabilities\FileAssociations" /v ".webp" /t REG_SZ /d "%CHRLAUNCHER_NAME_SHORT%HTML" /f
 		reg add "HKLM\Software\Clients\StartMenuInternet\%CHRLAUNCHER_NAME_SHORT%\Capabilities\FileAssociations" /v ".xht" /t REG_SZ /d "%CHRLAUNCHER_NAME_SHORT%HTML" /f
 		reg add "HKLM\Software\Clients\StartMenuInternet\%CHRLAUNCHER_NAME_SHORT%\Capabilities\FileAssociations" /v ".xhtml" /t REG_SZ /d "%CHRLAUNCHER_NAME_SHORT%HTML" /f
 
