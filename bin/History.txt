@@ -1,11 +1,15 @@
 v2.5.5 (x February 2019)
 - added more file formats recognition
-- updated project sdks
+- fixed cache file can still available after unpacking (issue #123)
+- fixed passing arguments to browser (issue #125)
+- fixed window blinking on startup
+- updated project sdk
 - updated lzma sdk
 - cosmetics fixes
+- fixed bugs
 
 v2.5.4 (20 December 2018)
-- added 7zip packages support (fix #120)
+- added 7zip packages support (issue #120)
 - activate browser window when browser is running
 - fixed bugs
 
@@ -30,7 +34,6 @@ v2.5 (3 November 2018)
 - added proxy support (issue #108)
 - fixed unpacking some zip packages (issue #107 & #100)
 - fixed wow64 related bugs
-
 - updated windows sdk
 - cosmetics fixes
 - fixed bugs
