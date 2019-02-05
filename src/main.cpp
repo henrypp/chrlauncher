@@ -136,6 +136,29 @@ void activate_browser_window (BROWSER_INFORMATION* pbi)
 	EnumWindows (&activate_browser_window_callback, (LPARAM)pbi);
 }
 
+bool path_is_url (LPCWSTR path)
+{
+	return !PathMatchSpec (path, L"*.ini");
+
+	//if (PathIsURL (path) || PathIsHTMLFile (path))
+	//	return true;
+
+	//static LPCWSTR types[] = {
+	//	L"application/pdf",
+	//	L"image/svg+xml",
+	//	L"image/webp",
+	//	L"text/html",
+	//};
+
+	//for (size_t i = 0; i < _countof (types); i++)
+	//{
+	//	if (PathIsContentType (path, types[i]))
+	//		return true;
+	//}
+
+	//return false;
+}
+
 void update_browser_info (HWND hwnd, BROWSER_INFORMATION* pbi)
 {
 	SetDlgItemText (hwnd, IDC_BROWSER, _r_fmt (app.LocaleString (IDS_BROWSER, nullptr), pbi->name_full));
@@ -149,8 +172,7 @@ void init_browser_info (BROWSER_INFORMATION* pbi)
 	pbi->urls[0] = 0; // reset
 
 	// configure paths
-	GetTempPath (_countof (pbi->cache_path), pbi->cache_path);
-	StringCchCat (pbi->cache_path, _countof (pbi->cache_path), APP_NAME_SHORT L"Cache.bin");
+	StringCchCopy (pbi->cache_path, _countof (pbi->cache_path), _r_path_expand (L"%temp%\\" APP_NAME_SHORT L"Cache.bin"));
 
 	StringCchCopy (pbi->binary_dir, _countof (pbi->binary_dir), _r_path_expand (app.ConfigGet (L"ChromiumDirectory", L".\\bin")));
 	StringCchPrintf (pbi->binary_path, _countof (pbi->binary_path), L"%s\\%s", pbi->binary_dir, app.ConfigGet (L"ChromiumBinary", L"chrome.exe").GetString ());
@@ -244,7 +266,7 @@ void init_browser_info (BROWSER_INFORMATION* pbi)
 					StringCchCat (pbi->args, _countof (pbi->args), L" ");
 					StringCchCat (pbi->args, _countof (pbi->args), arga[i]);
 				}
-				else if (PathIsURL (arga[i]) || PathIsHTMLFile (arga[i]) || PathIsContentType (arga[i], L"application/pdf") || PathIsContentType (arga[i], L"image/svg+xml") || PathIsContentType (arga[i], L"image/webp"))
+				else if (path_is_url (arga[i]))
 				{
 					// there is Chromium url
 					StringCchCat (pbi->urls, _countof (pbi->urls), L" \"");
@@ -385,6 +407,17 @@ bool _app_ishaveupdate (BROWSER_INFORMATION* pbi)
 	return false;
 }
 
+bool _app_isupdaterequired (BROWSER_INFORMATION* pbi)
+{
+	if (pbi->is_forcecheck)
+		return true;
+
+	if ((_r_unixtime_now () - app.ConfigGet (L"ChromiumLastCheck", 0).AsLonglong ()) >= _R_SECONDSCLOCK_DAY (pbi->check_period))
+		return true;
+
+	return false;
+}
+
 bool _app_checkupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 {
 	if (_app_ishaveupdate (pbi))
@@ -394,12 +427,13 @@ bool _app_checkupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 
 	const bool is_exists = _r_fs_exists (pbi->binary_path);
 	bool result2 = false;
+	const bool is_checkupdate = _app_isupdaterequired (pbi);
 
 	_app_setstatus (hwnd, app.LocaleString (IDS_STATUS_CHECK, nullptr), 0, 0);
 
-	if (!is_exists || pbi->is_forcecheck || pbi->check_period > 0)
+	if (!is_exists || is_checkupdate)
 	{
-		if (!is_exists || pbi->is_forcecheck || (_r_unixtime_now () - app.ConfigGet (L"ChromiumLastCheck", 0).AsLonglong ()) >= _R_SECONDSCLOCK_DAY (pbi->check_period))
+		if (!is_exists || is_checkupdate)
 		{
 			rstring content;
 			rstring url;
@@ -476,6 +510,9 @@ bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 	WCHAR temp_file[MAX_PATH] = {0};
 	StringCchPrintf (temp_file, _countof (temp_file), L"%s.tmp", pbi->cache_path);
 
+	_r_fs_delete (temp_file, false);
+	_r_fs_delete (pbi->cache_path, false);
+
 	_app_setstatus (hwnd, app.LocaleString (IDS_STATUS_DOWNLOAD, nullptr), 0, 0);
 
 	_r_fastlock_acquireexclusive (&lock_download);
@@ -491,7 +528,7 @@ bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 	{
 		_app_logerror (TEXT (__FUNCTION__), GetLastError (), pbi->download_url);
 
-		_r_fs_delete (temp_file, FALSE);
+		_r_fs_delete (temp_file, false);
 
 		*pis_error = true;
 	}
@@ -915,6 +952,7 @@ bool _app_installupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 		L"slimjet.exe",
 		L"vivaldi.exe",
 		L"waterfox.exe",
+		L"opera.exe",
 	};
 
 	const HZIP hzip = OpenZip (pbi->cache_path, nullptr);
@@ -933,15 +971,15 @@ bool _app_installupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 	if (result)
 	{
 		_app_cleanup (pbi, _app_getbinaryversion (pbi->binary_path));
-		_r_fs_delete (pbi->cache_path, false); // remove cache file on installation finished
 	}
 	else
 	{
 		RemoveDirectory (pbi->binary_dir); // no recurse
 
 		_app_logerror (TEXT (__FUNCTION__), GetLastError (), pbi->cache_path);
-		_r_fs_delete (pbi->cache_path, false); // remove cache file when zip cannot be opened
 	}
+
+	_r_fs_delete (pbi->cache_path, false); // remove cache file when zip cannot be opened
 
 	*pis_error = !result;
 	pbi->is_isinstalled = result;
@@ -987,6 +1025,8 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 
 				app.ConfigSet (L"ChromiumLastCheck", _r_unixtime_now ());
 			}
+
+			_r_fs_delete (pbi->cache_path, false); // remove cache file on installation finished
 		}
 		else
 		{
@@ -995,17 +1035,19 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 		}
 	}
 
-	const bool is_exists = _r_fs_exists (pbi->binary_path);
 
 	if (!pbi->is_isinstalled)
 	{
 		_r_status_pbsetmarquee (hwnd, IDC_PROGRESS, true);
 
-		if (pbi->check_period != 0)
+		const bool is_exists = _r_fs_exists (pbi->binary_path);
+		const bool is_checkupdate = _app_isupdaterequired (pbi);
+
+		if (!is_exists || is_checkupdate)
 			app.TrayToggle (hwnd, UID, nullptr, true); // show tray icon
 
 		// it's like "first run"
-		if (!is_exists || (pbi->is_waitdownloadend && pbi->check_period != 0))
+		if (!is_exists || (pbi->is_waitdownloadend && is_checkupdate))
 		{
 			app.TrayToggle (hwnd, UID, nullptr, true); // show tray icon
 
@@ -1037,9 +1079,7 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 						_r_ctrl_enable (hwnd, IDC_START_BTN, false);
 
 						if (_app_installupdate (hwnd, pbi, &is_haveerror))
-						{
 							app.ConfigSet (L"ChromiumLastCheck", _r_unixtime_now ());
-						}
 					}
 					else
 					{
