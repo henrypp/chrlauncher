@@ -510,8 +510,11 @@ bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 	WCHAR temp_file[MAX_PATH] = {0};
 	StringCchPrintf (temp_file, _countof (temp_file), L"%s.tmp", pbi->cache_path);
 
-	_r_fs_delete (temp_file, false);
+	SetFileAttributes (pbi->cache_path, FILE_ATTRIBUTE_NORMAL);
 	_r_fs_delete (pbi->cache_path, false);
+
+	SetFileAttributes (temp_file, FILE_ATTRIBUTE_NORMAL);
+	_r_fs_delete (temp_file, false);
 
 	_app_setstatus (hwnd, app.LocaleString (IDS_STATUS_DOWNLOAD, nullptr), 0, 0);
 
@@ -979,6 +982,7 @@ bool _app_installupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 		_app_logerror (TEXT (__FUNCTION__), GetLastError (), pbi->cache_path);
 	}
 
+	SetFileAttributes (pbi->cache_path,FILE_ATTRIBUTE_NORMAL);
 	_r_fs_delete (pbi->cache_path, false); // remove cache file when zip cannot be opened
 
 	*pis_error = !result;
@@ -1026,6 +1030,7 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 				app.ConfigSet (L"ChromiumLastCheck", _r_unixtime_now ());
 			}
 
+			SetFileAttributes (pbi->cache_path, FILE_ATTRIBUTE_NORMAL);
 			_r_fs_delete (pbi->cache_path, false); // remove cache file on installation finished
 		}
 		else
