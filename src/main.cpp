@@ -184,7 +184,7 @@ void init_browser_info (BROWSER_INFORMATION* pbi)
 	else
 		pbi->architecture = app.ConfigGet (L"ChromiumArchitecture", 0).AsUint ();
 
-	if (!pbi->architecture || (pbi->architecture != 64 && pbi->architecture != 32))
+	if (pbi->architecture != 64 && pbi->architecture != 32)
 	{
 		pbi->architecture = 0;
 
@@ -194,9 +194,7 @@ void init_browser_info (BROWSER_INFORMATION* pbi)
 			DWORD exe_type = 0;
 
 			if (GetBinaryType (pbi->binary_path, &exe_type))
-			{
 				pbi->architecture = (exe_type == SCS_64BIT_BINARY) ? 64 : 32;
-			}
 		}
 
 		// ...by processor architecture
@@ -209,7 +207,7 @@ void init_browser_info (BROWSER_INFORMATION* pbi)
 		}
 	}
 
-	if (!pbi->architecture || (pbi->architecture != 32 && pbi->architecture != 64))
+	if (pbi->architecture != 32 && pbi->architecture != 64)
 		pbi->architecture = 32; // default architecture
 
 	// set common data
@@ -433,36 +431,33 @@ bool _app_checkupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 
 	if (!is_exists || is_checkupdate)
 	{
-		if (!is_exists || is_checkupdate)
+		rstring content;
+		rstring url;
+
+		url.Format (app.ConfigGet (L"ChromiumUpdateUrl", CHROMIUM_UPDATE_URL), pbi->architecture, pbi->type);
+
+		if (app.DownloadURL (url, &content, false, nullptr, 0))
 		{
-			rstring content;
-			rstring url;
-
-			url.Format (app.ConfigGet (L"ChromiumUpdateUrl", CHROMIUM_UPDATE_URL), pbi->architecture, pbi->type);
-
-			if (app.DownloadURL (url, &content, false, nullptr, 0))
+			if (!content.IsEmpty ())
 			{
-				if (!content.IsEmpty ())
+				const rstring::rvector vc = content.AsVector (L";");
+
+				for (size_t i = 0; i < vc.size (); i++)
 				{
-					const rstring::rvector vc = content.AsVector (L";");
+					const size_t pos = vc.at (i).Find (L'=');
 
-					for (size_t i = 0; i < vc.size (); i++)
-					{
-						const size_t pos = vc.at (i).Find (L'=');
-
-						if (pos != rstring::npos)
-							result[vc.at (i).Midded (0, pos)] = vc.at (i).Midded (pos + 1);
-					}
+					if (pos != rstring::npos)
+						result[vc.at (i).Midded (0, pos)] = vc.at (i).Midded (pos + 1);
 				}
-
-				*pis_error = false;
 			}
-			else
-			{
-				_app_logerror (TEXT (__FUNCTION__), GetLastError (), url);
 
-				*pis_error = true;
-			}
+			*pis_error = false;
+		}
+		else
+		{
+			_app_logerror (TEXT (__FUNCTION__), GetLastError (), url);
+
+			*pis_error = true;
 		}
 	}
 
@@ -982,7 +977,7 @@ bool _app_installupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 		_app_logerror (TEXT (__FUNCTION__), GetLastError (), pbi->cache_path);
 	}
 
-	SetFileAttributes (pbi->cache_path,FILE_ATTRIBUTE_NORMAL);
+	SetFileAttributes (pbi->cache_path, FILE_ATTRIBUTE_NORMAL);
 	_r_fs_delete (pbi->cache_path, false); // remove cache file when zip cannot be opened
 
 	*pis_error = !result;
