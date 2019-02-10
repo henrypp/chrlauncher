@@ -410,7 +410,7 @@ bool _app_isupdaterequired (BROWSER_INFORMATION* pbi)
 	if (pbi->is_forcecheck)
 		return true;
 
-	if ((_r_unixtime_now () - app.ConfigGet (L"ChromiumLastCheck", 0).AsLonglong ()) >= _R_SECONDSCLOCK_DAY (pbi->check_period))
+	if (pbi->check_period && ((_r_unixtime_now () - app.ConfigGet (L"ChromiumLastCheck", 0).AsLonglong ()) >= _R_SECONDSCLOCK_DAY (pbi->check_period)))
 		return true;
 
 	return false;
@@ -424,8 +424,9 @@ bool _app_checkupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 	rstring::map_one result;
 
 	const bool is_exists = _r_fs_exists (pbi->binary_path);
-	bool result2 = false;
 	const bool is_checkupdate = _app_isupdaterequired (pbi);
+
+	bool result2 = false;
 
 	_app_setstatus (hwnd, app.LocaleString (IDS_STATUS_CHECK, nullptr), 0, 0);
 
