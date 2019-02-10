@@ -1,4 +1,4 @@
-v2.5.5 (x February 2019)
+v2.5.5 (10 February 2019)
 - added more file formats recognition
 - fixed cache file can still available after unpacking (issue #123)
 - fixed passing arguments to browser (issue #125)
