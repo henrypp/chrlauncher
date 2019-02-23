@@ -29,11 +29,6 @@ BROWSER_INFORMATION browser_info;
 
 _R_FASTLOCK lock_download;
 
-void _app_logerror (LPCWSTR fn, DWORD code, LPCWSTR desc)
-{
-	_r_dbg_write (APP_NAME_SHORT, APP_VERSION, fn, code, desc);
-}
-
 rstring _app_getbinaryversion (LPCWSTR path)
 {
 	rstring result;
@@ -456,7 +451,7 @@ bool _app_checkupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 		}
 		else
 		{
-			_app_logerror (TEXT (__FUNCTION__), GetLastError (), url);
+			_r_dbg (TEXT (__FUNCTION__), GetLastError (), url);
 
 			*pis_error = true;
 		}
@@ -525,7 +520,7 @@ bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 	}
 	else
 	{
-		_app_logerror (TEXT (__FUNCTION__), GetLastError (), pbi->download_url);
+		_r_dbg (TEXT (__FUNCTION__), GetLastError (), pbi->download_url);
 
 		_r_fs_delete (temp_file, false);
 
@@ -571,7 +566,7 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR* pnames, siz
 
 	if (res != ERROR_SUCCESS)
 	{
-		_app_logerror (L"InFile_OpenW", res, pbi->cache_path);
+		_r_dbg (L"InFile_OpenW", res, pbi->cache_path);
 		return false;
 	}
 
@@ -582,7 +577,7 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR* pnames, siz
 
 	if (!lookStream.buf)
 	{
-		_app_logerror (L"ISzAlloc_Alloc", SZ_ERROR_MEM, 0);
+		_r_dbg (L"ISzAlloc_Alloc", SZ_ERROR_MEM, 0);
 	}
 	else
 	{
@@ -598,7 +593,7 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR* pnames, siz
 
 		if (res != SZ_OK)
 		{
-			_app_logerror (L"SzArEx_Open", res, pbi->cache_path);
+			_r_dbg (L"SzArEx_Open", res, pbi->cache_path);
 		}
 		else
 		{
@@ -633,7 +628,7 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR* pnames, siz
 
 					if (!temp)
 					{
-						_app_logerror (L"SzAlloc", SZ_ERROR_MEM, 0);
+						_r_dbg (L"SzAlloc", SZ_ERROR_MEM, 0);
 						break;
 					}
 				}
@@ -683,7 +678,7 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR* pnames, siz
 
 					if (!temp)
 					{
-						_app_logerror (L"SzAlloc", SZ_ERROR_MEM, 0);
+						_r_dbg (L"SzAlloc", SZ_ERROR_MEM, 0);
 						break;
 					}
 				}
@@ -730,7 +725,7 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR* pnames, siz
 
 						if (res != SZ_OK)
 						{
-							_app_logerror (L"SzArEx_Extract", res, 0);
+							_r_dbg (L"SzArEx_Extract", res, 0);
 						}
 						else
 						{
@@ -738,7 +733,7 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR* pnames, siz
 
 							if (res != SZ_OK)
 							{
-								_app_logerror (L"OutFile_OpenW", res, destPath);
+								_r_dbg (L"OutFile_OpenW", res, destPath);
 							}
 							else
 							{
@@ -746,7 +741,7 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR* pnames, siz
 
 								if (File_Write (&outFile, outBuffer + offset, &processedSize) != SZ_OK || processedSize != outSizeProcessed)
 								{
-									_app_logerror (L"File_Write", res, destPath);
+									_r_dbg (L"File_Write", res, destPath);
 								}
 								else
 								{
@@ -919,7 +914,7 @@ bool _app_unpack_zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR* pnames, size
 				}
 				else
 				{
-					_app_logerror (L"CreateFile", GetLastError (), fpath);
+					_r_dbg (L"CreateFile", GetLastError (), fpath);
 				}
 			}
 		}
@@ -975,7 +970,7 @@ bool _app_installupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 	{
 		RemoveDirectory (pbi->binary_dir); // no recurse
 
-		_app_logerror (TEXT (__FUNCTION__), GetLastError (), pbi->cache_path);
+		_r_dbg (TEXT (__FUNCTION__), GetLastError (), pbi->cache_path);
 	}
 
 	SetFileAttributes (pbi->cache_path, FILE_ATTRIBUTE_NORMAL);
