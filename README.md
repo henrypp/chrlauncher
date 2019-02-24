@@ -58,7 +58,7 @@ FlashPlayerPath=.\plugins\pepflashplayer.dll
 # 32	-> 32-bit
 ChromiumArchitecture=0
 
-# Auto download updates if founded (boolean)
+# Auto download updates if found (boolean)
 #
 # false	-> show tray tip if update found, downloading manually (default)
 # true	-> auto download update and install it!
