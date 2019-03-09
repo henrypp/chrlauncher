@@ -1,3 +1,8 @@
+v2.5.6 (9 March 2019)
+- added better search for browser executables
+- fixed working with multiple chrlauncher copies
+- fixed firefox based browsers support
+
 v2.5.5 (10 February 2019)
 - added more file formats recognition
 - fixed cache file can still available after unpacking (issue #123)
