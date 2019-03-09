@@ -15,8 +15,8 @@ There is list of arguments overrides .ini options.
 /wait - start browser only when check/download/install update complete
 
 Supported browser:
-- Launcher - Chromium and their clones (like Google Chrome, Yandex Browser and other legitimate trojans!).
-- Updater - Chromium only.
+- as launcher - Chromium based (like Google Chrome, Opera, Yandex Browser, Vivaldi, etc.) and Firefox based (Mozilla Firefox, Basilisk, Pale Moon, Waterfox, etc.)
+- as updater - Chromium only
 
 Flash Player:
 chrlauncher has feature for use portable Flash Player PPAPI.

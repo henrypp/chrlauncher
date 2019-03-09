@@ -19,8 +19,8 @@ There is list of arguments overrides .ini options
 - /ini .\chrlauncher.ini - start chrlauncher with custom configuration
 
 #### Supported browser:
-- Launcher - Chromium and their clones (like Google Chrome, Yandex Browser and other legitimate trojans!).
-- Updater - Chromium only.
+- as launcher - Chromium based (like Google Chrome, Opera, Yandex Browser, Vivaldi, etc.) and Firefox based (Mozilla Firefox, Basilisk, Pale Moon, Waterfox, etc.)
+- as updater - Chromium only
 
 #### Flash Player:
 chrlauncher has feature for use portable Flash Player PPAPI.
