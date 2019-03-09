@@ -164,13 +164,42 @@ void update_browser_info (HWND hwnd, BROWSER_INFORMATION* pbi)
 
 void init_browser_info (BROWSER_INFORMATION* pbi)
 {
+	static LPCWSTR binNames[] = {
+		L"firefox.exe",
+		L"basilisk.exe",
+		L"palemoon.exe",
+		L"waterfox.exe",
+		L"dragon.exe",
+		L"iridium.exe",
+		L"iron.exe",
+		L"opera.exe",
+		L"slimjet.exe",
+		L"vivaldi.exe",
+		L"chromium.exe",
+		L"chrome.exe", // default
+	};
+
 	pbi->urls[0] = 0; // reset
 
 	// configure paths
-	StringCchCopy (pbi->cache_path, _countof (pbi->cache_path), _r_path_expand (L"%temp%\\" APP_NAME_SHORT L"Cache.bin"));
-
 	StringCchCopy (pbi->binary_dir, _countof (pbi->binary_dir), _r_path_expand (app.ConfigGet (L"ChromiumDirectory", L".\\bin")));
 	StringCchPrintf (pbi->binary_path, _countof (pbi->binary_path), L"%s\\%s", pbi->binary_dir, app.ConfigGet (L"ChromiumBinary", L"chrome.exe").GetString ());
+
+	if (!_r_fs_exists (pbi->binary_path))
+	{
+		for (size_t i = 0; i < _countof (binNames); i++)
+		{
+			StringCchPrintf (pbi->binary_path, _countof (pbi->binary_path), L"%s\\%s", pbi->binary_dir, binNames[i]);
+
+			if (_r_fs_exists (pbi->binary_path))
+				break;
+		}
+
+		if (!_r_fs_exists (pbi->binary_path))
+			StringCchPrintf (pbi->binary_path, _countof (pbi->binary_path), L"%s\\%s", pbi->binary_dir, app.ConfigGet (L"ChromiumBinary", L"chrome.exe").GetString ()); // fallback (use defaults)
+	}
+
+	StringCchPrintf (pbi->cache_path, _countof (pbi->cache_path), L"%s\\" APP_NAME_SHORT L"Cache_%d.bin", _r_path_expand (L"%TEMP%").GetString (), _r_str_hash (pbi->binary_path));
 
 	// get browser architecture...
 	if (_r_sys_validversion (5, 1, 0, VER_EQUAL) || _r_sys_validversion (5, 2, 0, VER_EQUAL))
@@ -545,7 +574,7 @@ void normallize_dir_name (LPWSTR name)
 	}
 }
 
-bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR* pnames, size_t names_count)
+bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 {
 #define kInputBufSize ((size_t)1 << 18)
 
@@ -638,28 +667,20 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR* pnames, siz
 					LPCWSTR destPath = (LPCWSTR)temp;
 					LPCWSTR fname = _r_path_extractfile (destPath);
 
-					if (!fname || !pnames)
+					if (!fname || !binName || !binName[0])
 						continue;
 
-					for (size_t j = 0; j < names_count; j++)
+					const size_t fname_len = _r_str_length (fname);
+
+					if (_wcsnicmp (fname, binName, fname_len) == 0)
 					{
-						if (!pnames[j])
-							continue;
+						const size_t root_dir_len = _r_str_length (destPath) - fname_len;
 
-						const size_t fname_len = _r_str_length (fname);
+						normallize_dir_name ((LPWSTR)destPath);
 
-						if (_wcsnicmp (fname, pnames[j], fname_len) == 0)
-						{
-							const size_t root_dir_len = _r_str_length (destPath) - fname_len;
-
-							normallize_dir_name ((LPWSTR)destPath);
-
-							root_dir_name = destPath;
-							root_dir_name.SetLength (root_dir_len);
-							root_dir_name.Trim (L"\\");
-
-							break;
-						}
+						root_dir_name = destPath;
+						root_dir_name.SetLength (root_dir_len);
+						root_dir_name.Trim (L"\\");
 					}
 				}
 			}
@@ -785,7 +806,7 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR* pnames, siz
 	return result;
 }
 
-bool _app_unpack_zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR* pnames, size_t names_count)
+bool _app_unpack_zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 {
 	bool result = false;
 
@@ -817,32 +838,24 @@ bool _app_unpack_zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR* pnames, size
 			// count total size of unpacked files
 			total_size += ze.unc_size;
 
-			if (root_dir_name.IsEmpty () && pnames)
+			if (root_dir_name.IsEmpty () && binName && binName[0])
 			{
 				LPCWSTR fname = _r_path_extractfile (ze.name);
 
 				if (!fname)
 					continue;
 
-				for (size_t j = 0; j < names_count; j++)
+				const size_t fname_len = _r_str_length (fname);
+
+				if (_wcsnicmp (fname, binName, fname_len) == 0)
 				{
-					if (!pnames[j])
-						continue;
+					const size_t root_dir_len = _r_str_length (ze.name) - fname_len;
 
-					const size_t fname_len = _r_str_length (fname);
+					normallize_dir_name (ze.name);
 
-					if (_wcsnicmp (fname, pnames[j], fname_len) == 0)
-					{
-						const size_t root_dir_len = _r_str_length (ze.name) - fname_len;
-
-						normallize_dir_name (ze.name);
-
-						root_dir_name = ze.name;
-						root_dir_name.SetLength (root_dir_len);
-						root_dir_name.Trim (L"\\");
-
-						break;
-					}
+					root_dir_name = ze.name;
+					root_dir_name.SetLength (root_dir_len);
+					root_dir_name.Trim (L"\\");
 				}
 			}
 		}
@@ -934,20 +947,7 @@ bool _app_installupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 
 	bool result = false;
 
-	rstring origName = _r_path_extractfile (pbi->binary_path);
-
-	LPCWSTR binNames[] = {
-		origName.GetString (),
-		L"chrome.exe",
-		L"dragon.exe",
-		L"firefox.exe",
-		L"iridium.exe",
-		L"iron.exe",
-		L"slimjet.exe",
-		L"vivaldi.exe",
-		L"waterfox.exe",
-		L"opera.exe",
-	};
+	const rstring binName = _r_path_extractfile (pbi->binary_path);
 
 	const HZIP hzip = OpenZip (pbi->cache_path, nullptr);
 
@@ -955,11 +955,11 @@ bool _app_installupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 	{
 		CloseZip (hzip);
 
-		result = _app_unpack_zip (hwnd, pbi, binNames, _countof (binNames));
+		result = _app_unpack_zip (hwnd, pbi, binName);
 	}
 	else
 	{
-		result = _app_unpack_7zip (hwnd, pbi, binNames, _countof (binNames));
+		result = _app_unpack_7zip (hwnd, pbi, binName);
 	}
 
 	if (result)
