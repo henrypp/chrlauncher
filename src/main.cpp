@@ -996,13 +996,13 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 
 	_r_ctrl_enable (hwnd, IDC_START_BTN, false);
 
-	_r_status_pbsetmarquee (hwnd, IDC_PROGRESS, true);
+	_r_progress_setmarquee (hwnd, IDC_PROGRESS, true);
 
 	// install downloaded package
 	if (_r_fs_exists (pbi->cache_path))
 	{
 		_r_ctrl_settext (hwnd, IDC_START_BTN, app.LocaleString (IDS_ACTION_INSTALL, nullptr));
-		_r_status_pbsetmarquee (hwnd, IDC_PROGRESS, false);
+		_r_progress_setmarquee (hwnd, IDC_PROGRESS, false);
 
 		app.TrayToggle (hwnd, UID, nullptr, true); // show tray icon
 
@@ -1034,7 +1034,7 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 
 	if (!pbi->is_isinstalled)
 	{
-		_r_status_pbsetmarquee (hwnd, IDC_PROGRESS, true);
+		_r_progress_setmarquee (hwnd, IDC_PROGRESS, true);
 
 		const bool is_exists = _r_fs_exists (pbi->binary_path);
 		const bool is_checkupdate = _app_isupdaterequired (pbi);
@@ -1066,7 +1066,7 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 				if (is_exists && !pbi->is_isdownloaded && !pbi->is_waitdownloadend)
 					_app_openbrowser (pbi);
 
-				_r_status_pbsetmarquee (hwnd, IDC_PROGRESS, false);
+				_r_progress_setmarquee (hwnd, IDC_PROGRESS, false);
 
 				if (_app_downloadupdate (hwnd, pbi, &is_haveerror))
 				{
@@ -1127,7 +1127,7 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 	if (pbi->is_isinstalled)
 		_app_openbrowser (pbi);
 
-	_r_status_pbsetmarquee (hwnd, IDC_PROGRESS, false);
+	_r_progress_setmarquee (hwnd, IDC_PROGRESS, false);
 
 	if (!is_stayopen)
 		PostMessage (hwnd, WM_DESTROY, 0, 0);
@@ -1158,7 +1158,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 			init_browser_info (&browser_info);
 
-			app.TrayCreate (hwnd, UID, nullptr, WM_TRAYICON, app.GetSharedIcon (app.GetHINSTANCE (), IDI_MAIN, GetSystemMetrics (SM_CXSMICON)), (_r_fastlock_islocked (&lock_download) || browser_info.is_isdownloaded) ? false : true);
+			app.TrayCreate (hwnd, UID, nullptr, WM_TRAYICON, app.GetSharedImage (app.GetHINSTANCE (), IDI_MAIN, GetSystemMetrics (SM_CXSMICON)), (_r_fastlock_islocked (&lock_download) || browser_info.is_isdownloaded) ? false : true);
 
 			if (!hthread_check || WaitForSingleObject (hthread_check, 0) == WAIT_OBJECT_0)
 			{
