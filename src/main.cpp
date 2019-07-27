@@ -47,7 +47,7 @@ rstring _app_getbinaryversion (LPCWSTR path)
 				LPBYTE buffer = nullptr;
 				UINT size = 0;
 
-				if (VerQueryValue (verData, L"\\", (void FAR* FAR*)&buffer, &size))
+				if (VerQueryValue (verData, L"\\", (void FAR * FAR*) & buffer, &size))
 				{
 					if (size)
 					{
@@ -65,7 +65,8 @@ rstring _app_getbinaryversion (LPCWSTR path)
 				}
 			}
 
-			delete[] verData;
+			SAFE_DELETE_ARRAY (verData);
+			SAFE_DELETE_ARRAY (verData);
 		}
 	}
 
@@ -99,7 +100,7 @@ BOOL CALLBACK activate_browser_window_callback (HWND hwnd, LPARAM lparam)
 
 		if (hlib)
 		{
-			typedef BOOL (WINAPI *QFPIN) (HANDLE, DWORD, LPWSTR, PDWORD); // QueryFullProcessImageName
+			typedef BOOL (WINAPI * QFPIN) (HANDLE, DWORD, LPWSTR, PDWORD); // QueryFullProcessImageName
 			const QFPIN _QueryFullProcessImageName = (QFPIN)GetProcAddress (hlib, "QueryFullProcessImageNameW");
 
 			if (_QueryFullProcessImageName)
@@ -740,9 +741,9 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 						size_t outSizeProcessed = 0;
 
 						res = SzArEx_Extract (&db, &lookStream.vt, i,
-							&blockIndex, &outBuffer, &outBufferSize,
-							&offset, &outSizeProcessed,
-							&allocImp, &allocTempImp);
+											  &blockIndex, &outBuffer, &outBufferSize,
+											  &offset, &outSizeProcessed,
+											  &allocImp, &allocTempImp);
 
 						if (res != SZ_OK)
 						{
