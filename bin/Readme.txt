@@ -73,25 +73,35 @@ ChromiumWaitForDownloadEnd=true
 
 # Type of Chromium builds:
 #
-# dev-official		-> Official development builds from snapshots repository "commondatastorage.googleapis.com/chromium-browser-snapshots/index.html"
+# dev-official
+#	Official development builds from snapshots repository
+#	"storage.googleapis.com/chromium-browser-snapshots/index.html" (32/64 bit)
 #
-# dev-codecs-sync	-> Unofficial development builds with codecs "github.com/henrypp/chromium" (default)
+# stable-codecs-sync
+#	Unofficial stable builds with codecs
+#	"github.com/macchrome/winchrome/releases" (32/64 bit)
 #
-# dev-clang-nosync	-> Unofficial development builds without Google services "github.com/henrypp/chromium"
+# dev-nosync
+#	Unofficial development builds without Google services
+#	"github.com/RobRich999/Chromium_Clang/releases" (32/64 bit)
 #
-# stable-codecs-sync	-> Unofficial stable builds with codecs "github.com/henrypp/chromium"
+# dev-codecs-sync
+#	Unofficial development builds with codecs and without Google services
+#	"github.com/macchrome/winchrome/releases" (64 bit)
 #
-# ungoogled-chromium	-> Unofficial builds without google integration and enhanced privacy "github.com/macchrome/winchrome"
+# dev-codecs-nosync
+#	Unofficial development builds with codecs and without Google services
+#	"github.com/macchrome/winchrome/releases" (64 bit)
 #
-# dev-codecs-nosync	-> !!! DISCONTINUED since June 2018 !!!
-# Unofficial development builds with codecs and without Google services
+# ungoogled-chromium
+#	Unofficial builds without Google integration and enhanced privacy (based on Eloston project)
+#	"github.com/macchrome/winchrome/releases/" (32/64 bit)
+#	"github.com/Eloston/ungoogled-chromium"
 #
-# stable-codecs-nosync	-> !!! DISCONTINUED since June 2018 !!!
-# Unofficial stable builds with codecs and without google services
-#
-# dev-codecs-nosync-experimental -> !!! EXPERIMENTAL !!!
-# Unofficial development builds with codecs and without Google services "github.com/macchrome/chromium"
-ChromiumType=dev-codecs-sync
+# stable-codecs-nosync
+#	Unofficial stable builds with codecs and without google services
+#	!!! DISCONTINUED since June 2018 !!!
+ChromiumType=dev-official
 
 # Check for new Chromium version once in X days (integer):
 #
