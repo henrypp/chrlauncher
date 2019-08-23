@@ -40,34 +40,30 @@ rstring _app_getbinaryversion (LPCWSTR path)
 	{
 		LPSTR verData = new CHAR[verSize];
 
-		if (verData)
+		if (GetFileVersionInfo (path, verHandle, verSize, verData))
 		{
-			if (GetFileVersionInfo (path, verHandle, verSize, verData))
+			LPBYTE buffer = nullptr;
+			UINT size = 0;
+
+			if (VerQueryValue (verData, L"\\", (void FAR * FAR*) & buffer, &size))
 			{
-				LPBYTE buffer = nullptr;
-				UINT size = 0;
-
-				if (VerQueryValue (verData, L"\\", (void FAR * FAR*) & buffer, &size))
+				if (size)
 				{
-					if (size)
+					VS_FIXEDFILEINFO const *verInfo = (VS_FIXEDFILEINFO*)buffer;
+
+					if (verInfo->dwSignature == 0xfeef04bd)
 					{
-						VS_FIXEDFILEINFO const *verInfo = (VS_FIXEDFILEINFO*)buffer;
+						// Doesn't matter if you are on 32 bit or 64 bit,
+						// DWORD is always 32 bits, so first two revision numbers
+						// come from dwFileVersionMS, last two come from dwFileVersionLS
 
-						if (verInfo->dwSignature == 0xfeef04bd)
-						{
-							// Doesn't matter if you are on 32 bit or 64 bit,
-							// DWORD is always 32 bits, so first two revision numbers
-							// come from dwFileVersionMS, last two come from dwFileVersionLS
-
-							result.Format (L"%d.%d.%d.%d", (verInfo->dwFileVersionMS >> 16) & 0xffff, (verInfo->dwFileVersionMS >> 0) & 0xffff, (verInfo->dwFileVersionLS >> 16) & 0xffff, (verInfo->dwFileVersionLS >> 0) & 0xffff);
-						}
+						result.Format (L"%d.%d.%d.%d", (verInfo->dwFileVersionMS >> 16) & 0xffff, (verInfo->dwFileVersionMS >> 0) & 0xffff, (verInfo->dwFileVersionLS >> 16) & 0xffff, (verInfo->dwFileVersionLS >> 0) & 0xffff);
 					}
 				}
 			}
-
-			SAFE_DELETE_ARRAY (verData);
-			SAFE_DELETE_ARRAY (verData);
 		}
+
+		SAFE_DELETE_ARRAY (verData);
 	}
 
 	return result;
@@ -200,7 +196,7 @@ void init_browser_info (BROWSER_INFORMATION* pbi)
 			StringCchPrintf (pbi->binary_path, _countof (pbi->binary_path), L"%s\\%s", pbi->binary_dir, app.ConfigGet (L"ChromiumBinary", L"chrome.exe").GetString ()); // fallback (use defaults)
 	}
 
-	StringCchPrintf (pbi->cache_path, _countof (pbi->cache_path), L"%s\\" APP_NAME_SHORT L"Cache_%d.bin", _r_path_expand (L"%TEMP%").GetString (), _r_str_hash (pbi->binary_path));
+	StringCchPrintf (pbi->cache_path, _countof (pbi->cache_path), L"%s\\" APP_NAME_SHORT L"Cache_%Iu.bin", _r_path_expand (L"%TEMP%").GetString (), _r_str_hash (pbi->binary_path));
 
 	// get browser architecture...
 	if (_r_sys_validversion (5, 1, 0, VER_EQUAL) || _r_sys_validversion (5, 2, 0, VER_EQUAL))
@@ -347,7 +343,7 @@ void _app_setstatus (HWND hwnd, LPCWSTR text, DWORDLONG v, DWORDLONG t)
 		text2.Format (L"%s/%s", _r_fmt_size64 (v).GetString (), _r_fmt_size64 (t).GetString ());
 	}
 
-	SendDlgItemMessage (hwnd, IDC_PROGRESS, PBM_SETPOS, percent, 0);
+	SendDlgItemMessage (hwnd, IDC_PROGRESS, PBM_SETPOS, (WPARAM)percent, 0);
 
 	_r_status_settext (hwnd, IDC_STATUSBAR, 1, text2);
 
