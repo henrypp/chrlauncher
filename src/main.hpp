@@ -34,7 +34,7 @@ struct BROWSER_INFORMATION
 	time_t timestamp = 0;
 
 	INT check_period = 0;
-	UINT architecture = 0;
+	INT architecture = 0;
 
 	WCHAR current_version[32] = {0};
 	WCHAR new_version[32] = {0};

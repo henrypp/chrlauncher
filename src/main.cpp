@@ -153,10 +153,14 @@ bool path_is_url (LPCWSTR path)
 
 void update_browser_info (HWND hwnd, BROWSER_INFORMATION* pbi)
 {
-	SetDlgItemText (hwnd, IDC_BROWSER, _r_fmt (app.LocaleString (IDS_BROWSER, nullptr), pbi->name_full));
-	SetDlgItemText (hwnd, IDC_CURRENTVERSION, _r_fmt (app.LocaleString (IDS_CURRENTVERSION, nullptr), !pbi->current_version[0] ? app.LocaleString (IDS_STATUS_NOTFOUND, nullptr).GetString () : pbi->current_version));
-	SetDlgItemText (hwnd, IDC_VERSION, _r_fmt (app.LocaleString (IDS_VERSION, nullptr), !pbi->new_version[0] ? app.LocaleString (IDS_STATUS_NOTFOUND, nullptr).GetString () : pbi->new_version));
-	SetDlgItemText (hwnd, IDC_DATE, _r_fmt (app.LocaleString (IDS_DATE, nullptr), pbi->timestamp ? _r_fmt_date (pbi->timestamp, FDTF_SHORTDATE | FDTF_SHORTTIME).GetString () : app.LocaleString (IDS_STATUS_NOTFOUND, nullptr).GetString ()));
+	const HDC hdc = GetDC (hwnd);
+
+	_r_ctrl_settabletext (hdc, hwnd, IDC_BROWSER, app.LocaleString (IDS_BROWSER, L":"), IDC_BROWSER_DATA, pbi->name_full);
+	_r_ctrl_settabletext (hdc, hwnd, IDC_CURRENTVERSION, app.LocaleString (IDS_CURRENTVERSION, L":"), IDC_CURRENTVERSION_DATA, !pbi->current_version[0] ? app.LocaleString (IDS_STATUS_NOTFOUND, nullptr).GetString () : pbi->current_version);
+	_r_ctrl_settabletext (hdc, hwnd, IDC_VERSION, app.LocaleString (IDS_VERSION, L":"), IDC_VERSION_DATA, !pbi->new_version[0] ? app.LocaleString (IDS_STATUS_NOTFOUND, nullptr).GetString () : pbi->new_version);
+	_r_ctrl_settabletext (hdc, hwnd, IDC_DATE, app.LocaleString (IDS_DATE, L":"), IDC_DATE_DATA, pbi->timestamp ? _r_fmt_date (pbi->timestamp, FDTF_SHORTDATE | FDTF_SHORTTIME).GetString () : app.LocaleString (IDS_STATUS_NOTFOUND, nullptr).GetString ());
+
+	ReleaseDC (hwnd, hdc);
 }
 
 void init_browser_info (BROWSER_INFORMATION* pbi)
@@ -203,7 +207,7 @@ void init_browser_info (BROWSER_INFORMATION* pbi)
 		pbi->architecture = 32; // winxp supports only 32-bit
 
 	else
-		pbi->architecture = app.ConfigGet (L"ChromiumArchitecture", 0).AsUint ();
+		pbi->architecture = app.ConfigGet (L"ChromiumArchitecture", 0).AsInt ();
 
 	if (pbi->architecture != 64 && pbi->architecture != 32)
 	{
@@ -276,7 +280,8 @@ void init_browser_info (BROWSER_INFORMATION* pbi)
 						_wcsnicmp (arga[i], L"-new-tab", 8) == 0 ||
 						_wcsnicmp (arga[i], L"-new-window", 11) == 0 ||
 						_wcsnicmp (arga[i], L"--new-window", 12) == 0 ||
-						_wcsnicmp (arga[i], L"-new-instance", 13) == 0)
+						_wcsnicmp (arga[i], L"-new-instance", 13) == 0
+						)
 					{
 						pbi->is_opennewwindow = true;
 					}
@@ -300,7 +305,7 @@ void init_browser_info (BROWSER_INFORMATION* pbi)
 
 	pbi->check_period = app.ConfigGet (L"ChromiumCheckPeriod", 1).AsInt ();
 
-	if (pbi->check_period == -1)
+	if (pbi->check_period == INVALID_INT)
 		pbi->is_forcecheck = true;
 
 	// set default config
@@ -330,24 +335,28 @@ void init_browser_info (BROWSER_INFORMATION* pbi)
 
 void _app_setstatus (HWND hwnd, LPCWSTR text, DWORDLONG v, DWORDLONG t)
 {
-	// primary part
-	_r_status_settext (hwnd, IDC_STATUSBAR, 0, text);
+	INT percent = 0;
 
-	// second part
-	rstring text2;
-	UINT percent = 0;
-
-	if (t)
+	if (!v && t)
 	{
-		percent = static_cast<UINT>((double (v) / double (t)) * 100.0);
-		text2.Format (L"%s/%s", _r_fmt_size64 (v).GetString (), _r_fmt_size64 (t).GetString ());
+		_r_status_settext (hwnd, IDC_STATUSBAR, 0, _r_fmt (L"%s 0%%", text));
+		app.TraySetInfo (hwnd, UID, nullptr, nullptr, text ? _r_fmt (L"%s\r\n%s: 0%%", APP_NAME, text) : APP_NAME);
+	}
+	else if (v && t)
+	{
+		percent = std::clamp ((INT)((double (v) / double (t)) * 100.0), 0, 100);
+		//buffer.Format (L"%s %s/%s", text, _r_fmt_size64 (v).GetString (), _r_fmt_size64 (t).GetString ());
+
+		_r_status_settext (hwnd, IDC_STATUSBAR, 0, _r_fmt (L"%s %d%%", text, percent));
+		app.TraySetInfo (hwnd, UID, nullptr, nullptr, text ? _r_fmt (L"%s\r\n%s: %d%%", APP_NAME, text, percent) : APP_NAME);
+	}
+	else
+	{
+		_r_status_settext (hwnd, IDC_STATUSBAR, 0, text);
+		app.TraySetInfo (hwnd, UID, nullptr, nullptr, text ? _r_fmt (L"%s\r\n%s", APP_NAME, text) : APP_NAME);
 	}
 
 	SendDlgItemMessage (hwnd, IDC_PROGRESS, PBM_SETPOS, (WPARAM)percent, 0);
-
-	_r_status_settext (hwnd, IDC_STATUSBAR, 1, text2);
-
-	app.TraySetInfo (hwnd, UID, nullptr, nullptr, text ? _r_fmt (L"%s\r\n%s: %d%%", APP_NAME, text, percent) : APP_NAME);
 }
 
 void _app_cleanup (BROWSER_INFORMATION* pbi, LPCWSTR current_version)
@@ -469,7 +478,11 @@ bool _app_checkupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 					const size_t pos = vc.at (i).Find (L'=');
 
 					if (pos != rstring::npos)
-						result[vc.at (i).Midded (0, pos)] = vc.at (i).Midded (pos + 1);
+					{
+						const rstring& rlink = vc.at (i);
+
+						result[rlink.Midded (0, pos)] = rlink.Midded (pos + 1);
+					}
 				}
 			}
 
@@ -533,7 +546,7 @@ bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 	SetFileAttributes (temp_file, FILE_ATTRIBUTE_NORMAL);
 	_r_fs_delete (temp_file, false);
 
-	_app_setstatus (hwnd, app.LocaleString (IDS_STATUS_DOWNLOAD, nullptr), 0, 0);
+	_app_setstatus (hwnd, app.LocaleString (IDS_STATUS_DOWNLOAD, nullptr), 0, 1);
 
 	_r_fastlock_acquireexclusive (&lock_download);
 
@@ -818,7 +831,7 @@ bool _app_unpack_zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 		DWORDLONG total_read = 0; // this is our progress so far
 
 		// count total files
-		if (GetZipItem (hzip, -1, &ze) == ZR_OK)
+		if (GetZipItem (hzip, INVALID_INT, &ze) == ZR_OK)
 			total_files = ze.index;
 
 		rstring root_dir_name;
@@ -1028,7 +1041,6 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 		}
 	}
 
-
 	if (!pbi->is_isinstalled)
 	{
 		_r_progress_setmarquee (hwnd, IDC_PROGRESS, true);
@@ -1142,9 +1154,9 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		{
 			_r_fastlock_initialize (&lock_download);
 
-			// configure statusbar
-			const INT parts[] = {app.GetDPI (228), -1};
-			SendDlgItemMessage (hwnd, IDC_STATUSBAR, SB_SETPARTS, 2, (LPARAM)parts);
+#ifndef _APP_NO_DARKTHEME
+			_r_wnd_setdarktheme (hwnd);
+#endif // _APP_NO_DARKTHEME
 
 			break;
 		}
@@ -1188,7 +1200,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			app.LocaleMenu (hmenu, IDS_FILE, 0, true, nullptr);
 			app.LocaleMenu (hmenu, IDS_RUN, IDM_RUN, false, _r_fmt (L" \"%s\"", _r_path_extractfile (browser_info.binary_path).GetString ()));
 			app.LocaleMenu (hmenu, IDS_OPEN, IDM_OPEN, false, _r_fmt (L" \"%s\"\tF2", _r_path_extractfile (app.GetConfigPath ()).GetString ()));
-			app.LocaleMenu (hmenu, IDS_EXIT, IDM_EXIT, false, L"\tAlt+F4");
+			app.LocaleMenu (hmenu, IDS_EXIT, IDM_EXIT, false, nullptr);
 			app.LocaleMenu (hmenu, IDS_SETTINGS, 1, true, nullptr);
 			app.LocaleMenu (GetSubMenu (hmenu, 1), IDS_LANGUAGE, LANG_MENU, true, L" (Language)");
 			app.LocaleMenu (hmenu, IDS_HELP, 2, true, nullptr);
@@ -1253,6 +1265,45 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			SetCursor (LoadCursor (nullptr, (msg == WM_ENTERSIZEMOVE) ? IDC_SIZEALL : IDC_ARROW));
 
 			break;
+		}
+
+#ifndef _APP_NO_DARKTHEME
+		case WM_SETTINGCHANGE:
+		case WM_SYSCOLORCHANGE:
+		{
+			_r_wnd_setdarktheme (hwnd);
+			break;
+		}
+#endif // _APP_NO_DARKTHEME
+
+		case WM_DRAWITEM:
+		{
+			LPDRAWITEMSTRUCT drawInfo = (LPDRAWITEMSTRUCT)lparam;
+
+			if (drawInfo->CtlID != IDC_LINE)
+				break;
+
+			HDC bufferDc = CreateCompatibleDC (drawInfo->hDC);
+			HBITMAP bufferBitmap = CreateCompatibleBitmap (drawInfo->hDC, _R_RECT_WIDTH (&drawInfo->rcItem), _R_RECT_HEIGHT (&drawInfo->rcItem));
+
+			HGDIOBJ oldBufferBitmap = SelectObject (bufferDc, bufferBitmap);
+
+			SetBkMode (bufferDc, TRANSPARENT);
+
+			_r_dc_fillrect (bufferDc, &drawInfo->rcItem, GetSysColor (COLOR_WINDOW));
+
+			for (INT i = drawInfo->rcItem.left; i < _R_RECT_WIDTH (&drawInfo->rcItem); i++)
+				SetPixel (bufferDc, i, drawInfo->rcItem.top, GetSysColor (COLOR_APPWORKSPACE));
+
+			BitBlt (drawInfo->hDC, drawInfo->rcItem.left, drawInfo->rcItem.top, drawInfo->rcItem.right, drawInfo->rcItem.bottom, bufferDc, 0, 0, SRCCOPY);
+
+			SelectObject (bufferDc, oldBufferBitmap);
+
+			DeleteObject (bufferBitmap);
+			DeleteDC (bufferDc);
+
+			SetWindowLongPtr (hwnd, DWLP_MSGRESULT, TRUE);
+			return TRUE;
 		}
 
 		case WM_NOTIFY:
