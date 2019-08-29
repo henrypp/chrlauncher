@@ -31,7 +31,7 @@ Settings:
 #ChromiumUpdateUrl=https://chromium.woolyss.com/api/v3/?os=windows&bit=%d&type=%s&out=string
 
 # Command line for Chromium (string):
-# See here: http://peter.sh/experiments/chromium-command-line-switches/
+# See here: https://peter.sh/experiments/chromium-command-line-switches/
 ChromiumCommandLine=--user-data-dir=..\profile --no-default-browser-check --allow-outdated-plugins --disable-logging --disable-breakpad
 
 # Chromium executable file name (string):
