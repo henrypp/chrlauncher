@@ -1218,6 +1218,8 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 			update_browser_info (hwnd, &browser_info);
 
+			SetDlgItemText (hwnd, IDC_LINKS, L"<a href=\"https://github.com/henrypp\">github.com/henrypp</a>\r\n<a href=\"https://chromium.woolyss.com\">chromium.woolyss.com</a>");
+
 			SetDlgItemText (hwnd, IDC_START_BTN, app.LocaleString (browser_info.is_isdownloaded ? IDS_ACTION_INSTALL : IDS_ACTION_DOWNLOAD, nullptr));
 
 			_r_wnd_addstyle (hwnd, IDC_START_BTN, app.IsClassicUI () ? WS_EX_STATICEDGE : 0, WS_EX_STATICEDGE, GWL_EXSTYLE);

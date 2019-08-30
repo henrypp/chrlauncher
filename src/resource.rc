@@ -84,7 +84,7 @@ BEGIN
 
 	LTEXT			"", IDC_LINE, 8, 86, 222, 1, SS_OWNERDRAW
 
-	CONTROL			"<a href=""https://github.com/henrypp"">github.com/henrypp</a>\r\n<a href=""https://chromium.woolyss.com"">chromium.woolyss.com</a>", IDC_STATIC, WC_LINK, 0, 8, 94, 100, 18
+	CONTROL			"", IDC_LINKS, WC_LINK, 0, 8, 94, 100, 18
 
 	PUSHBUTTON		"", IDC_START_BTN, 136, 94, 94, 14
 

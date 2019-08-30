@@ -27,24 +27,25 @@
 #define IDC_VERSION_DATA 110
 #define IDC_DATE_DATA 111
 #define IDC_LINE 112
-#define IDC_START_BTN 113
-#define IDC_STATUSBAR 114
+#define IDC_LINKS 113
+#define IDC_START_BTN 114
+#define IDC_STATUSBAR 115
 
 // Main Menu
-#define IDM_RUN 115
-#define IDM_EXPLORE 116
-#define IDM_OPEN 117
-#define IDM_EXIT 118
-#define IDM_WEBSITE 119
-#define IDM_ABOUT 120
+#define IDM_RUN 116
+#define IDM_EXPLORE 117
+#define IDM_OPEN 118
+#define IDM_EXIT 119
+#define IDM_WEBSITE 120
+#define IDM_ABOUT 121
 
 // Tray Menu
-#define IDM_TRAY_SHOW 121
-#define IDM_TRAY_RUN 122
-#define IDM_TRAY_OPEN 123
-#define IDM_TRAY_WEBSITE 124
-#define IDM_TRAY_ABOUT 125
-#define IDM_TRAY_EXIT 126
+#define IDM_TRAY_SHOW 122
+#define IDM_TRAY_RUN 123
+#define IDM_TRAY_OPEN 124
+#define IDM_TRAY_WEBSITE 125
+#define IDM_TRAY_ABOUT 126
+#define IDM_TRAY_EXIT 127
 
 #define IDX_LANGUAGE 1000
 
