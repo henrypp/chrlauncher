@@ -325,6 +325,13 @@ void init_browser_info (BROWSER_INFORMATION* pbi)
 	if (!pbi->is_onlyupdate)
 		pbi->is_onlyupdate = app.ConfigGet (L"ChromiumUpdateOnly", false).AsBool ();
 
+	// rewrite options when update-only mode is enabled
+	if (pbi->is_onlyupdate)
+	{
+		pbi->is_bringtofront = true;
+		pbi->is_waitdownloadend = true;
+	}
+
 	// set ppapi info
 	{
 		const rstring ppapi_path = _r_path_expand (app.ConfigGet (L"FlashPlayerPath", L".\\plugins\\pepflashplayer.dll"));
@@ -467,10 +474,15 @@ bool _app_checkupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 
 	_app_setstatus (hwnd, app.LocaleString (IDS_STATUS_CHECK, nullptr), 0, 0);
 
+	pbi->new_version[0] = 0;
+	pbi->timestamp = 0;
+
+	update_browser_info (hwnd, pbi);
+
 	if (!is_exists || is_checkupdate)
 	{
-		rstring content;
 		rstring url;
+		rstring content;
 
 		url.Format (app.ConfigGet (L"ChromiumUpdateUrl", CHROMIUM_UPDATE_URL), pbi->architecture, pbi->type);
 
@@ -518,6 +530,8 @@ bool _app_checkupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 		}
 		else
 		{
+			pbi->download_url[0] = 0; // clear download url if update not found
+
 			app.ConfigSet (L"ChromiumLastCheck", _r_unixtime_now ());
 		}
 	}
@@ -1135,6 +1149,12 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 		_app_setstatus (hwnd, app.LocaleString (IDS_STATUS_ERROR, nullptr), 0, 0);
 
 		_r_ctrl_settext (hwnd, IDC_START_BTN, app.LocaleString (IDS_ACTION_DOWNLOAD, nullptr));
+		_r_ctrl_enable (hwnd, IDC_START_BTN, true);
+
+		is_stayopen = true;
+	}
+	else if (pbi->is_onlyupdate)
+	{
 		_r_ctrl_enable (hwnd, IDC_START_BTN, true);
 
 		is_stayopen = true;
