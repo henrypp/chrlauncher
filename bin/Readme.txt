@@ -13,6 +13,8 @@ There is list of arguments overrides .ini options.
 /bringtofront - bring chrlauncher window to front when download started
 /forcecheck - force update checking
 /wait - start browser only when check/download/install update complete
+/update - use chrlauncher as updater, but does not start Chromium
+/ini .\chrlauncher.ini - start chrlauncher with custom configuration
 
 Supported browser:
 - as launcher - Chromium based (like Google Chrome, Opera, Yandex Browser, Vivaldi, etc.) and Firefox based (Mozilla Firefox, Basilisk, Pale Moon, Waterfox, etc.)
@@ -70,6 +72,12 @@ ChromiumBringToFront=true
 # false	-> start browser and check/download/install update in background
 # true	-> start browser only when check/download/install update complete (default)
 ChromiumWaitForDownloadEnd=true
+
+# Use chrlauncher as updater, but does not start Chromium (boolean):
+#
+# false	-> update & start Chromium (default)
+# true	-> only check for Chromium update
+ChromiumUpdateOnly=false
 
 # Type of Chromium builds:
 #
