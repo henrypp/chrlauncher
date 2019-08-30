@@ -273,6 +273,10 @@ void init_browser_info (BROWSER_INFORMATION* pbi)
 					{
 						pbi->is_waitdownloadend = true;
 					}
+					else if (_wcsnicmp (arga[i], L"/u", 2) == 0 || _wcsnicmp (arga[i], L"/update", 7) == 0)
+					{
+						pbi->is_onlyupdate = true;
+					}
 				}
 				else if (arga[i][0] == L'-')
 				{
@@ -317,6 +321,9 @@ void init_browser_info (BROWSER_INFORMATION* pbi)
 
 	if (!pbi->is_waitdownloadend)
 		pbi->is_waitdownloadend = app.ConfigGet (L"ChromiumWaitForDownloadEnd", true).AsBool ();
+
+	if (!pbi->is_onlyupdate)
+		pbi->is_onlyupdate = app.ConfigGet (L"ChromiumUpdateOnly", false).AsBool ();
 
 	// set ppapi info
 	{
@@ -575,7 +582,7 @@ bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 	return result;
 }
 
-void normallize_dir_name (LPWSTR name)
+void normalize_dir_name (LPWSTR name)
 {
 	for (size_t i = 0; i < _r_str_length (name); i++)
 	{
@@ -686,7 +693,7 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 					{
 						const size_t root_dir_len = _r_str_length (destPath) - fname_len;
 
-						normallize_dir_name ((LPWSTR)destPath);
+						normalize_dir_name ((LPWSTR)destPath);
 
 						root_dir_name = destPath;
 						root_dir_name.SetLength (root_dir_len);
@@ -716,7 +723,7 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 
 				if (SzArEx_GetFileNameUtf16 (&db, i, temp))
 				{
-					normallize_dir_name ((LPWSTR)temp);
+					normalize_dir_name ((LPWSTR)temp);
 
 					LPCWSTR dirname = _r_path_extractdir ((LPCWSTR)temp).Trim (L"\\").GetString ();
 
@@ -861,7 +868,7 @@ bool _app_unpack_zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 				{
 					const size_t root_dir_len = _r_str_length (ze.name) - fname_len;
 
-					normallize_dir_name (ze.name);
+					normalize_dir_name (ze.name);
 
 					root_dir_name = ze.name;
 					root_dir_name.SetLength (root_dir_len);
@@ -880,7 +887,7 @@ bool _app_unpack_zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 			if (GetZipItem (hzip, i, &ze) != ZR_OK)
 				continue;
 
-			normallize_dir_name (ze.name);
+			normalize_dir_name (ze.name);
 
 			LPCWSTR dirname = _r_path_extractdir (ze.name).Trim (L"\\").GetString ();
 
@@ -1060,7 +1067,7 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 				_r_wnd_toggle (hwnd, true);
 		}
 
-		if (is_exists && !pbi->is_waitdownloadend)
+		if (is_exists && !pbi->is_waitdownloadend && !pbi->is_onlyupdate)
 			_app_openbrowser (pbi);
 
 		if (_app_checkupdate (hwnd, pbi, &is_haveerror))
@@ -1072,7 +1079,7 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 				if (pbi->is_bringtofront)
 					_r_wnd_toggle (hwnd, true); // show window
 
-				if (is_exists && !pbi->is_isdownloaded && !pbi->is_waitdownloadend)
+				if (is_exists && !pbi->is_isdownloaded && !pbi->is_waitdownloadend && !pbi->is_onlyupdate)
 					_app_openbrowser (pbi);
 
 				_r_progress_setmarquee (hwnd, IDC_PROGRESS, false);
@@ -1133,7 +1140,7 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 		is_stayopen = true;
 	}
 
-	if (pbi->is_isinstalled)
+	if (pbi->is_isinstalled && !pbi->is_onlyupdate)
 		_app_openbrowser (pbi);
 
 	_r_progress_setmarquee (hwnd, IDC_PROGRESS, false);
@@ -1180,7 +1187,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				hthread_check = _r_createthread (&_app_thread_check, &browser_info, false);
 			}
 
-			if (!browser_info.is_waitdownloadend && _r_fs_exists (browser_info.binary_path))
+			if (!browser_info.is_waitdownloadend && !browser_info.is_onlyupdate && _r_fs_exists (browser_info.binary_path))
 				_app_openbrowser (&browser_info);
 
 			break;
@@ -1232,7 +1239,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		{
 			app.TrayDestroy (hwnd, UID, nullptr);
 
-			if (browser_info.is_waitdownloadend)
+			if (browser_info.is_waitdownloadend && !browser_info.is_onlyupdate)
 				_app_openbrowser (&browser_info);
 
 			if (_r_fastlock_islocked (&lock_download))
