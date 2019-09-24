@@ -202,8 +202,6 @@ void init_browser_info (BROWSER_INFORMATION* pbi)
 
 	_r_str_copy (pbi->cache_path, _countof (pbi->cache_path), _r_path_expand (_r_fmt (CACHE_PATH, _r_str_hash (pbi->binary_path, INVALID_SIZE_T))).GetString ());
 
-	RDBG (L"%s", pbi->cache_path);
-
 	// get browser architecture...
 	if (_r_sys_validversion (5, 1, 0, VER_EQUAL) || _r_sys_validversion (5, 2, 0, VER_EQUAL))
 		pbi->architecture = 32; // winxp supports only 32-bit
