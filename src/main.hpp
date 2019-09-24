@@ -15,6 +15,11 @@
 
 #define LANG_MENU 0
 
+#define BUFFER_SIZE (_R_BUFFER_LENGTH * 4)
+
+#define CHROMIUM_UPDATE_URL L"https://chromium.woolyss.com/api/v3/?os=windows&bit=%d&type=%s&out=string"
+#define CACHE_PATH L"%%TEMP%%\\" APP_NAME_SHORT L"_%Iu.tmp"
+
 // libs
 #pragma comment(lib, "ntdll.lib")
 #pragma comment(lib, "version.lib")
@@ -27,10 +32,6 @@ struct BROWSER_INFORMATION
 	bool is_waitdownloadend = false;
 	bool is_opennewwindow = false;
 	bool is_onlyupdate = false;
-
-	bool is_ischecked = false;
-	bool is_isdownloaded = false;
-	bool is_isinstalled = false;
 
 	time_t timestamp = 0;
 
