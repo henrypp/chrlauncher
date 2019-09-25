@@ -296,6 +296,9 @@
     <ClInclude Include="src\include\Threads.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\routine\ntapi.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="src\resource.rc">
