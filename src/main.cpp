@@ -501,12 +501,12 @@ bool _app_checkupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 
 		url.Format (app.ConfigGet (L"ChromiumUpdateUrl", CHROMIUM_UPDATE_URL), pbi->architecture, pbi->type);
 
-		const rstring proxy_info = _r_inet_getproxyconfiguration (app.ConfigGet (L"Proxy", nullptr));
-		const HINTERNET hsession = _r_inet_createsession (app.GetUserAgent (), proxy_info);
+		LPCWSTR proxy_addr = app.GetProxyConfiguration ();
+		const HINTERNET hsession = _r_inet_createsession (app.GetUserAgent (), proxy_addr);
 
 		if (hsession)
 		{
-			if (_r_inet_downloadurl (hsession, proxy_info, url, &content, false, nullptr, 0))
+			if (_r_inet_downloadurl (hsession, proxy_addr, url, &content, false, nullptr, 0))
 			{
 				if (!content.IsEmpty ())
 				{
@@ -582,12 +582,12 @@ bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 
 	_r_fastlock_acquireshared (&lock_download);
 
-	const rstring proxy_info = _r_inet_getproxyconfiguration (app.ConfigGet (L"Proxy", nullptr));
-	const HINTERNET hsession = _r_inet_createsession (app.GetUserAgent (), proxy_info);
+	LPCWSTR proxy_addr = app.GetProxyConfiguration ();
+	const HINTERNET hsession = _r_inet_createsession (app.GetUserAgent (), proxy_addr);
 
 	if (hsession)
 	{
-		if (_r_inet_downloadurl (hsession, proxy_info, pbi->download_url, temp_file, true, &_app_downloadupdate_callback, (LONG_PTR)hwnd))
+		if (_r_inet_downloadurl (hsession, proxy_addr, pbi->download_url, temp_file, true, &_app_downloadupdate_callback, (LONG_PTR)hwnd))
 		{
 			pbi->download_url[0] = 0; // clear download url
 
