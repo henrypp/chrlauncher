@@ -18,7 +18,6 @@
 #define BUFFER_SIZE (_R_BUFFER_LENGTH * 4)
 
 #define CHROMIUM_UPDATE_URL L"https://chromium.woolyss.com/api/v3/?os=windows&bit=%d&type=%s&out=string"
-#define CACHE_PATH L"%%TEMP%%\\" APP_NAME_SHORT L"_%Iu.tmp"
 
 // libs
 #pragma comment(lib, "ntdll.lib")

@@ -200,7 +200,7 @@ void init_browser_info (BROWSER_INFORMATION* pbi)
 			_r_str_printf (pbi->binary_path, _countof (pbi->binary_path), L"%s\\%s", pbi->binary_dir, app.ConfigGet (L"ChromiumBinary", L"chrome.exe").GetString ()); // fallback (use defaults)
 	}
 
-	_r_str_copy (pbi->cache_path, _countof (pbi->cache_path), _r_path_expand (_r_fmt (CACHE_PATH, _r_str_hash (pbi->binary_path, INVALID_SIZE_T))).GetString ());
+	_r_str_copy (pbi->cache_path, _countof (pbi->cache_path), _r_path_expand (_r_fmt (L"%%TEMP%%\\" APP_NAME_SHORT L"_%" PR_SIZE_T L".tmp", _r_str_hash (pbi->binary_path, INVALID_SIZE_T))).GetString ());
 
 	// get browser architecture...
 	if (_r_sys_validversion (5, 1, 0, VER_EQUAL) || _r_sys_validversion (5, 2, 0, VER_EQUAL))
