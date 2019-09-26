@@ -399,15 +399,13 @@ bool _app_browserisrunning (BROWSER_INFORMATION* pbi)
 {
 	const HANDLE hfile = CreateFile (pbi->binary_path, GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, nullptr);
 
-	bool result = false;
-
 	if (hfile != INVALID_HANDLE_VALUE)
 		CloseHandle (hfile);
 
 	else
-		result = (GetLastError () == ERROR_SHARING_VIOLATION);
+		return (GetLastError () == ERROR_SHARING_VIOLATION);
 
-	return result;
+	return false;
 }
 
 void _app_openbrowser (BROWSER_INFORMATION* pbi)
@@ -503,20 +501,28 @@ bool _app_checkupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 
 		url.Format (app.ConfigGet (L"ChromiumUpdateUrl", CHROMIUM_UPDATE_URL), pbi->architecture, pbi->type);
 
-		if (app.DownloadURL (url, &content, false, nullptr, 0))
+		const rstring proxy_info = _r_inet_getproxyconfiguration (app.ConfigGet (L"Proxy", nullptr));
+		const HINTERNET hsession = _r_inet_createsession (app.GetUserAgent (), proxy_info);
+
+		if (hsession)
 		{
-			if (!content.IsEmpty ())
+			if (_r_inet_downloadurl (hsession, proxy_info, url, &content, false, nullptr, 0))
 			{
-				_r_str_unserialize (content, L';', L'=', &result);
+				if (!content.IsEmpty ())
+				{
+					_r_str_unserialize (content, L';', L'=', &result);
+				}
+
+				*pis_error = false;
+			}
+			else
+			{
+				_r_dbg (TEXT (__FUNCTION__), GetLastError (), url);
+
+				*pis_error = true;
 			}
 
-			*pis_error = false;
-		}
-		else
-		{
-			_r_dbg (TEXT (__FUNCTION__), GetLastError (), url);
-
-			*pis_error = true;
+			_r_inet_close (hsession);
 		}
 	}
 
@@ -576,23 +582,31 @@ bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 
 	_r_fastlock_acquireshared (&lock_download);
 
-	if (app.DownloadURL (pbi->download_url, temp_file, true, &_app_downloadupdate_callback, (LONG_PTR)hwnd))
+	const rstring proxy_info = _r_inet_getproxyconfiguration (app.ConfigGet (L"Proxy", nullptr));
+	const HINTERNET hsession = _r_inet_createsession (app.GetUserAgent (), proxy_info);
+
+	if (hsession)
 	{
-		pbi->download_url[0] = 0; // clear download url
+		if (_r_inet_downloadurl (hsession, proxy_info, pbi->download_url, temp_file, true, &_app_downloadupdate_callback, (LONG_PTR)hwnd))
+		{
+			pbi->download_url[0] = 0; // clear download url
 
-		_r_fs_move (temp_file, pbi->cache_path, MOVEFILE_REPLACE_EXISTING);
+			_r_fs_move (temp_file, pbi->cache_path, MOVEFILE_REPLACE_EXISTING);
 
-		result = true;
+			result = true;
 
-		*pis_error = false;
-	}
-	else
-	{
-		_r_dbg (TEXT (__FUNCTION__), GetLastError (), pbi->download_url);
+			*pis_error = false;
+		}
+		else
+		{
+			_r_dbg (TEXT (__FUNCTION__), GetLastError (), pbi->download_url);
 
-		_r_fs_delete (temp_file, false);
+			_r_fs_delete (temp_file, false);
 
-		*pis_error = true;
+			*pis_error = true;
+		}
+
+		_r_inet_close (hsession);
 	}
 
 	_r_fastlock_releaseshared (&lock_download);
@@ -738,7 +752,7 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 					const size_t len_path = _r_str_length ((LPCWSTR)temp);
 					_r_str_replace ((LPWSTR)temp, len_path, L'/', L'\\');
 
-					const rstring dirname = _r_path_getdirectory ((LPCWSTR)temp);
+					LPCWSTR dirname = _r_path_getdirectory ((LPCWSTR)temp);
 
 					// skip non-root dirs
 					if (!root_dir_name.IsEmpty () && (len_path <= root_dir_name.GetLength () || _r_str_compare (root_dir_name, dirname, root_dir_name.GetLength ()) != 0))
@@ -769,10 +783,7 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 						size_t offset = 0;
 						size_t outSizeProcessed = 0;
 
-						rc = SzArEx_Extract (&db, &lookStream.vt, i,
-											 &blockIndex, &outBuffer, &outBufferSize,
-											 &offset, &outSizeProcessed,
-											 &allocImp, &allocTempImp);
+						rc = SzArEx_Extract (&db, &lookStream.vt, i, &blockIndex, &outBuffer, &outBufferSize, &offset, &outSizeProcessed, &allocImp, &allocTempImp);
 
 						if (rc != SZ_OK)
 						{
@@ -849,8 +860,8 @@ bool _app_unpack_zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 	if (IsZipHandleU (hzip))
 	{
 		INT total_files = 0;
-		DWORDLONG total_size = 0;
-		DWORDLONG total_read = 0; // this is our progress so far
+		ULONG64 total_size = 0;
+		ULONG64 total_read = 0; // this is our progress so far
 
 		// count total files
 		if (GetZipItem (hzip, INVALID_INT, &ze) == ZR_OK)
@@ -907,7 +918,7 @@ bool _app_unpack_zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 			const size_t len = _r_str_length (ze.name);
 			_r_str_replace (ze.name, len, L'/', L'\\');
 
-			const rstring dirname = _r_path_getdirectory (ze.name);
+			LPCWSTR dirname = _r_path_getdirectory (ze.name);
 
 			// skip non-root dirs
 			if (!root_dir_name.IsEmpty () && (len <= root_dir_name.GetLength () || _r_str_compare (root_dir_name, dirname, root_dir_name.GetLength ()) != 0))
@@ -924,7 +935,7 @@ bool _app_unpack_zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 			else
 			{
 				{
-					const rstring dir = _r_path_getdirectory (fpath);
+					LPCWSTR dir = _r_path_getdirectory (fpath);
 
 					if (!_r_fs_exists (dir))
 						_r_fs_mkdir (dir);
@@ -982,7 +993,7 @@ bool _app_installupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 
 	bool result = false;
 
-	const rstring binName = _r_path_getfilename (pbi->binary_path);
+	LPCWSTR binName = _r_path_getfilename (pbi->binary_path);
 
 	const HZIP hzip = OpenZip (pbi->cache_path, nullptr);
 
@@ -1005,9 +1016,9 @@ bool _app_installupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 	}
 	else
 	{
-		RemoveDirectory (pbi->binary_dir); // no recurse
-
 		_r_dbg (TEXT (__FUNCTION__), GetLastError (), pbi->cache_path);
+
+		_r_fs_rmdir (pbi->binary_dir, false); // no recurse
 	}
 
 	SetFileAttributes (pbi->cache_path, FILE_ATTRIBUTE_NORMAL);
