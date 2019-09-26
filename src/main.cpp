@@ -591,7 +591,7 @@ bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 		{
 			pbi->download_url[0] = 0; // clear download url
 
-			_r_fs_move (temp_file, pbi->cache_path, MOVEFILE_REPLACE_EXISTING);
+			_r_fs_move (temp_file, pbi->cache_path, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH);
 
 			result = true;
 
@@ -602,6 +602,7 @@ bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 			_r_dbg (TEXT (__FUNCTION__), GetLastError (), pbi->download_url);
 
 			_r_fs_delete (temp_file, false);
+			_r_fs_delete (pbi->cache_path, false);
 
 			*pis_error = true;
 		}
