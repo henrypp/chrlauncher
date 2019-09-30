@@ -200,7 +200,7 @@ void init_browser_info (BROWSER_INFORMATION* pbi)
 			_r_str_printf (pbi->binary_path, _countof (pbi->binary_path), L"%s\\%s", pbi->binary_dir, app.ConfigGet (L"ChromiumBinary", L"chrome.exe").GetString ()); // fallback (use defaults)
 	}
 
-	_r_str_copy (pbi->cache_path, _countof (pbi->cache_path), _r_path_expand (_r_fmt (L"%%TEMP%%\\" APP_NAME_SHORT L"_%" PR_SIZE_T L".tmp", _r_str_hash (pbi->binary_path, INVALID_SIZE_T))).GetString ());
+	_r_str_copy (pbi->cache_path, _countof (pbi->cache_path), _r_path_expand (_r_fmt (L"%%TEMP%%\\" APP_NAME_SHORT L"_%" PR_SIZE_T L".tmp", _r_str_hash (pbi->binary_path))).GetString ());
 
 	// get browser architecture...
 	if (_r_sys_validversion (5, 1, 0, VER_EQUAL) || _r_sys_validversion (5, 2, 0, VER_EQUAL))
@@ -707,7 +707,7 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 
 				if (root_dir_name.IsEmpty () && SzArEx_GetFileNameUtf16 (&db, i, temp))
 				{
-					_r_str_replace ((LPWSTR)temp, INVALID_SIZE_T, L'/', L'\\');
+					_r_str_replace ((LPWSTR)temp, L'/', L'\\');
 
 					LPCWSTR destPath = (LPCWSTR)temp;
 					LPCWSTR fname = _r_path_getfilename (destPath);
@@ -751,7 +751,7 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 				if (SzArEx_GetFileNameUtf16 (&db, i, temp))
 				{
 					const size_t len_path = _r_str_length ((LPCWSTR)temp);
-					_r_str_replace ((LPWSTR)temp, len_path, L'/', L'\\');
+					_r_str_replace ((LPWSTR)temp, L'/', L'\\');
 
 					LPCWSTR dirname = _r_path_getdirectory ((LPCWSTR)temp);
 
@@ -885,7 +885,7 @@ bool _app_unpack_zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 			if (root_dir_name.IsEmpty () && !_r_str_isempty (binName))
 			{
 				const size_t len = _r_str_length (ze.name);
-				_r_str_replace (ze.name, len, L'/', L'\\');
+				_r_str_replace (ze.name, L'/', L'\\');
 
 				LPCWSTR fname = _r_path_getfilename (ze.name);
 
@@ -917,7 +917,7 @@ bool _app_unpack_zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 				continue;
 
 			const size_t len = _r_str_length (ze.name);
-			_r_str_replace (ze.name, len, L'/', L'\\');
+			_r_str_replace (ze.name, L'/', L'\\');
 
 			LPCWSTR dirname = _r_path_getdirectory (ze.name);
 
