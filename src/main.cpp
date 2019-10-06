@@ -163,7 +163,7 @@ void update_browser_info (HWND hwnd, BROWSER_INFORMATION* pbi)
 
 void init_browser_info (BROWSER_INFORMATION* pbi)
 {
-	static LPCWSTR binNames[] = {
+	LPCWSTR binNames[] = {
 		L"firefox.exe",
 		L"basilisk.exe",
 		L"palemoon.exe",
@@ -354,7 +354,7 @@ void _app_setstatus (HWND hwnd, LPCWSTR text, DWORDLONG v, DWORDLONG t)
 
 	if (!v && t)
 	{
-		_r_status_settext (hwnd, IDC_STATUSBAR, 0, _r_fmt (L"%s 0%%", text));
+		_r_status_settext (hwnd, IDC_STATUSBAR, 0, _r_fmt (L"%s 0%%", text), nullptr);
 		_r_tray_setinfo (hwnd, UID, nullptr, !_r_str_isempty (text) ? _r_fmt (L"%s\r\n%s: 0%%", APP_NAME, text) : APP_NAME);
 	}
 	else if (v && t)
@@ -362,12 +362,12 @@ void _app_setstatus (HWND hwnd, LPCWSTR text, DWORDLONG v, DWORDLONG t)
 		percent = std::clamp ((INT)((double (v) / double (t)) * 100.0), 0, 100);
 		//buffer.Format (L"%s %s/%s", text, _r_fmt_size64 (v).GetString (), _r_fmt_size64 (t).GetString ());
 
-		_r_status_settext (hwnd, IDC_STATUSBAR, 0, _r_fmt (L"%s %d%%", text, percent));
+		_r_status_settext (hwnd, IDC_STATUSBAR, 0, _r_fmt (L"%s %d%%", text, percent), nullptr);
 		_r_tray_setinfo (hwnd, UID, nullptr, !_r_str_isempty (text) ? _r_fmt (L"%s\r\n%s: %d%%", APP_NAME, text, percent) : APP_NAME);
 	}
 	else
 	{
-		_r_status_settext (hwnd, IDC_STATUSBAR, 0, text);
+		_r_status_settext (hwnd, IDC_STATUSBAR, 0, text, nullptr);
 		_r_tray_setinfo (hwnd, UID, nullptr, !_r_str_isempty (text) ? _r_fmt (L"%s\r\n%s", APP_NAME, text) : APP_NAME);
 	}
 
@@ -1219,7 +1219,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 			init_browser_info (&browser_info);
 
-			_r_tray_create (hwnd, UID, WM_TRAYICON, app.GetSharedImage (app.GetHINSTANCE (), IDI_MAIN, GetSystemMetrics (SM_CXSMICON)), APP_NAME, (_r_fastlock_islocked (&lock_download) || _app_isupdatedownloaded (&browser_info)) ? false : true);
+			_r_tray_create (hwnd, UID, WM_TRAYICON, app.GetSharedImage (app.GetHINSTANCE (), IDI_MAIN, _r_dc_getdpi (_R_SIZE_ICON16)), APP_NAME, (_r_fastlock_islocked (&lock_download) || _app_isupdatedownloaded (&browser_info)) ? false : true);
 
 			if (!hthread_check || WaitForSingleObject (hthread_check, 0) == WAIT_OBJECT_0)
 			{
@@ -1268,6 +1268,15 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			SetDlgItemText (hwnd, IDC_START_BTN, app.LocaleString (_app_getactionid (&browser_info), nullptr));
 
 			_r_wnd_addstyle (hwnd, IDC_START_BTN, app.IsClassicUI () ? WS_EX_STATICEDGE : 0, WS_EX_STATICEDGE, GWL_EXSTYLE);
+
+			break;
+		}
+
+		case RM_DPICHANGED:
+		{
+			_r_tray_setinfo (hwnd, UID, app.GetSharedImage (app.GetHINSTANCE (), IDI_MAIN, _r_dc_getdpi (_R_SIZE_ICON16)), APP_NAME);
+
+			SendDlgItemMessage (hwnd, IDC_STATUSBAR, WM_SIZE, 0, 0);
 
 			break;
 		}
