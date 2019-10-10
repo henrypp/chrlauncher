@@ -241,7 +241,7 @@ void init_browser_info (BROWSER_INFORMATION* pbi)
 
 	_r_str_copy (pbi->current_version, _countof (pbi->current_version), _app_getbinaryversion (pbi->binary_path));
 
-	_r_str_copy (pbi->args, _countof (pbi->args), app.ConfigGet (L"ChromiumCommandLine", L"--user-data-dir=..\\profile --no-default-browser-check --allow-outdated-plugins --disable-logging --disable-breakpad"));
+	_r_str_copy (pbi->args, _countof (pbi->args), app.ConfigGet (L"ChromiumCommandLine", L"--flag-switches-begin --user-data-dir=..\\profile --no-default-browser-check --allow-outdated-plugins --disable-logging --disable-breakpad --flag-switches-end"));
 
 	// parse command line
 	{
