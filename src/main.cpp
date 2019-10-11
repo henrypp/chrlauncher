@@ -1219,7 +1219,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 			init_browser_info (&browser_info);
 
-			_r_tray_create (hwnd, UID, WM_TRAYICON, app.GetSharedImage (app.GetHINSTANCE (), IDI_MAIN, _r_dc_getdpi (_R_SIZE_ICON16)), APP_NAME, (_r_fastlock_islocked (&lock_download) || _app_isupdatedownloaded (&browser_info)) ? false : true);
+			_r_tray_create (hwnd, UID, WM_TRAYICON, app.GetSharedImage (app.GetHINSTANCE (), IDI_MAIN, _r_dc_getdpi (hwnd, _R_SIZE_ICON16)), APP_NAME, (_r_fastlock_islocked (&lock_download) || _app_isupdatedownloaded (&browser_info)) ? false : true);
 
 			if (!hthread_check || WaitForSingleObject (hthread_check, 0) == WAIT_OBJECT_0)
 			{
@@ -1274,7 +1274,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 		case RM_DPICHANGED:
 		{
-			_r_tray_setinfo (hwnd, UID, app.GetSharedImage (app.GetHINSTANCE (), IDI_MAIN, _r_dc_getdpi (_R_SIZE_ICON16)), APP_NAME);
+			_r_tray_setinfo (hwnd, UID, app.GetSharedImage (app.GetHINSTANCE (), IDI_MAIN, _r_dc_getdpi (hwnd, _R_SIZE_ICON16)), APP_NAME);
 
 			SendDlgItemMessage (hwnd, IDC_STATUSBAR, WM_SIZE, 0, 0);
 
@@ -1329,15 +1329,6 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 			break;
 		}
-
-#ifndef _APP_NO_DARKTHEME
-		case WM_SETTINGCHANGE:
-		case WM_SYSCOLORCHANGE:
-		{
-			_r_wnd_setdarktheme (hwnd);
-			break;
-		}
-#endif // _APP_NO_DARKTHEME
 
 		case WM_DRAWITEM:
 		{
