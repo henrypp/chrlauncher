@@ -354,7 +354,7 @@ void _app_setstatus (HWND hwnd, LPCWSTR text, DWORDLONG v, DWORDLONG t)
 
 	if (!v && t)
 	{
-		_r_status_settext (hwnd, IDC_STATUSBAR, 0, _r_fmt (L"%s 0%%", text), nullptr);
+		_r_status_settext (hwnd, IDC_STATUSBAR, 0, _r_fmt (L"%s 0%%", text));
 		_r_tray_setinfo (hwnd, UID, nullptr, !_r_str_isempty (text) ? _r_fmt (L"%s\r\n%s: 0%%", APP_NAME, text) : APP_NAME);
 	}
 	else if (v && t)
@@ -362,12 +362,12 @@ void _app_setstatus (HWND hwnd, LPCWSTR text, DWORDLONG v, DWORDLONG t)
 		percent = std::clamp ((INT)((double (v) / double (t)) * 100.0), 0, 100);
 		//buffer.Format (L"%s %s/%s", text, _r_fmt_size64 (v).GetString (), _r_fmt_size64 (t).GetString ());
 
-		_r_status_settext (hwnd, IDC_STATUSBAR, 0, _r_fmt (L"%s %d%%", text, percent), nullptr);
+		_r_status_settext (hwnd, IDC_STATUSBAR, 0, _r_fmt (L"%s %d%%", text, percent));
 		_r_tray_setinfo (hwnd, UID, nullptr, !_r_str_isempty (text) ? _r_fmt (L"%s\r\n%s: %d%%", APP_NAME, text, percent) : APP_NAME);
 	}
 	else
 	{
-		_r_status_settext (hwnd, IDC_STATUSBAR, 0, text, nullptr);
+		_r_status_settext (hwnd, IDC_STATUSBAR, 0, text);
 		_r_tray_setinfo (hwnd, UID, nullptr, !_r_str_isempty (text) ? _r_fmt (L"%s\r\n%s", APP_NAME, text) : APP_NAME);
 	}
 
@@ -502,16 +502,14 @@ bool _app_checkupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 		url.Format (app.ConfigGet (L"ChromiumUpdateUrl", CHROMIUM_UPDATE_URL), pbi->architecture, pbi->type);
 
 		LPCWSTR proxy_addr = app.GetProxyConfiguration ();
-		const HINTERNET hsession = _r_inet_createsession (app.GetUserAgent (), proxy_addr);
+		HINTERNET hsession = _r_inet_createsession (app.GetUserAgent (), proxy_addr);
 
 		if (hsession)
 		{
-			if (_r_inet_downloadurl (hsession, proxy_addr, url, &content, false, nullptr, 0))
+			if (_r_inet_downloadurl (hsession, proxy_addr, url, &content, false, nullptr, 0) == ERROR_SUCCESS)
 			{
 				if (!content.IsEmpty ())
-				{
 					_r_str_unserialize (content, L';', L'=', &result);
-				}
 
 				*pis_error = false;
 			}
@@ -583,11 +581,11 @@ bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 	_r_fastlock_acquireshared (&lock_download);
 
 	LPCWSTR proxy_addr = app.GetProxyConfiguration ();
-	const HINTERNET hsession = _r_inet_createsession (app.GetUserAgent (), proxy_addr);
+	HINTERNET hsession = _r_inet_createsession (app.GetUserAgent (), proxy_addr);
 
 	if (hsession)
 	{
-		if (_r_inet_downloadurl (hsession, proxy_addr, pbi->download_url, temp_file, true, &_app_downloadupdate_callback, (LONG_PTR)hwnd))
+		if (_r_inet_downloadurl (hsession, proxy_addr, pbi->download_url, temp_file, true, &_app_downloadupdate_callback, (LONG_PTR)hwnd) == ERROR_SUCCESS)
 		{
 			pbi->download_url[0] = 0; // clear download url
 
