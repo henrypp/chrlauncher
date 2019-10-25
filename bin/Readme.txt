@@ -34,7 +34,7 @@ Settings:
 
 # Command line for Chromium (string):
 # See here: https://peter.sh/experiments/chromium-command-line-switches/
-ChromiumCommandLine=--user-data-dir=..\profile --no-default-browser-check --allow-outdated-plugins --disable-logging --disable-breakpad
+ChromiumCommandLine=--flag-switches-begin --user-data-dir=..\profile --no-default-browser-check --allow-outdated-plugins --disable-logging --disable-breakpad --flag-switches-end
 
 # Chromium executable file name (string):
 ChromiumBinary=chrome.exe
