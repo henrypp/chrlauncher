@@ -200,7 +200,7 @@ void init_browser_info (BROWSER_INFORMATION* pbi)
 			_r_str_printf (pbi->binary_path, _countof (pbi->binary_path), L"%s\\%s", pbi->binary_dir, app.ConfigGet (L"ChromiumBinary", L"chrome.exe").GetString ()); // fallback (use defaults)
 	}
 
-	_r_str_copy (pbi->cache_path, _countof (pbi->cache_path), _r_path_expand (_r_fmt (L"%%TEMP%%\\" APP_NAME_SHORT L"_%" PR_SIZE_T L".tmp", _r_str_hash (pbi->binary_path))).GetString ());
+	_r_str_copy (pbi->cache_path, _countof (pbi->cache_path), _r_path_expand (_r_fmt (L"%%TEMP%%\\" APP_NAME_SHORT L"_%" PR_SIZE_T L".bin", _r_str_hash (pbi->binary_path))).GetString ());
 
 	// get browser architecture...
 	if (_r_sys_validversion (5, 1, 0, VER_EQUAL) || _r_sys_validversion (5, 2, 0, VER_EQUAL))
@@ -359,7 +359,7 @@ void _app_setstatus (HWND hwnd, LPCWSTR text, DWORDLONG v, DWORDLONG t)
 	}
 	else if (v && t)
 	{
-		percent = std::clamp ((INT)((double (v) / double (t)) * 100.0), 0, 100);
+		percent = std::clamp (_R_PERCENT_OF (v, t), 0, 100);
 		//buffer.Format (L"%s %s/%s", text, _r_fmt_size64 (v).GetString (), _r_fmt_size64 (t).GetString ());
 
 		_r_status_settext (hwnd, IDC_STATUSBAR, 0, _r_fmt (L"%s %d%%", text, percent));
@@ -397,7 +397,7 @@ void _app_cleanup (BROWSER_INFORMATION* pbi, LPCWSTR current_version)
 
 bool _app_browserisrunning (BROWSER_INFORMATION* pbi)
 {
-	const HANDLE hfile = CreateFile (pbi->binary_path, GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, nullptr);
+	const HANDLE hfile = CreateFile (pbi->binary_path, GENERIC_WRITE | GENERIC_READ, 0, nullptr, OPEN_EXISTING, 0, nullptr);
 
 	if (hfile != INVALID_HANDLE_VALUE)
 		CloseHandle (hfile);
@@ -506,7 +506,9 @@ bool _app_checkupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 
 		if (hsession)
 		{
-			if (_r_inet_downloadurl (hsession, proxy_addr, url, &content, false, nullptr, 0) == ERROR_SUCCESS)
+			DWORD rc = _r_inet_downloadurl (hsession, proxy_addr, url, (LONG_PTR)&content, false, nullptr, 0);
+
+			if (rc == ERROR_SUCCESS)
 			{
 				if (!content.IsEmpty ())
 					_r_str_unserialize (content, L';', L'=', &result);
@@ -515,7 +517,7 @@ bool _app_checkupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 			}
 			else
 			{
-				_r_dbg (TEXT (__FUNCTION__), GetLastError (), url);
+				_r_dbg (TEXT (__FUNCTION__), rc, url);
 
 				*pis_error = true;
 			}
@@ -569,12 +571,10 @@ bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 
 	WCHAR temp_file[MAX_PATH] = {0};
 	_r_str_printf (temp_file, _countof (temp_file), L"%s.tmp", pbi->cache_path);
+	_r_str_copy (temp_file, _countof (temp_file), _r_path_makeunique (temp_file));
 
 	SetFileAttributes (pbi->cache_path, FILE_ATTRIBUTE_NORMAL);
 	_r_fs_delete (pbi->cache_path, false);
-
-	SetFileAttributes (temp_file, FILE_ATTRIBUTE_NORMAL);
-	_r_fs_delete (temp_file, false);
 
 	_app_setstatus (hwnd, app.LocaleString (IDS_STATUS_DOWNLOAD, nullptr), 0, 1);
 
@@ -585,24 +585,41 @@ bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 
 	if (hsession)
 	{
-		if (_r_inet_downloadurl (hsession, proxy_addr, pbi->download_url, temp_file, true, &_app_downloadupdate_callback, (LONG_PTR)hwnd) == ERROR_SUCCESS)
+		HANDLE hfile = CreateFile (temp_file, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+
+		if (hfile == INVALID_HANDLE_VALUE)
 		{
-			pbi->download_url[0] = 0; // clear download url
+			_r_dbg (L"CreateFile", GetLastError (), temp_file);
 
-			_r_fs_move (temp_file, pbi->cache_path, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH);
-
-			result = true;
-
-			*pis_error = false;
+			*pis_error = true;
 		}
 		else
 		{
-			_r_dbg (TEXT (__FUNCTION__), GetLastError (), pbi->download_url);
+			DWORD rc = _r_inet_downloadurl (hsession, proxy_addr, pbi->download_url, (LONG_PTR)hfile, true, &_app_downloadupdate_callback, (LONG_PTR)hwnd);
 
-			_r_fs_delete (temp_file, false);
-			_r_fs_delete (pbi->cache_path, false);
+			if (rc == ERROR_SUCCESS)
+			{
+				pbi->download_url[0] = 0; // clear download url
 
-			*pis_error = true;
+				SAFE_DELETE_HANDLE (hfile); // close handle (required!)
+
+				_r_fs_move (temp_file, pbi->cache_path, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED);
+
+				result = true;
+
+				*pis_error = false;
+			}
+			else
+			{
+				_r_dbg (TEXT (__FUNCTION__), rc, pbi->download_url);
+
+				_r_fs_delete (temp_file, false);
+				_r_fs_delete (pbi->cache_path, false);
+
+				*pis_error = true;
+			}
+
+			SAFE_DELETE_HANDLE (hfile);
 		}
 
 		_r_inet_close (hsession);
@@ -629,7 +646,7 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 	CFileInStream archiveStream;
 	CLookToRead2 lookStream;
 	CSzArEx db;
-	UInt16 *temp = nullptr;
+	UInt16 *tempBuf = nullptr;
 	size_t tempSize = 0;
 
 	SRes rc = InFile_OpenW (&archiveStream.file, pbi->cache_path);
@@ -692,34 +709,35 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 
 				if (len > tempSize)
 				{
-					SzFree (nullptr, temp);
+					SzFree (nullptr, tempBuf);
 					tempSize = len;
-					temp = (UInt16 *)SzAlloc (nullptr, tempSize * sizeof (UInt16));
+					tempBuf = (UInt16 *)SzAlloc (nullptr, tempSize * sizeof (UInt16));
 
-					if (!temp)
+					if (!tempBuf)
 					{
 						_r_dbg (L"SzAlloc", SZ_ERROR_MEM, 0);
 						break;
 					}
 				}
 
-				if (root_dir_name.IsEmpty () && SzArEx_GetFileNameUtf16 (&db, i, temp))
+				if (root_dir_name.IsEmpty () && SzArEx_GetFileNameUtf16 (&db, i, tempBuf))
 				{
-					_r_str_replace ((LPWSTR)temp, L'/', L'\\');
+					LPWSTR buffer = (LPWSTR)tempBuf;
 
-					LPCWSTR destPath = (LPCWSTR)temp;
-					LPCWSTR fname = _r_path_getfilename (destPath);
+					_r_str_replace (buffer, L'/', OBJ_NAME_PATH_SEPARATOR);
 
-					if (_r_str_isempty (fname) || _r_str_isempty (binName))
+					LPCWSTR file_name = _r_path_getfilename (buffer);
+
+					if (_r_str_isempty (file_name) || _r_str_isempty (binName))
 						continue;
 
-					const size_t fname_len = _r_str_length (fname);
+					const size_t fname_len = _r_str_length (file_name);
 
-					if (_r_str_compare (fname, binName, fname_len) == 0)
+					if (_r_str_compare (file_name, binName, fname_len) == 0)
 					{
-						const size_t root_dir_len = _r_str_length (destPath) - fname_len;
+						const size_t root_dir_len = _r_str_length (buffer) - fname_len;
 
-						root_dir_name = destPath;
+						root_dir_name = buffer;
 						root_dir_name.SetLength (root_dir_len);
 
 						_r_str_trim (root_dir_name, L"\\");
@@ -729,42 +747,45 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 
 			for (UInt32 i = 0; i < db.NumFiles; i++)
 			{
-				const bool isDir = SzArEx_IsDir (&db, i);
+				//const size_t len = SzArEx_GetFileNameUtf16 (&db, i, nullptr);
 
-				const size_t len = SzArEx_GetFileNameUtf16 (&db, i, nullptr);
+				//if (len > tempSize)
+				//{
+				//	SzFree (nullptr, tempBuf);
+				//	tempSize = len;
+				//	tempBuf = (UInt16*)SzAlloc (nullptr, tempSize * sizeof (tempBuf[0]));
 
-				if (len > tempSize)
+				//	if (!tempBuf)
+				//	{
+				//		_r_dbg (L"SzAlloc", SZ_ERROR_MEM, 0);
+				//		break;
+				//	}
+				//}
+
+				const size_t len = SzArEx_GetFileNameUtf16 (&db, i, tempBuf);
+
+				if (len)
 				{
-					SzFree (nullptr, temp);
-					tempSize = len;
-					temp = (UInt16*)SzAlloc (nullptr, tempSize * sizeof (UInt16));
+					tempBuf[len - 1] = UNICODE_NULL;
 
-					if (!temp)
-					{
-						_r_dbg (L"SzAlloc", SZ_ERROR_MEM, 0);
-						break;
-					}
-				}
+					LPWSTR file_name = (LPWSTR)tempBuf;
 
-				if (SzArEx_GetFileNameUtf16 (&db, i, temp))
-				{
-					const size_t len_path = _r_str_length ((LPCWSTR)temp);
-					_r_str_replace ((LPWSTR)temp, L'/', L'\\');
+					_r_str_replace (file_name, L'/', OBJ_NAME_PATH_SEPARATOR);
 
-					LPCWSTR dirname = _r_path_getdirectory ((LPCWSTR)temp);
+					rstring dir_name = _r_path_getdirectory (file_name);
 
 					// skip non-root dirs
-					if (!root_dir_name.IsEmpty () && (len_path <= root_dir_name.GetLength () || _r_str_compare (root_dir_name, dirname, root_dir_name.GetLength ()) != 0))
+					if (!root_dir_name.IsEmpty () && ((len - 1) <= root_dir_name.GetLength () || _r_str_compare (root_dir_name, dir_name, root_dir_name.GetLength ()) != 0))
 						continue;
 
 					CSzFile outFile;
 
-					rstring destPath;
-					destPath.Format (L"%s\\%s", pbi->binary_dir, (LPWSTR)temp + root_dir_name.GetLength ());
+					rstring dest_path;
+					dest_path.Format (L"%s\\%s", pbi->binary_dir, file_name + root_dir_name.GetLength ());
 
-					if (isDir)
+					if (SzArEx_IsDir (&db, i))
 					{
-						_r_fs_mkdir (destPath);
+						_r_fs_mkdir (dest_path);
 					}
 					else
 					{
@@ -772,11 +793,12 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 
 						_app_setstatus (hwnd, app.LocaleString (IDS_STATUS_INSTALL, nullptr), total_read, total_size);
 
+						// create directory if not-exist
 						{
-							const rstring dir = _r_path_getdirectory (destPath);
+							rstring sub_dir = _r_path_getdirectory (dest_path);
 
-							if (!_r_fs_exists (dir))
-								_r_fs_mkdir (dir);
+							if (!_r_fs_exists (sub_dir))
+								_r_fs_mkdir (sub_dir);
 						}
 
 						size_t offset = 0;
@@ -786,15 +808,15 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 
 						if (rc != SZ_OK)
 						{
-							_r_dbg (L"SzArEx_Extract", rc, 0);
+							_r_dbg (L"SzArEx_Extract", rc, dest_path);
 						}
 						else
 						{
-							rc = OutFile_OpenW (&outFile, destPath);
+							rc = OutFile_OpenW (&outFile, dest_path);
 
 							if (rc != SZ_OK)
 							{
-								_r_dbg (L"OutFile_OpenW", rc, destPath);
+								_r_dbg (L"OutFile_OpenW", rc, dest_path);
 							}
 							else
 							{
@@ -804,7 +826,7 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 
 								if (rc != SZ_OK || processedSize != outSizeProcessed)
 								{
-									_r_dbg (L"File_Write", rc, destPath);
+									_r_dbg (L"File_Write", rc, dest_path);
 								}
 								else
 								{
@@ -820,17 +842,17 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 										if ((attrib & 0xF0000000) != 0)
 											attrib &= 0x7FFF;
 
-										SetFileAttributes (destPath, attrib);
+										SetFileAttributes (dest_path, attrib);
 									}
 								}
-
-								if (!result)
-									result = true;
 
 								File_Close (&outFile);
 							}
 						}
 					}
+
+					if (!result)
+						result = true;
 				}
 			}
 
@@ -838,7 +860,7 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 		}
 	}
 
-	SzFree (nullptr, temp);
+	SzFree (nullptr, tempBuf);
 	SzArEx_Free (&db, &allocImp);
 
 	ISzAlloc_Free (&allocImp, lookStream.buf);
@@ -856,7 +878,11 @@ bool _app_unpack_zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 
 	const HZIP hzip = OpenZip (pbi->cache_path, nullptr);
 
-	if (IsZipHandleU (hzip))
+	if (!IsZipHandleU (hzip))
+	{
+		_r_dbg (L"OpenZip", GetLastError (), pbi->cache_path);
+	}
+	else
 	{
 		INT total_files = 0;
 		ULONG64 total_size = 0;
@@ -882,19 +908,19 @@ bool _app_unpack_zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 
 			if (root_dir_name.IsEmpty () && !_r_str_isempty (binName))
 			{
-				const size_t len = _r_str_length (ze.name);
-				_r_str_replace (ze.name, L'/', L'\\');
+				const size_t len_path = _r_str_length (ze.name);
+				_r_str_replace (ze.name, L'/', OBJ_NAME_PATH_SEPARATOR);
 
 				LPCWSTR fname = _r_path_getfilename (ze.name);
 
 				if (!fname)
 					continue;
 
-				const size_t fname_len = _r_str_length (fname);
+				const size_t len_name = _r_str_length (fname);
 
-				if (_r_str_compare (fname, binName, fname_len) == 0)
+				if (_r_str_compare (fname, binName, len_name) == 0)
 				{
-					const size_t root_dir_len = len - fname_len;
+					const size_t root_dir_len = len_path - len_name;
 
 					root_dir_name = ze.name;
 					root_dir_name.SetLength (root_dir_len);
@@ -903,8 +929,6 @@ bool _app_unpack_zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 				}
 			}
 		}
-
-		rstring fpath;
 
 		CHAR buffer[BUFFER_SIZE] = {0};
 		DWORD written = 0;
@@ -915,34 +939,39 @@ bool _app_unpack_zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 				continue;
 
 			const size_t len = _r_str_length (ze.name);
-			_r_str_replace (ze.name, L'/', L'\\');
+			_r_str_replace (ze.name, L'/', OBJ_NAME_PATH_SEPARATOR);
 
-			LPCWSTR dirname = _r_path_getdirectory (ze.name);
+			rstring dir_name = _r_path_getdirectory (ze.name);
 
 			// skip non-root dirs
-			if (!root_dir_name.IsEmpty () && (len <= root_dir_name.GetLength () || _r_str_compare (root_dir_name, dirname, root_dir_name.GetLength ()) != 0))
+			if (!root_dir_name.IsEmpty () && (len <= root_dir_name.GetLength () || _r_str_compare (root_dir_name, dir_name, root_dir_name.GetLength ()) != 0))
 				continue;
 
-			fpath.Format (L"%s\\%s", pbi->binary_dir, ze.name + root_dir_name.GetLength ());
+			rstring dest_path;
+			dest_path.Format (L"%s\\%s", pbi->binary_dir, ze.name + root_dir_name.GetLength ());
 
 			_app_setstatus (hwnd, app.LocaleString (IDS_STATUS_INSTALL, nullptr), total_read, total_size);
 
 			if ((ze.attr & FILE_ATTRIBUTE_DIRECTORY) != 0)
 			{
-				_r_fs_mkdir (fpath);
+				_r_fs_mkdir (dest_path);
 			}
 			else
 			{
 				{
-					LPCWSTR dir = _r_path_getdirectory (fpath);
+					rstring sub_dir = _r_path_getdirectory (dest_path);
 
-					if (!_r_fs_exists (dir))
-						_r_fs_mkdir (dir);
+					if (!_r_fs_exists (sub_dir))
+						_r_fs_mkdir (sub_dir);
 				}
 
-				const HANDLE hfile = CreateFile (fpath, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_FLAG_WRITE_THROUGH, nullptr);
+				const HANDLE hfile = CreateFile (dest_path, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
 
-				if (hfile != INVALID_HANDLE_VALUE)
+				if (hfile == INVALID_HANDLE_VALUE)
+				{
+					_r_dbg (L"CreateFile", GetLastError (), dest_path);
+				}
+				else
 				{
 					DWORD total_read_file = 0;
 
@@ -965,16 +994,12 @@ bool _app_unpack_zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 
 					CloseHandle (hfile);
 
-					SetFileAttributes (fpath, ze.attr);
-
-					if (!result)
-						result = true;
-				}
-				else
-				{
-					_r_dbg (L"CreateFile", GetLastError (), fpath);
+					SetFileAttributes (dest_path, ze.attr);
 				}
 			}
+
+			if (!result)
+				result = true;
 		}
 
 		CloseZip (hzip);
@@ -1070,9 +1095,6 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 
 				is_installed = true;
 			}
-
-			SetFileAttributes (pbi->cache_path, FILE_ATTRIBUTE_NORMAL);
-			_r_fs_delete (pbi->cache_path, false); // remove cache file on installation finished
 		}
 		else
 		{
@@ -1082,7 +1104,7 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 	}
 
 	// check/download/unpack
-	if (!is_installed)
+	if (!is_installed && !is_stayopen)
 	{
 		_r_progress_setmarquee (hwnd, IDC_PROGRESS, true);
 
@@ -1108,7 +1130,7 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 		{
 			_r_tray_toggle (hwnd, UID, true); // show tray icon
 
-			if (!is_exists || pbi->is_autodownload || (!pbi->is_autodownload && _app_ishaveupdate (pbi)))
+			if ((!is_exists || pbi->is_autodownload) || (!pbi->is_autodownload && _app_ishaveupdate (pbi)))
 			{
 				if (pbi->is_bringtofront)
 					_r_wnd_toggle (hwnd, true); // show window
@@ -1221,13 +1243,9 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 			if (!hthread_check || WaitForSingleObject (hthread_check, 0) == WAIT_OBJECT_0)
 			{
-				if (hthread_check)
-				{
-					CloseHandle (hthread_check);
-					hthread_check = nullptr;
-				}
+				SAFE_DELETE_HANDLE (hthread_check);
 
-				hthread_check = _r_createthread (&_app_thread_check, &browser_info, false);
+				hthread_check = _r_createthread (&_app_thread_check, &browser_info, false, THREAD_PRIORITY_ABOVE_NORMAL);
 			}
 
 			if (!browser_info.is_waitdownloadend && !browser_info.is_onlyupdate && _r_fs_exists (browser_info.binary_path))
@@ -1299,8 +1317,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			if (_r_fastlock_islocked (&lock_download))
 				WaitForSingleObjectEx (hthread_check, 7500, FALSE);
 
-			if (hthread_check)
-				CloseHandle (hthread_check);
+			SAFE_DELETE_HANDLE (hthread_check);
 
 			PostQuitMessage (0);
 
@@ -1503,11 +1520,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				{
 					if (!hthread_check || !_r_fastlock_islocked (&lock_thread))
 					{
-						if (hthread_check)
-						{
-							CloseHandle (hthread_check);
-							hthread_check = nullptr;
-						}
+						SAFE_DELETE_HANDLE (hthread_check);
 
 						hthread_check = _r_createthread (&_app_thread_check, &browser_info, false, THREAD_PRIORITY_ABOVE_NORMAL);
 					}
