@@ -1233,6 +1233,12 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			break;
 		}
 
+		case WM_NCCREATE:
+		{
+			_r_dc_enablenonclientscaling (hwnd);
+			break;
+		}
+
 		case RM_INITIALIZE:
 		{
 			SetCurrentDirectory (app.GetDirectory ());
@@ -1284,6 +1290,14 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			SetDlgItemText (hwnd, IDC_START_BTN, app.LocaleString (_app_getactionid (&browser_info), nullptr));
 
 			_r_wnd_addstyle (hwnd, IDC_START_BTN, app.IsClassicUI () ? WS_EX_STATICEDGE : 0, WS_EX_STATICEDGE, GWL_EXSTYLE);
+
+			break;
+		}
+
+		case RM_TASKBARCREATED:
+		{
+			_r_tray_destroy (hwnd, UID);
+			_r_tray_create (hwnd, UID, WM_TRAYICON, app.GetSharedImage (app.GetHINSTANCE (), IDI_MAIN, _r_dc_getdpi (hwnd, _R_SIZE_ICON16)), APP_NAME, (_r_fastlock_islocked (&lock_download) || _app_isupdatedownloaded (&browser_info)) ? false : true);
 
 			break;
 		}
