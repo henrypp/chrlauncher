@@ -1235,7 +1235,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 		case WM_NCCREATE:
 		{
-			_r_dc_enablenonclientscaling (hwnd);
+			_r_wnd_enablenonclientscaling (hwnd);
 			break;
 		}
 
@@ -1297,7 +1297,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		case RM_TASKBARCREATED:
 		{
 			_r_tray_destroy (hwnd, UID);
-			_r_tray_create (hwnd, UID, WM_TRAYICON, app.GetSharedImage (app.GetHINSTANCE (), IDI_MAIN, _r_dc_getdpi (hwnd, _R_SIZE_ICON16)), APP_NAME, (_r_fastlock_islocked (&lock_download) || _app_isupdatedownloaded (&browser_info)) ? false : true);
+			_r_tray_create (hwnd, UID, WM_TRAYICON, app.GetSharedImage (app.GetHINSTANCE (), IDI_MAIN, _r_dc_getdpi (hwnd, _R_SIZE_ICON16)), APP_NAME, false);
 
 			break;
 		}
@@ -1367,23 +1367,31 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				break;
 
 			HDC bufferDc = CreateCompatibleDC (drawInfo->hDC);
-			HBITMAP bufferBitmap = CreateCompatibleBitmap (drawInfo->hDC, _R_RECT_WIDTH (&drawInfo->rcItem), _R_RECT_HEIGHT (&drawInfo->rcItem));
 
-			HGDIOBJ oldBufferBitmap = SelectObject (bufferDc, bufferBitmap);
+			if (bufferDc)
+			{
+				HBITMAP bufferBitmap = CreateCompatibleBitmap (drawInfo->hDC, _R_RECT_WIDTH (&drawInfo->rcItem), _R_RECT_HEIGHT (&drawInfo->rcItem));
 
-			SetBkMode (bufferDc, TRANSPARENT);
+				if (bufferBitmap)
+				{
+					HGDIOBJ oldBufferBitmap = SelectObject (bufferDc, bufferBitmap);
 
-			_r_dc_fillrect (bufferDc, &drawInfo->rcItem, GetSysColor (COLOR_WINDOW));
+					SetBkMode (bufferDc, TRANSPARENT);
 
-			for (INT i = drawInfo->rcItem.left; i < _R_RECT_WIDTH (&drawInfo->rcItem); i++)
-				SetPixel (bufferDc, i, drawInfo->rcItem.top, GetSysColor (COLOR_APPWORKSPACE));
+					_r_dc_fillrect (bufferDc, &drawInfo->rcItem, GetSysColor (COLOR_WINDOW));
 
-			BitBlt (drawInfo->hDC, drawInfo->rcItem.left, drawInfo->rcItem.top, drawInfo->rcItem.right, drawInfo->rcItem.bottom, bufferDc, 0, 0, SRCCOPY);
+					for (INT i = drawInfo->rcItem.left; i < _R_RECT_WIDTH (&drawInfo->rcItem); i++)
+						SetPixel (bufferDc, i, drawInfo->rcItem.top, GetSysColor (COLOR_APPWORKSPACE));
 
-			SelectObject (bufferDc, oldBufferBitmap);
+					BitBlt (drawInfo->hDC, drawInfo->rcItem.left, drawInfo->rcItem.top, drawInfo->rcItem.right, drawInfo->rcItem.bottom, bufferDc, 0, 0, SRCCOPY);
 
-			DeleteObject (bufferBitmap);
-			DeleteDC (bufferDc);
+					SelectObject (bufferDc, oldBufferBitmap);
+
+					SAFE_DELETE_OBJECT (bufferBitmap);
+				}
+
+				SAFE_DELETE_DC (bufferDc);
+			}
 
 			SetWindowLongPtr (hwnd, DWLP_MSGRESULT, TRUE);
 			return TRUE;
