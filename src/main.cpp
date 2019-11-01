@@ -501,7 +501,7 @@ bool _app_checkupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 
 		url.Format (app.ConfigGet (L"ChromiumUpdateUrl", CHROMIUM_UPDATE_URL), pbi->architecture, pbi->type);
 
-		LPCWSTR proxy_addr = app.GetProxyConfiguration ();
+		rstring proxy_addr = app.GetProxyConfiguration ();
 		HINTERNET hsession = _r_inet_createsession (app.GetUserAgent (), proxy_addr);
 
 		if (hsession)
@@ -580,7 +580,7 @@ bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 
 	_r_fastlock_acquireshared (&lock_download);
 
-	LPCWSTR proxy_addr = app.GetProxyConfiguration ();
+	rstring proxy_addr = app.GetProxyConfiguration ();
 	HINTERNET hsession = _r_inet_createsession (app.GetUserAgent (), proxy_addr);
 
 	if (hsession)
