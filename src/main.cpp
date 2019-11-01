@@ -597,11 +597,11 @@ bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 		{
 			DWORD rc = _r_inet_downloadurl (hsession, proxy_addr, pbi->download_url, (LONG_PTR)hfile, true, &_app_downloadupdate_callback, (LONG_PTR)hwnd);
 
+			SAFE_DELETE_HANDLE (hfile); // close handle (required!)
+
 			if (rc == ERROR_SUCCESS)
 			{
 				pbi->download_url[0] = 0; // clear download url
-
-				SAFE_DELETE_HANDLE (hfile); // close handle (required!)
 
 				_r_fs_move (temp_file, pbi->cache_path, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED);
 
@@ -613,13 +613,12 @@ bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 			{
 				_r_dbg (TEXT (__FUNCTION__), rc, pbi->download_url);
 
-				_r_fs_delete (temp_file, false);
 				_r_fs_delete (pbi->cache_path, false);
 
 				*pis_error = true;
 			}
 
-			SAFE_DELETE_HANDLE (hfile);
+			_r_fs_delete (temp_file, false);
 		}
 
 		_r_inet_close (hsession);
