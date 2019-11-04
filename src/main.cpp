@@ -1309,7 +1309,10 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		case WM_CLOSE:
 		{
 			if (_r_fastlock_islocked (&lock_download) && _r_msg (hwnd, MB_YESNO | MB_ICONQUESTION, APP_NAME, nullptr, app.LocaleString (IDS_QUESTION_STOP, nullptr)) != IDYES)
+			{
+				SetWindowLongPtr (hwnd, DWLP_MSGRESULT, TRUE);
 				return TRUE;
+			}
 
 			DestroyWindow (hwnd);
 
