@@ -151,14 +151,10 @@ bool path_is_url (LPCWSTR path)
 
 void update_browser_info (HWND hwnd, BROWSER_INFORMATION* pbi)
 {
-	const HDC hdc = GetDC (hwnd);
-
-	_r_ctrl_settabletext (hdc, hwnd, IDC_BROWSER, app.LocaleString (IDS_BROWSER, L":"), IDC_BROWSER_DATA, pbi->name_full);
-	_r_ctrl_settabletext (hdc, hwnd, IDC_CURRENTVERSION, app.LocaleString (IDS_CURRENTVERSION, L":"), IDC_CURRENTVERSION_DATA, _r_str_isempty (pbi->current_version) ? app.LocaleString (IDS_STATUS_NOTFOUND, nullptr).GetString () : pbi->current_version);
-	_r_ctrl_settabletext (hdc, hwnd, IDC_VERSION, app.LocaleString (IDS_VERSION, L":"), IDC_VERSION_DATA, _r_str_isempty (pbi->new_version) ? app.LocaleString (IDS_STATUS_NOTFOUND, nullptr).GetString () : pbi->new_version);
-	_r_ctrl_settabletext (hdc, hwnd, IDC_DATE, app.LocaleString (IDS_DATE, L":"), IDC_DATE_DATA, pbi->timestamp ? _r_fmt_date (pbi->timestamp, FDTF_SHORTDATE | FDTF_SHORTTIME).GetString () : app.LocaleString (IDS_STATUS_NOTFOUND, nullptr).GetString ());
-
-	ReleaseDC (hwnd, hdc);
+	_r_ctrl_settabletext (hwnd, IDC_BROWSER, app.LocaleString (IDS_BROWSER, L":"), IDC_BROWSER_DATA, pbi->name_full);
+	_r_ctrl_settabletext (hwnd, IDC_CURRENTVERSION, app.LocaleString (IDS_CURRENTVERSION, L":"), IDC_CURRENTVERSION_DATA, _r_str_isempty (pbi->current_version) ? app.LocaleString (IDS_STATUS_NOTFOUND, nullptr).GetString () : pbi->current_version);
+	_r_ctrl_settabletext (hwnd, IDC_VERSION, app.LocaleString (IDS_VERSION, L":"), IDC_VERSION_DATA, _r_str_isempty (pbi->new_version) ? app.LocaleString (IDS_STATUS_NOTFOUND, nullptr).GetString () : pbi->new_version);
+	_r_ctrl_settabletext (hwnd, IDC_DATE, app.LocaleString (IDS_DATE, L":"), IDC_DATE_DATA, pbi->timestamp ? _r_fmt_date (pbi->timestamp, FDTF_SHORTDATE | FDTF_SHORTTIME).GetString () : app.LocaleString (IDS_STATUS_NOTFOUND, nullptr).GetString ());
 }
 
 void init_browser_info (BROWSER_INFORMATION* pbi)
@@ -1244,7 +1240,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 			init_browser_info (&browser_info);
 
-			_r_tray_create (hwnd, UID, WM_TRAYICON, app.GetSharedImage (app.GetHINSTANCE (), IDI_MAIN, _r_dc_getdpi (hwnd, _R_SIZE_ICON16)), APP_NAME, (_r_fastlock_islocked (&lock_download) || _app_isupdatedownloaded (&browser_info)) ? false : true);
+			_r_tray_create (hwnd, UID, WM_TRAYICON, app.GetSharedImage (app.GetHINSTANCE (), IDI_MAIN, _r_dc_getsystemmetrics (hwnd, SM_CXSMICON)), APP_NAME, (_r_fastlock_islocked (&lock_download) || _app_isupdatedownloaded (&browser_info)) ? false : true);
 
 			if (!hthread_check || WaitForSingleObject (hthread_check, 0) == WAIT_OBJECT_0)
 			{
@@ -1296,14 +1292,14 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		case RM_TASKBARCREATED:
 		{
 			_r_tray_destroy (hwnd, UID);
-			_r_tray_create (hwnd, UID, WM_TRAYICON, app.GetSharedImage (app.GetHINSTANCE (), IDI_MAIN, _r_dc_getdpi (hwnd, _R_SIZE_ICON16)), APP_NAME, false);
+			_r_tray_create (hwnd, UID, WM_TRAYICON, app.GetSharedImage (app.GetHINSTANCE (), IDI_MAIN, _r_dc_getsystemmetrics (hwnd, SM_CXSMICON)), APP_NAME, false);
 
 			break;
 		}
 
 		case RM_DPICHANGED:
 		{
-			_r_tray_setinfo (hwnd, UID, app.GetSharedImage (app.GetHINSTANCE (), IDI_MAIN, _r_dc_getdpi (hwnd, _R_SIZE_ICON16)), APP_NAME);
+			_r_tray_setinfo (hwnd, UID, app.GetSharedImage (app.GetHINSTANCE (), IDI_MAIN, _r_dc_getsystemmetrics (hwnd, SM_CXSMICON)), APP_NAME);
 
 			SendDlgItemMessage (hwnd, IDC_STATUSBAR, WM_SIZE, 0, 0);
 
