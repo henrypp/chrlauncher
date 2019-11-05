@@ -1225,6 +1225,16 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			_r_wnd_setdarktheme (hwnd);
 #endif // _APP_NO_DARKTHEME
 
+			const HWND htip = _r_ctrl_createtip (hwnd);
+
+			if (htip)
+			{
+				_r_ctrl_settip (htip, hwnd, IDC_BROWSER_DATA, LPSTR_TEXTCALLBACK);
+				_r_ctrl_settip (htip, hwnd, IDC_CURRENTVERSION_DATA, LPSTR_TEXTCALLBACK);
+				_r_ctrl_settip (htip, hwnd, IDC_VERSION_DATA, LPSTR_TEXTCALLBACK);
+				_r_ctrl_settip (htip, hwnd, IDC_DATE_DATA, LPSTR_TEXTCALLBACK);
+			}
+
 			break;
 		}
 
@@ -1399,6 +1409,24 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		{
 			switch (LPNMHDR (lparam)->code)
 			{
+				case TTN_GETDISPINFO:
+				{
+					LPNMTTDISPINFO lpnmdi = (LPNMTTDISPINFO)lparam;
+
+					if ((lpnmdi->uFlags & TTF_IDISHWND) == 0)
+						break;
+
+					WCHAR buffer[1024] = {0};
+					const INT ctrl_id = GetDlgCtrlID ((HWND)lpnmdi->hdr.idFrom);
+
+					_r_str_copy (buffer, _countof (buffer), _r_ctrl_gettext (hwnd, ctrl_id));
+
+					if (!_r_str_isempty (buffer))
+						lpnmdi->lpszText = buffer;
+
+					break;
+				}
+
 				case NM_CLICK:
 				case NM_RETURN:
 				{
