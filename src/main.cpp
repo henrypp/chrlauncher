@@ -355,7 +355,7 @@ void _app_setstatus (HWND hwnd, LPCWSTR text, DWORDLONG v, DWORDLONG t)
 	}
 	else if (v && t)
 	{
-		percent = std::clamp (_R_PERCENT_OF (v, t), 0, 100);
+		percent = std::clamp ((INT)_R_PERCENT_OF (v, t), 0, 100);
 		//buffer.Format (L"%s %s/%s", text, _r_fmt_size64 (v).GetString (), _r_fmt_size64 (t).GetString ());
 
 		_r_status_settext (hwnd, IDC_STATUSBAR, 0, _r_fmt (L"%s %d%%", text, percent));
