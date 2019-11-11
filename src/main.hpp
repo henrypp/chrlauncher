@@ -10,7 +10,6 @@
 #include "app.hpp"
 
 // config
-#define WM_TRAYICON WM_APP + 1
 #define UID 2008
 
 #define LANG_MENU 0
