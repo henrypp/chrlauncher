@@ -11,10 +11,7 @@
 
 // config
 #define UID 2008
-
 #define LANG_MENU 0
-
-#define BUFFER_SIZE (_R_BUFFER_LENGTH * 4)
 
 #define CHROMIUM_UPDATE_URL L"https://chromium.woolyss.com/api/v3/?os=windows&bit=%d&type=%s&out=string"
 

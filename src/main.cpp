@@ -925,7 +925,7 @@ bool _app_unpack_zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 			}
 		}
 
-		CHAR buffer[BUFFER_SIZE] = {0};
+		CHAR buffer[_R_BUFFER_NET_LENGTH] = {0};
 		DWORD written = 0;
 
 		for (INT i = 0; i < total_files; i++)
@@ -972,7 +972,7 @@ bool _app_unpack_zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 
 					for (ZRESULT zr = ZR_MORE; zr == ZR_MORE;)
 					{
-						DWORD bufsize = BUFFER_SIZE;
+						DWORD bufsize = _R_BUFFER_NET_LENGTH;
 
 						zr = UnzipItem (hzip, i, buffer, bufsize);
 
