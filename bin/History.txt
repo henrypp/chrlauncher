@@ -1,3 +1,9 @@
+v2.5.7 (17 November 2019)
+- added updater only mode (issue #84 & #119)
+- updated project sdk
+- cosmetics fixes
+- fixed bugs
+
 v2.5.6 (9 March 2019)
 - added better search for browser executables
 - fixed working with multiple chrlauncher copies
