@@ -454,7 +454,7 @@ bool _app_isupdaterequired (BROWSER_INFORMATION* pbi)
 	if (pbi->is_forcecheck)
 		return true;
 
-	if (pbi->check_period && ((_r_unixtime_now () - app.ConfigGet (L"ChromiumLastCheck", 0).AsLonglong ()) >= _R_SECONDSCLOCK_DAY (pbi->check_period)))
+	if (pbi->check_period && ((_r_unixtime_now () - app.ConfigGet (L"ChromiumLastCheck", 0LL).AsLonglong ()) >= _R_SECONDSCLOCK_DAY (pbi->check_period)))
 		return true;
 
 	return false;
@@ -1106,16 +1106,11 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 		const bool is_exists = _r_fs_exists (pbi->binary_path);
 		const bool is_checkupdate = _app_isupdaterequired (pbi);
 
-		if (!is_exists || is_checkupdate)
-			_r_tray_toggle (hwnd, UID, true); // show tray icon
-
-		// it's like "first run"
-		if (!is_exists || (pbi->is_waitdownloadend && is_checkupdate))
+		// show launcher gui
+		if (!is_exists || pbi->is_onlyupdate || pbi->is_bringtofront)
 		{
 			_r_tray_toggle (hwnd, UID, true); // show tray icon
-
-			if (!is_exists || pbi->is_bringtofront)
-				_r_wnd_toggle (hwnd, true);
+			_r_wnd_toggle (hwnd, true);
 		}
 
 		if (is_exists && !pbi->is_waitdownloadend && !pbi->is_onlyupdate)
@@ -1259,7 +1254,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				hthread_check = _r_createthread (&_app_thread_check, &browser_info, false, THREAD_PRIORITY_ABOVE_NORMAL);
 			}
 
-			if (!browser_info.is_waitdownloadend && !browser_info.is_onlyupdate && _r_fs_exists (browser_info.binary_path))
+			if (!browser_info.is_waitdownloadend && !browser_info.is_onlyupdate && _r_fs_exists (browser_info.binary_path) && !_app_isupdatedownloaded(&browser_info))
 				_app_openbrowser (&browser_info);
 
 			break;
@@ -1302,7 +1297,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		case RM_TASKBARCREATED:
 		{
 			_r_tray_destroy (hwnd, UID);
-			_r_tray_create (hwnd, UID, WM_TRAYICON, app.GetSharedImage (app.GetHINSTANCE (), IDI_MAIN, _r_dc_getsystemmetrics (hwnd, SM_CXSMICON)), APP_NAME, false);
+			_r_tray_create (hwnd, UID, WM_TRAYICON, app.GetSharedImage (app.GetHINSTANCE (), IDI_MAIN, _r_dc_getsystemmetrics (hwnd, SM_CXSMICON)), APP_NAME, (_r_fastlock_islocked (&lock_download) || _app_isupdatedownloaded (&browser_info)) ? false : true);
 
 			break;
 		}
