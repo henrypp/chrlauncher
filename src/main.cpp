@@ -175,8 +175,8 @@ void init_browser_info (BROWSER_INFORMATION* pbi)
 	};
 
 	// reset
-	pbi->urls[0] = 0;
-	pbi->args[0] = 0;
+	pbi->urls[0] = UNICODE_NULL;
+	pbi->args[0] = UNICODE_NULL;
 
 	// configure paths
 	_r_str_copy (pbi->binary_dir, _countof (pbi->binary_dir), _r_path_expand (app.ConfigGet (L"ChromiumDirectory", L".\\bin")));
@@ -425,7 +425,7 @@ void _app_openbrowser (BROWSER_INFORMATION* pbi)
 	if (!_r_str_isempty (pbi->urls))
 	{
 		_r_str_cat (args, _countof (args), pbi->urls);
-		pbi->urls[0] = 0; // reset
+		pbi->urls[0] = UNICODE_NULL; // reset
 	}
 
 	pbi->is_opennewwindow = false;
@@ -485,7 +485,7 @@ bool _app_checkupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 
 	_app_setstatus (hwnd, app.LocaleString (IDS_STATUS_CHECK, nullptr), 0, 0);
 
-	pbi->new_version[0] = 0;
+	pbi->new_version[0] = UNICODE_NULL;
 	pbi->timestamp = 0;
 
 	update_browser_info (hwnd, pbi);
@@ -537,7 +537,7 @@ bool _app_checkupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 		}
 		else
 		{
-			pbi->download_url[0] = 0; // clear download url if update not found
+			pbi->download_url[0] = UNICODE_NULL; // clear download url if update not found
 
 			app.ConfigSet (L"ChromiumLastCheck", _r_unixtime_now ());
 		}
@@ -597,7 +597,7 @@ bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 
 			if (rc == ERROR_SUCCESS)
 			{
-				pbi->download_url[0] = 0; // clear download url
+				pbi->download_url[0] = UNICODE_NULL; // clear download url
 
 				_r_fs_move (temp_file, pbi->cache_path, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED);
 
