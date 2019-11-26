@@ -21,58 +21,10 @@
     <ClCompile Include="src\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\include\unzip.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\routine\rstring.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\routine\rapp.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\include\Xz.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\include\XzCrc64.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\include\XzCrc64Opt.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\include\XzDec.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\include\XzEnc.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\include\XzIn.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\include\7zAlloc.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\include\7zArcIn.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\include\7zBuf.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\include\7zBuf2.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\include\7zCrc.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\include\7zCrcOpt.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\include\7zDec.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\include\7zFile.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\include\7zStream.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\include\Aes.c">
@@ -162,6 +114,54 @@
     <ClCompile Include="src\include\Threads.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\include\unzip.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\include\Xz.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\include\XzCrc64.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\include\XzCrc64Opt.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\include\XzDec.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\include\XzEnc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\include\XzIn.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\include\7zAlloc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\include\7zArcIn.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\include\7zBuf.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\include\7zBuf2.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\include\7zCrc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\include\7zCrcOpt.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\include\7zDec.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\include\7zFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\include\7zStream.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\routine\routine.hpp">
@@ -176,9 +176,6 @@
     <ClInclude Include="src\resource.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\unzip.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\routine\rstring.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -188,31 +185,10 @@
     <ClInclude Include="..\routine\rapp.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\Xz.h">
+    <ClInclude Include="..\routine\ntapi.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\XzCrc64.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\include\XzEnc.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\include\7z.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\include\7zAlloc.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\include\7zBuf.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\include\7zCrc.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\include\7zFile.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\include\7zTypes.h">
+    <ClInclude Include="src\include\7zVersion.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\include\Aes.h">
@@ -296,7 +272,34 @@
     <ClInclude Include="src\include\Threads.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\routine\ntapi.hpp">
+    <ClInclude Include="src\include\unzip.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\Xz.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\XzCrc64.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\XzEnc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\7z.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\7zAlloc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\7zBuf.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\7zCrc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\7zFile.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\7zTypes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
