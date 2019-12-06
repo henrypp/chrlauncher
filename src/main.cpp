@@ -19,7 +19,7 @@
 
 #include "resource.hpp"
 
-rapp app (APP_NAME, APP_NAME_SHORT, APP_VERSION, APP_COPYRIGHT);
+rapp app;
 
 HANDLE hthread_check = nullptr;
 BROWSER_INFORMATION browser_info;
@@ -1583,38 +1583,41 @@ INT APIENTRY wWinMain (HINSTANCE, HINSTANCE, LPWSTR args, INT)
 {
 	MSG msg = {0};
 
-	if (args)
+	if (app.Initialize (APP_NAME, APP_NAME_SHORT, APP_VERSION, APP_COPYRIGHT))
 	{
-		SetCurrentDirectory (app.GetDirectory ());
-
-		init_browser_info (&browser_info);
-
-		if (!_r_str_isempty (browser_info.urls) && _r_fs_exists (browser_info.binary_path))
+		if (args)
 		{
-			_app_openbrowser (&browser_info);
+			SetCurrentDirectory (app.GetDirectory ());
 
-			return ERROR_SUCCESS;
-		}
-	}
+			init_browser_info (&browser_info);
 
-	if (app.CreateMainWindow (IDD_MAIN, IDI_MAIN, &DlgProc))
-	{
-		const HACCEL haccel = LoadAccelerators (app.GetHINSTANCE (), MAKEINTRESOURCE (IDA_MAIN));
-
-		if (haccel)
-		{
-			while (GetMessage (&msg, nullptr, 0, 0) > 0)
+			if (!_r_str_isempty (browser_info.urls) && _r_fs_exists (browser_info.binary_path))
 			{
-				TranslateAccelerator (app.GetHWND (), haccel, &msg);
+				_app_openbrowser (&browser_info);
 
-				if (!IsDialogMessage (app.GetHWND (), &msg))
-				{
-					TranslateMessage (&msg);
-					DispatchMessage (&msg);
-				}
+				return ERROR_SUCCESS;
 			}
+		}
 
-			DestroyAcceleratorTable (haccel);
+		if (app.CreateMainWindow (IDD_MAIN, IDI_MAIN, &DlgProc))
+		{
+			const HACCEL haccel = LoadAccelerators (app.GetHINSTANCE (), MAKEINTRESOURCE (IDA_MAIN));
+
+			if (haccel)
+			{
+				while (GetMessage (&msg, nullptr, 0, 0) > 0)
+				{
+					TranslateAccelerator (app.GetHWND (), haccel, &msg);
+
+					if (!IsDialogMessage (app.GetHWND (), &msg))
+					{
+						TranslateMessage (&msg);
+						DispatchMessage (&msg);
+					}
+				}
+
+				DestroyAcceleratorTable (haccel);
+			}
 		}
 	}
 
