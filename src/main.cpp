@@ -86,7 +86,7 @@ BOOL CALLBACK activate_browser_window_callback (HWND hwnd, LPARAM lparam)
 	WCHAR buffer[MAX_PATH] = {0};
 	DWORD length = _countof (buffer);
 
-	const HANDLE hproc = OpenProcess (app.IsVistaOrLater () ? PROCESS_QUERY_LIMITED_INFORMATION : PROCESS_QUERY_INFORMATION, false, pid);
+	HANDLE hproc = OpenProcess (app.IsVistaOrLater () ? PROCESS_QUERY_LIMITED_INFORMATION : PROCESS_QUERY_INFORMATION, false, pid);
 
 	if (hproc)
 	{
@@ -109,7 +109,7 @@ BOOL CALLBACK activate_browser_window_callback (HWND hwnd, LPARAM lparam)
 				_r_str_copy (buffer, length, _r_path_dospathfromnt (path));
 		}
 
-		CloseHandle (hproc);
+		SAFE_DELETE_HANDLE (hproc);
 	}
 
 	if (!_r_str_isempty (buffer) && _r_str_compare (buffer, pbi->binary_path, _r_str_length (pbi->binary_path)) == 0)
