@@ -49,13 +49,13 @@ rstring _app_getbinaryversion (LPCWSTR path)
 				{
 					VS_FIXEDFILEINFO const *verInfo = (VS_FIXEDFILEINFO*)buffer;
 
-					if (verInfo->dwSignature == 0xfeef04bd)
+					if (verInfo->dwSignature == 0xFEEF04BD)
 					{
 						// Doesn't matter if you are on 32 bit or 64 bit,
 						// DWORD is always 32 bits, so first two revision numbers
 						// come from dwFileVersionMS, last two come from dwFileVersionLS
 
-						result.Format (L"%d.%d.%d.%d", (verInfo->dwFileVersionMS >> 16) & 0xffff, (verInfo->dwFileVersionMS >> 0) & 0xffff, (verInfo->dwFileVersionLS >> 16) & 0xffff, (verInfo->dwFileVersionLS >> 0) & 0xffff);
+						result.Format (L"%d.%d.%d.%d", (verInfo->dwFileVersionMS >> 16) & 0xFFFF, (verInfo->dwFileVersionMS >> 0) & 0xFFFF, (verInfo->dwFileVersionLS >> 16) & 0xFFFF, (verInfo->dwFileVersionLS >> 0) & 0xFFFF);
 					}
 				}
 			}
