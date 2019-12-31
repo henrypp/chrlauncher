@@ -1384,7 +1384,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 					_r_dc_fillrect (bufferDc, &drawInfo->rcItem, GetSysColor (COLOR_WINDOW));
 
 					for (INT i = drawInfo->rcItem.left; i < _R_RECT_WIDTH (&drawInfo->rcItem); i++)
-						SetPixel (bufferDc, i, drawInfo->rcItem.top, GetSysColor (COLOR_APPWORKSPACE));
+						SetPixelV (bufferDc, i, drawInfo->rcItem.top, GetSysColor (COLOR_APPWORKSPACE));
 
 					BitBlt (drawInfo->hDC, drawInfo->rcItem.left, drawInfo->rcItem.top, drawInfo->rcItem.right, drawInfo->rcItem.bottom, bufferDc, 0, 0, SRCCOPY);
 
