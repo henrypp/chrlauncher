@@ -383,7 +383,7 @@ void _app_cleanup (BROWSER_INFORMATION* pbi, LPCWSTR current_version)
 		do
 		{
 			if (_r_str_compare (current_version, wfd.cFileName, len) != 0)
-				_r_fs_delete (_r_fmt (L"%s\\%s", pbi->binary_dir, wfd.cFileName), false);
+				_r_fs_remove (_r_fmt (L"%s\\%s", pbi->binary_dir, wfd.cFileName), 0);
 		}
 		while (FindNextFile (hfile, &wfd));
 
@@ -569,8 +569,7 @@ bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 	_r_str_printf (temp_file, _countof (temp_file), L"%s.tmp", pbi->cache_path);
 	_r_str_copy (temp_file, _countof (temp_file), _r_path_makeunique (temp_file));
 
-	SetFileAttributes (pbi->cache_path, FILE_ATTRIBUTE_NORMAL);
-	_r_fs_delete (pbi->cache_path, false);
+	_r_fs_remove (pbi->cache_path, RFS_FORCEREMOVE);
 
 	_app_setstatus (hwnd, app.LocaleString (IDS_STATUS_DOWNLOAD, nullptr), 0, 1);
 
@@ -609,12 +608,12 @@ bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 			{
 				_r_dbg (TEXT (__FUNCTION__), rc, pbi->download_url);
 
-				_r_fs_delete (pbi->cache_path, false);
+				_r_fs_remove (pbi->cache_path, RFS_FORCEREMOVE);
 
 				*pis_error = true;
 			}
 
-			_r_fs_delete (temp_file, false);
+			_r_fs_remove (temp_file, RFS_FORCEREMOVE);
 		}
 
 		_r_inet_close (hsession);
@@ -1037,11 +1036,10 @@ bool _app_installupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 	{
 		_r_dbg (TEXT (__FUNCTION__), GetLastError (), pbi->cache_path);
 
-		_r_fs_rmdir (pbi->binary_dir, false); // no recurse
+		_r_fs_remove (pbi->binary_dir, RFS_FORCEREMOVE); // no recurse
 	}
 
-	SetFileAttributes (pbi->cache_path, FILE_ATTRIBUTE_NORMAL);
-	_r_fs_delete (pbi->cache_path, false); // remove cache file when zip cannot be opened
+	_r_fs_remove (pbi->cache_path, RFS_FORCEREMOVE); // remove cache file when zip cannot be opened
 
 	*pis_error = !result;
 
