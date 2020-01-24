@@ -1,11 +1,13 @@
 // chrlauncher
-// Copyright (c) 2015-2019 Henry++
+// Copyright (c) 2015-2020 Henry++
 
 #ifndef __MAIN_H__
 #define __MAIN_H__
 
 #include <windows.h>
 #include <commctrl.h>
+
+#include "routine.hpp"
 #include "resource.hpp"
 #include "app.hpp"
 

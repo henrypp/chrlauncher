@@ -1,5 +1,5 @@
 // chrlauncher
-// Copyright (c) 2015-2019 Henry++
+// Copyright (c) 2015-2020 Henry++
 
 #include <windows.h>
 
