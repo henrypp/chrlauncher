@@ -88,7 +88,7 @@ BOOL CALLBACK activate_browser_window_callback (HWND hwnd, LPARAM lparam)
 
 	HANDLE hproc = OpenProcess (app.IsVistaOrLater () ? PROCESS_QUERY_LIMITED_INFORMATION : PROCESS_QUERY_INFORMATION, false, pid);
 
-	if (hproc)
+	if (_r_fs_isvalidhandle (hproc))
 	{
 		const HMODULE hlib = GetModuleHandle (L"kernel32.dll");
 
@@ -109,7 +109,7 @@ BOOL CALLBACK activate_browser_window_callback (HWND hwnd, LPARAM lparam)
 				_r_str_copy (buffer, length, _r_path_dospathfromnt (path));
 		}
 
-		SAFE_DELETE_HANDLE (hproc);
+		CloseHandle (hproc);
 	}
 
 	if (!_r_str_isempty (buffer) && _r_str_compare (buffer, pbi->binary_path, _r_str_length (pbi->binary_path)) == 0)
@@ -376,7 +376,7 @@ void _app_cleanup (BROWSER_INFORMATION* pbi, LPCWSTR current_version)
 
 	const HANDLE hfile = FindFirstFile (_r_fmt (L"%s\\*.manifest", pbi->binary_dir), &wfd);
 
-	if (hfile != INVALID_HANDLE_VALUE)
+	if (_r_fs_isvalidhandle (hfile))
 	{
 		const size_t len = _r_str_length (current_version);
 
@@ -395,7 +395,7 @@ bool _app_browserisrunning (BROWSER_INFORMATION* pbi)
 {
 	const HANDLE hfile = CreateFile (pbi->binary_path, GENERIC_WRITE | GENERIC_READ, 0, nullptr, OPEN_EXISTING, 0, nullptr);
 
-	if (hfile != INVALID_HANDLE_VALUE)
+	if (_r_fs_isvalidhandle (hfile))
 		CloseHandle (hfile);
 
 	else
@@ -513,7 +513,7 @@ bool _app_checkupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 			}
 			else
 			{
-				_r_dbg (TEXT (__FUNCTION__), rc, url);
+				app.LogError (TEXT (__FUNCTION__), rc, url, UID);
 
 				*pis_error = true;
 			}
@@ -582,9 +582,9 @@ bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 	{
 		HANDLE hfile = CreateFile (temp_file, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
 
-		if (hfile == INVALID_HANDLE_VALUE)
+		if (!_r_fs_isvalidhandle (hfile))
 		{
-			_r_dbg (L"CreateFile", GetLastError (), temp_file);
+			app.LogError (L"CreateFile", GetLastError (), temp_file, UID);
 
 			*pis_error = true;
 		}
@@ -592,7 +592,7 @@ bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 		{
 			DWORD rc = _r_inet_downloadurl (hsession, proxy_addr, pbi->download_url, (LONG_PTR)hfile, true, &_app_downloadupdate_callback, (LONG_PTR)hwnd);
 
-			SAFE_DELETE_HANDLE (hfile); // close handle (required!)
+			CloseHandle (hfile); // close handle (required!)
 
 			if (rc == ERROR_SUCCESS)
 			{
@@ -606,7 +606,7 @@ bool _app_downloadupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 			}
 			else
 			{
-				_r_dbg (TEXT (__FUNCTION__), rc, pbi->download_url);
+				app.LogError (TEXT (__FUNCTION__), rc, pbi->download_url, UID);
 
 				_r_fs_remove (pbi->cache_path, RFS_FORCEREMOVE);
 
@@ -647,7 +647,7 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 
 	if (rc != ERROR_SUCCESS)
 	{
-		_r_dbg (L"InFile_OpenW", rc, pbi->cache_path);
+		app.LogError (L"InFile_OpenW", rc, pbi->cache_path, 0);
 		return false;
 	}
 
@@ -658,7 +658,7 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 
 	if (!lookStream.buf)
 	{
-		_r_dbg (L"ISzAlloc_Alloc", SZ_ERROR_MEM, 0);
+		app.LogError (L"ISzAlloc_Alloc", SZ_ERROR_MEM, nullptr, 0);
 	}
 	else
 	{
@@ -674,7 +674,7 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 
 		if (rc != SZ_OK)
 		{
-			_r_dbg (L"SzArEx_Open", rc, pbi->cache_path);
+			app.LogError (L"SzArEx_Open", rc, pbi->cache_path, 0);
 		}
 		else
 		{
@@ -709,7 +709,7 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 
 					if (!tempBuf)
 					{
-						_r_dbg (L"SzAlloc", SZ_ERROR_MEM, 0);
+						app.LogError (L"SzAlloc", SZ_ERROR_MEM, nullptr, 0);
 						break;
 					}
 				}
@@ -741,21 +741,6 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 
 			for (UInt32 i = 0; i < db.NumFiles; i++)
 			{
-				//const size_t len = SzArEx_GetFileNameUtf16 (&db, i, nullptr);
-
-				//if (len > tempSize)
-				//{
-				//	SzFree (nullptr, tempBuf);
-				//	tempSize = len;
-				//	tempBuf = (UInt16*)SzAlloc (nullptr, tempSize * sizeof (tempBuf[0]));
-
-				//	if (!tempBuf)
-				//	{
-				//		_r_dbg (L"SzAlloc", SZ_ERROR_MEM, 0);
-				//		break;
-				//	}
-				//}
-
 				const size_t len = SzArEx_GetFileNameUtf16 (&db, i, tempBuf);
 
 				if (len)
@@ -802,7 +787,7 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 
 						if (rc != SZ_OK)
 						{
-							_r_dbg (L"SzArEx_Extract", rc, dest_path);
+							app.LogError (L"SzArEx_Extract", rc, dest_path, 0);
 						}
 						else
 						{
@@ -810,7 +795,7 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 
 							if (rc != SZ_OK)
 							{
-								_r_dbg (L"OutFile_OpenW", rc, dest_path);
+								app.LogError (L"OutFile_OpenW", rc, dest_path, 0);
 							}
 							else
 							{
@@ -820,7 +805,7 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 
 								if (rc != SZ_OK || processedSize != outSizeProcessed)
 								{
-									_r_dbg (L"File_Write", rc, dest_path);
+									app.LogError (L"File_Write", rc, dest_path, 0);
 								}
 								else
 								{
@@ -874,7 +859,7 @@ bool _app_unpack_zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 
 	if (!IsZipHandleU (hzip))
 	{
-		_r_dbg (L"OpenZip", GetLastError (), pbi->cache_path);
+		app.LogError (L"OpenZip", GetLastError (), pbi->cache_path, 0);
 	}
 	else
 	{
@@ -961,9 +946,9 @@ bool _app_unpack_zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 
 				const HANDLE hfile = CreateFile (dest_path, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
 
-				if (hfile == INVALID_HANDLE_VALUE)
+				if (!_r_fs_isvalidhandle (hfile))
 				{
-					_r_dbg (L"CreateFile", GetLastError (), dest_path);
+					app.LogError (L"CreateFile", GetLastError (), dest_path, 0);
 				}
 				else
 				{
@@ -1034,7 +1019,7 @@ bool _app_installupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 	}
 	else
 	{
-		_r_dbg (TEXT (__FUNCTION__), GetLastError (), pbi->cache_path);
+		app.LogError (TEXT (__FUNCTION__), GetLastError (), pbi->cache_path, 0);
 
 		_r_fs_remove (pbi->binary_dir, RFS_FORCEREMOVE); // no recurse
 	}
@@ -1252,7 +1237,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				hthread_check = _r_createthread (&_app_thread_check, &browser_info, false, THREAD_PRIORITY_ABOVE_NORMAL);
 			}
 
-			if (!browser_info.is_waitdownloadend && !browser_info.is_onlyupdate && _r_fs_exists (browser_info.binary_path) && !_app_isupdatedownloaded(&browser_info))
+			if (!browser_info.is_waitdownloadend && !browser_info.is_onlyupdate && _r_fs_exists (browser_info.binary_path) && !_app_isupdatedownloaded (&browser_info))
 				_app_openbrowser (&browser_info);
 
 			break;
