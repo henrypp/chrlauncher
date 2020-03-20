@@ -160,6 +160,7 @@ void update_browser_info (HWND hwnd, BROWSER_INFORMATION* pbi)
 void init_browser_info (BROWSER_INFORMATION* pbi)
 {
 	LPCWSTR binNames[] = {
+		L"brave.exe",
 		L"firefox.exe",
 		L"basilisk.exe",
 		L"palemoon.exe",
