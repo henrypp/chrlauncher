@@ -36,32 +36,35 @@ rstring _app_getbinaryversion (LPCWSTR path)
 
 	if (verSize)
 	{
-		LPSTR verData = new CHAR[verSize];
+		void* verData = _r_mem_allocex (verSize, 0);
 
-		if (GetFileVersionInfo (path, verHandle, verSize, verData))
+		if (verData)
 		{
-			LPBYTE buffer = nullptr;
-			UINT size = 0;
-
-			if (VerQueryValue (verData, L"\\", (void FAR * FAR*) & buffer, &size))
+			if (GetFileVersionInfo (path, verHandle, verSize, verData))
 			{
-				if (size)
+				void* buffer = nullptr;
+				UINT size = 0;
+
+				if (VerQueryValue (verData, L"\\", &buffer, &size))
 				{
-					VS_FIXEDFILEINFO const *verInfo = (VS_FIXEDFILEINFO*)buffer;
-
-					if (verInfo->dwSignature == 0xFEEF04BD)
+					if (size)
 					{
-						// Doesn't matter if you are on 32 bit or 64 bit,
-						// DWORD is always 32 bits, so first two revision numbers
-						// come from dwFileVersionMS, last two come from dwFileVersionLS
+						VS_FIXEDFILEINFO const *verInfo = (VS_FIXEDFILEINFO*)buffer;
 
-						result.Format (L"%d.%d.%d.%d", (verInfo->dwFileVersionMS >> 16) & 0xFFFF, (verInfo->dwFileVersionMS >> 0) & 0xFFFF, (verInfo->dwFileVersionLS >> 16) & 0xFFFF, (verInfo->dwFileVersionLS >> 0) & 0xFFFF);
+						if (verInfo->dwSignature == 0xFEEF04BD)
+						{
+							// Doesn't matter if you are on 32 bit or 64 bit,
+							// DWORD is always 32 bits, so first two revision numbers
+							// come from dwFileVersionMS, last two come from dwFileVersionLS
+
+							result.Format (L"%d.%d.%d.%d", (verInfo->dwFileVersionMS >> 16) & 0xFFFF, (verInfo->dwFileVersionMS >> 0) & 0xFFFF, (verInfo->dwFileVersionLS >> 16) & 0xFFFF, (verInfo->dwFileVersionLS >> 0) & 0xFFFF);
+						}
 					}
 				}
 			}
-		}
 
-		SAFE_DELETE_ARRAY (verData);
+			_r_mem_free (verData);
+		}
 	}
 
 	return result;
@@ -683,6 +686,7 @@ bool _app_unpack_7zip (HWND hwnd, BROWSER_INFORMATION* pbi, LPCWSTR binName)
 				if you need cache, use these 3 variables.
 				if you use external function, you can make these variable as static.
 			*/
+
 			UInt32 blockIndex = UINT32_MAX; // it can have any value before first call (if outBuffer = 0)
 			Byte *outBuffer = nullptr; // it must be 0 before first call for each new archive.
 			size_t outBufferSize = 0; // it can have any value before first call (if outBuffer = 0)
