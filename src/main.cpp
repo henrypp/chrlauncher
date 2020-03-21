@@ -437,7 +437,8 @@ void _app_openbrowser (BROWSER_INFORMATION* pbi)
 	rstring arg;
 	arg.Format (L"\"%s\" %s", pbi->binary_path, args);
 
-	_r_run (pbi->binary_path, arg, pbi->binary_dir);
+	if (!_r_run (pbi->binary_path, arg, pbi->binary_dir))
+		app.ShowErrorMessage (app.GetHWND (), nullptr, GetLastError (), nullptr);
 }
 
 bool _app_ishaveupdate (BROWSER_INFORMATION* pbi)
