@@ -4,10 +4,8 @@
 #ifndef __MAIN_H__
 #define __MAIN_H__
 
-#include <windows.h>
-#include <commctrl.h>
-
 #include "routine.hpp"
+
 #include "resource.hpp"
 #include "app.hpp"
 
@@ -16,10 +14,6 @@
 #define LANG_MENU 0
 
 #define CHROMIUM_UPDATE_URL L"https://chromium.woolyss.com/api/v3/?os=windows&bit=%d&type=%s&out=string"
-
-// libs
-#pragma comment(lib, "ntdll.lib")
-#pragma comment(lib, "version.lib")
 
 struct BROWSER_INFORMATION
 {

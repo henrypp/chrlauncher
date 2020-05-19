@@ -1,11 +1,10 @@
 // chrlauncher
 // Copyright (c) 2015-2020 Henry++
 
-#include <windows.h>
+#include "routine.hpp"
 
 #include "main.hpp"
 #include "rapp.hpp"
-#include "routine.hpp"
 #include "unzip.hpp"
 
 #include "CpuArch.h"
@@ -72,9 +71,6 @@ rstring _app_getbinaryversion (LPCWSTR path)
 
 BOOL CALLBACK activate_browser_window_callback (HWND hwnd, LPARAM lparam)
 {
-	if (!lparam)
-		return FALSE;
-
 	BROWSER_INFORMATION* pbi = (BROWSER_INFORMATION*)lparam;
 
 	DWORD pid = 0;
@@ -97,7 +93,7 @@ BOOL CALLBACK activate_browser_window_callback (HWND hwnd, LPARAM lparam)
 
 		if (hlib)
 		{
-			typedef BOOL (WINAPI * QFPIN) (HANDLE, DWORD, LPWSTR, PDWORD); // QueryFullProcessImageName
+			using QFPIN = decltype (&QueryFullProcessImageName); // vista+
 			const QFPIN _QueryFullProcessImageName = (QFPIN)GetProcAddress (hlib, "QueryFullProcessImageNameW");
 
 			if (_QueryFullProcessImageName)
@@ -1041,7 +1037,7 @@ bool _app_installupdate (HWND hwnd, BROWSER_INFORMATION* pbi, bool *pis_error)
 	return result;
 }
 
-UINT WINAPI _app_thread_check (LPVOID lparam)
+THREAD_FN _app_thread_check (LPVOID lparam)
 {
 	BROWSER_INFORMATION* pbi = (BROWSER_INFORMATION*)lparam;
 	const HWND hwnd = app.GetHWND ();
@@ -1191,9 +1187,7 @@ UINT WINAPI _app_thread_check (LPVOID lparam)
 		PostMessage (hwnd, WM_DESTROY, 0, 0);
 	}
 
-	_endthreadex (ERROR_SUCCESS);
-
-	return ERROR_SUCCESS;
+	return _r_sys_endthread (ERROR_SUCCESS);
 }
 
 INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
@@ -1240,7 +1234,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			{
 				SAFE_DELETE_HANDLE (hthread_check);
 
-				hthread_check = _r_createthread (&_app_thread_check, &browser_info, false, THREAD_PRIORITY_ABOVE_NORMAL);
+				hthread_check = _r_sys_createthread (&_app_thread_check, &browser_info, false, THREAD_PRIORITY_ABOVE_NORMAL);
 			}
 
 			if (!browser_info.is_waitdownloadend && !browser_info.is_onlyupdate && _r_fs_exists (browser_info.binary_path) && !_app_isupdatedownloaded (&browser_info))
@@ -1554,7 +1548,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 					{
 						SAFE_DELETE_HANDLE (hthread_check);
 
-						hthread_check = _r_createthread (&_app_thread_check, &browser_info, false, THREAD_PRIORITY_ABOVE_NORMAL);
+						hthread_check = _r_sys_createthread (&_app_thread_check, &browser_info, false, THREAD_PRIORITY_ABOVE_NORMAL);
 					}
 
 					break;
