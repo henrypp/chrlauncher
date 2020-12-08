@@ -20,12 +20,6 @@ Supported browser:
 - as launcher - Chromium based (like Google Chrome, Opera, Yandex Browser, Vivaldi, etc.) and Firefox based (Mozilla Firefox, Basilisk, Pale Moon, Waterfox, etc.)
 - as updater - Chromium only
 
-Flash Player:
-chrlauncher has feature for use portable Flash Player PPAPI.
-- download portable Flash Player PPAPI 32-bit/64-bit: http://effect8.ru/soft/media/adobe-flash-player-portable.html
-- unpack archive to the "Plugins" folder.
-- open "chrlauncher.ini" and find "FlashPlayerPath" option and then set ".\Plugins\%flash_player_dll_name_here%"
-
 Settings:
 [chrlauncher]
 
@@ -42,11 +36,6 @@ ChromiumBinary=chrome.exe
 # Chromium binaries directory (string):
 # Relative (to chrlauncher directory) or full path (env. variables supported).
 ChromiumDirectory=.\bin
-
-# Adobe Flash Player PPAPI portable library path (string):
-# Relative (to chrlauncher directory) or full path (env. variables supported).
-# Download here: http://effect8.ru/soft/media/adobe-flash-player-portable.html
-FlashPlayerPath=.\plugins\pepflashplayer.dll
 
 # Set Chromium binaries architecture (integer):
 #
@@ -137,4 +126,4 @@ ChromiumLastCheck=0
 Website: www.henrypp.org
 Support: support@henrypp.org
 
-(c) 2015-2019 Henry++
+(c) 2015-2021 Henry++
