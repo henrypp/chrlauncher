@@ -9,12 +9,12 @@ chrlauncher has feature to use portable Chromium as default browser and it will 
 
 Command line:
 There is list of arguments overrides .ini options.
-/autodownload - auto download update and install it!
-/bringtofront - bring chrlauncher window to front when download started
-/forcecheck - force update checking
-/wait - start browser only when check/download/install update complete
-/update - use chrlauncher as updater, but does not start Chromium
-/ini .\chrlauncher.ini - start chrlauncher with custom configuration
+-autodownload - auto download update and install it!
+-bringtofront - bring chrlauncher window to front when download started
+-forcecheck - force update checking
+-wait - start browser only when check/download/install update complete
+-update - use chrlauncher as updater, but does not start Chromium
+-ini .\chrlauncher.ini - start chrlauncher with custom configuration
 
 Supported browser:
 - as launcher - Chromium based (like Google Chrome, Opera, Yandex Browser, Vivaldi, etc.) and Firefox based (Mozilla Firefox, Basilisk, Pale Moon, Waterfox, etc.)
