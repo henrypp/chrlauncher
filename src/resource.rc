@@ -157,7 +157,7 @@ BEGIN
 	BEGIN
 		BLOCK "040904E4"
 		BEGIN
-			VALUE "Comments", APP_WEBSITE_URL
+			VALUE "Comments", APP_COMMENT
 			VALUE "CompanyName", APP_AUTHOR
 			VALUE "FileDescription", APP_NAME
 			VALUE "FileVersion", APP_VERSION
