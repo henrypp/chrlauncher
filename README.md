@@ -1,16 +1,28 @@
-chrlauncher [![Github All Releases](https://img.shields.io/github/downloads/henrypp/chrlauncher/total.svg)](https://github.com/henrypp/chrlauncher/releases) [![GitHub issues](https://img.shields.io/github/issues-raw/henrypp/chrlauncher.svg)](https://github.com/henrypp/chrlauncher/issues) [![Donate via PayPal](https://img.shields.io/badge/donate-paypal-red.svg)](https://www.paypal.me/henrypp/15) [![Donate via Bitcoin](https://img.shields.io/badge/donate-bitcoin-red.svg)](https://blockchain.info/address/1LrRTXPsvHcQWCNZotA9RcwjsGcRghG96c) [![Licence](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html)
-=======
+<h1 align="center">chrlauncher</h1>
 
-![chrlauncher](https://www.henrypp.org/images/chrlauncher.png?cachefix)
+<p align="center">
+	<a href="https://github.com/henrypp/chrlauncher/releases"><img src="https://img.shields.io/github/v/release/henrypp/chrlauncher?style=flat-square&include_prereleases&label=version" /></a>
+	<a href="https://github.com/henrypp/chrlauncher/releases"><img src="https://img.shields.io/github/downloads/henrypp/chrlauncher/total.svg?style=flat-square" /></a>
+	<a href="https://github.com/henrypp/chrlauncher/issues"><img src="https://img.shields.io/github/issues-raw/henrypp/chrlauncher.svg?style=flat-square&label=issues" /></a>
+	<a href="https://github.com/henrypp/chrlauncher/graphs/contributors"><img src="https://img.shields.io/github/contributors/henrypp/chrlauncher?style=flat-square" /></a>
+	<a href="https://github.com/henrypp/chrlauncher/blob/master/LICENSE"><img src="https://img.shields.io/github/license/henrypp/chrlauncher?style=flat-square" /></a>
+</p>
 
+-------
+
+<p align="center">
+	<img src="https://www.henrypp.org/images/chrlauncher.png" />
+</p>
+
+### Description:
 Small and very fast portable launcher and updater for Chromium.
 
-#### Default browser:
+### Default browser:
 chrlauncher has feature to use portable Chromium as default browser and it will be open links from another programs through chrlauncher.
 - start "SetDefaultBrowser.bat" (as admin).
 - start "Control panel" -> "Default programs" -> "Set your default programs" -> "chrlauncher" and set all checkboxes on.
 
-#### Command line:
+### Command line:
 There is list of arguments overrides .ini options
 ~~~
 -autodownload - auto download update and install it!
@@ -21,11 +33,11 @@ There is list of arguments overrides .ini options
 -ini .\chrlauncher.ini - start chrlauncher with custom configuration
 ~~~
 
-#### Supported browser:
+### Supported browser:
 - as launcher - Chromium based (like Google Chrome, Opera, Yandex Browser, Vivaldi, etc.) and Firefox based (Mozilla Firefox, Basilisk, Pale Moon, Waterfox, etc.)
 - as updater - Chromium only
 
-#### Settings:
+### Settings:
 ~~~ini
 [chrlauncher]
 
@@ -116,20 +128,16 @@ ChromiumCheckPeriod=2
 # Last cached update checking timestamp (integer):
 ChromiumLastCheck=0
 
-##########################
-# Internal settings (SDK)
-##########################
+# Internal settings (Project SDK)
+# https://github.com/henrypp/routine
 
 # Enable classic theme UI (boolean):
 #ClassicUI=true
 
 # Set custom useragent (string):
 #UserAgent=Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36
-
-# Set proxy configuration (string):
-#Proxy=127.0.0.1:80
 ~~~
-#### FAQ:
+### FAQ:
 - [If you lost all setting and extensions when copy Chromium to another PC (answer)](https://github.com/henrypp/chrlauncher/issues/116#issuecomment-444426692)
 - [How to force check for an update every chrlauncher start?](https://github.com/henrypp/chrlauncher/issues/92#issuecomment-343274418)
 - [How to host the Chromium package zip on custom network?](https://github.com/henrypp/chrlauncher/issues/86)
