@@ -37,7 +37,8 @@ typedef struct tagBROWSER_INFORMATION
 	BOOLEAN is_autodownload;
 	BOOLEAN is_bringtofront;
 	BOOLEAN is_forcecheck;
-	BOOLEAN is_waitdownloadend;
-	BOOLEAN is_opennewwindow;
+	BOOLEAN is_hasurls;
 	BOOLEAN is_onlyupdate;
+	BOOLEAN is_opennewwindow;
+	BOOLEAN is_waitdownloadend;
 } BROWSER_INFORMATION, *PBROWSER_INFORMATION;
