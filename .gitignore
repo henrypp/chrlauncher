@@ -3,8 +3,11 @@
 temp/
 bin/32/
 bin/64/
+bin/arm64/
 x64/
 win32/
+arm64/
+__pycache__
 
 thumbs.db
 ehthumbs.db
