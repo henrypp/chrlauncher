@@ -9,12 +9,13 @@
 #include "app.h"
 
 // config
-#define UID 2008
 #define LANG_MENU 0
 
 #define CHROMIUM_UPDATE_URL L"https://chromium.woolyss.com/api/v3/?os=windows&bit=%d&type=%s&out=string"
 
-typedef struct tagBROWSER_INFORMATION
+DEFINE_GUID (GUID_TrayIcon, 0xead41630, 0x90bb, 0x4836, 0x82, 0x41, 0xae, 0xae, 0x12, 0xe8, 0x69, 0x12);
+
+typedef struct BROWSER_INFORMATION
 {
 	WCHAR args[512];
 	WCHAR urls[512];
