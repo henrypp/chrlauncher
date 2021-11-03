@@ -189,17 +189,15 @@ VOID init_browser_info (_Inout_ PBROWSER_INFORMATION pbi)
 		}
 
 		if (_r_obj_isstringempty (pbi->binary_path) || !_r_fs_exists (pbi->binary_path->buffer))
-		{
 			_r_obj_movereference (&pbi->binary_path, _r_obj_concatstringrefs (3, &pbi->binary_dir->sr, &separator_sr, &binary_name->sr)); // fallback (use defaults)
-		}
 	}
 
 	_r_obj_dereference (binary_name);
 
-	_r_obj_movereference (&pbi->cache_path, _r_format_string (L"%s\\%s_%" TEXT (PR_ULONG) L".bin", _r_sys_gettempdirectory (), _r_app_getnameshort (), _r_obj_getstringhash (pbi->binary_path)));
+	_r_obj_movereference (&pbi->cache_path, _r_format_string (L"%s\\%s_%" TEXT (PR_ULONG) L".bin", _r_sys_gettempdirectory ()->buffer, _r_app_getnameshort (), _r_obj_getstringhash (pbi->binary_path, TRUE)));
 
 	// Get browser architecture
-	pbi->architecture = _r_config_getinteger (L"ChromiumArchitecture", 0);
+	pbi->architecture = _r_config_getlong (L"ChromiumArchitecture", 0);
 
 	if (pbi->architecture != 64 && pbi->architecture != 32)
 	{
@@ -227,9 +225,7 @@ VOID init_browser_info (_Inout_ PBROWSER_INFORMATION pbi)
 	}
 
 	if (pbi->architecture != 32 && pbi->architecture != 64)
-	{
-		pbi->architecture = 32; // default architecture
-	}
+		pbi->architecture = 64; // default architecture
 
 	// Set common data
 	PR_STRING browser_type = _r_config_getstring (L"ChromiumType", L"dev-codecs-sync");
@@ -247,7 +243,7 @@ VOID init_browser_info (_Inout_ PBROWSER_INFORMATION pbi)
 		_r_obj_dereference (browser_arguments);
 	}
 
-	_r_obj_movereference (&pbi->browser_name, _r_format_string (L"%s (%d-bit)", pbi->browser_type->buffer, pbi->architecture));
+	_r_obj_movereference (&pbi->browser_name, _r_format_string (L"%s (%" PR_LONG L"-bit)", pbi->browser_type->buffer, pbi->architecture));
 	_r_obj_movereference (&pbi->current_version, _r_res_queryversionstring (pbi->binary_path->buffer));
 
 	// Parse command line
@@ -328,7 +324,7 @@ VOID init_browser_info (_Inout_ PBROWSER_INFORMATION pbi)
 		}
 	}
 
-	pbi->check_period = _r_config_getinteger (L"ChromiumCheckPeriod", 2);
+	pbi->check_period = _r_config_getlong (L"ChromiumCheckPeriod", 2);
 
 	if (pbi->check_period == -1)
 		pbi->is_forcecheck = TRUE;
@@ -600,13 +596,16 @@ BOOLEAN _app_checkupdate (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _Out_ P
 
 		if (url)
 		{
-			HINTERNET hsession = _r_inet_createsession (_r_app_getuseragent ());
+			HINTERNET hsession;
+			ULONG code;
+
+			hsession = _r_inet_createsession (_r_app_getuseragent ());
 
 			if (hsession)
 			{
 				_r_inet_initializedownload (&download_info, NULL, NULL, NULL);
 
-				ULONG code = _r_inet_begindownload (hsession, url->buffer, &download_info);
+				code = _r_inet_begindownload (hsession, url->buffer, &download_info);
 
 				if (code == ERROR_SUCCESS)
 				{
@@ -641,13 +640,13 @@ BOOLEAN _app_checkupdate (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _Out_ P
 	{
 		PR_STRING value_string;
 
-		value_string = _r_obj_findhashtablepointer (result, _r_str_gethash (L"download"));
+		value_string = _r_obj_findhashtablepointer (result, _r_str_gethash (L"download", TRUE));
 		_r_obj_movereference (&pbi->download_url, value_string);
 
-		value_string = _r_obj_findhashtablepointer (result, _r_str_gethash (L"version"));
+		value_string = _r_obj_findhashtablepointer (result, _r_str_gethash (L"version", TRUE));
 		_r_obj_movereference (&pbi->new_version, value_string);
 
-		value_string = _r_obj_findhashtablepointer (result, _r_str_gethash (L"timestamp"));
+		value_string = _r_obj_findhashtablepointer (result, _r_str_gethash (L"timestamp", TRUE));
 
 		if (value_string)
 		{
@@ -1400,11 +1399,11 @@ INT_PTR CALLBACK DlgProc (_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wparam, _In
 			icon_small_x = _r_dc_getsystemmetrics (SM_CXSMICON, dpi_value);
 			icon_small_y = _r_dc_getsystemmetrics (SM_CYSMICON, dpi_value);
 
-			hicon = _r_sys_loadicon (_r_sys_getimagebase (), MAKEINTRESOURCE (IDI_MAIN), icon_small_y, icon_small_x, TRUE);
+			hicon = _r_sys_loadsharedicon (_r_sys_getimagebase (), MAKEINTRESOURCE (IDI_MAIN), icon_small_y, icon_small_x);
 
 			init_browser_info (browser_info);
 
-			_r_tray_create (hwnd, &GUID_TrayIcon, WM_TRAYICON, hicon, _r_app_getname (), (_r_queuedlock_islocked (&lock_download) || _app_isupdatedownloaded (browser_info)) ? FALSE : TRUE);
+			_r_tray_create (hwnd, &GUID_TrayIcon, RM_TRAYICON, hicon, _r_app_getname (), (_r_queuedlock_islocked (&lock_download) || _app_isupdatedownloaded (browser_info)) ? FALSE : TRUE);
 
 			_r_workqueue_queueitem (&workqueue, &_app_thread_check, browser_info);
 
@@ -1468,9 +1467,9 @@ INT_PTR CALLBACK DlgProc (_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wparam, _In
 			icon_small_x = _r_dc_getsystemmetrics (SM_CXSMICON, dpi_value);
 			icon_small_y = _r_dc_getsystemmetrics (SM_CYSMICON, dpi_value);
 
-			hicon = _r_sys_loadicon (_r_sys_getimagebase (), MAKEINTRESOURCE (IDI_MAIN), icon_small_x, icon_small_y, TRUE);
+			hicon = _r_sys_loadsharedicon (_r_sys_getimagebase (), MAKEINTRESOURCE (IDI_MAIN), icon_small_x, icon_small_y);
 
-			_r_tray_create (hwnd, &GUID_TrayIcon, WM_TRAYICON, hicon, _r_app_getname (), (_r_queuedlock_islocked (&lock_download) || _app_isupdatedownloaded (browser_info)) ? FALSE : TRUE);
+			_r_tray_create (hwnd, &GUID_TrayIcon, RM_TRAYICON, hicon, _r_app_getname (), (_r_queuedlock_islocked (&lock_download) || _app_isupdatedownloaded (browser_info)) ? FALSE : TRUE);
 
 			break;
 		}
@@ -1489,7 +1488,7 @@ INT_PTR CALLBACK DlgProc (_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wparam, _In
 			icon_small_x = _r_dc_getsystemmetrics (SM_CXSMICON, dpi_value);
 			icon_small_y = _r_dc_getsystemmetrics (SM_CYSMICON, dpi_value);
 
-			hicon = _r_sys_loadicon (_r_sys_getimagebase (), MAKEINTRESOURCE (IDI_MAIN), icon_small_x, icon_small_y, TRUE);
+			hicon = _r_sys_loadsharedicon (_r_sys_getimagebase (), MAKEINTRESOURCE (IDI_MAIN), icon_small_x, icon_small_y);
 
 			_r_tray_setinfo (hwnd, &GUID_TrayIcon, hicon, _r_app_getname ());
 
@@ -1644,7 +1643,7 @@ INT_PTR CALLBACK DlgProc (_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wparam, _In
 			break;
 		}
 
-		case WM_TRAYICON:
+		case RM_TRAYICON:
 		{
 			switch (LOWORD (lparam))
 			{
@@ -1749,8 +1748,12 @@ INT_PTR CALLBACK DlgProc (_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wparam, _In
 				case IDM_OPEN:
 				case IDM_TRAY_OPEN:
 				{
-					if (_r_fs_exists (_r_app_getconfigpath ()))
-						_r_shell_opendefault (_r_app_getconfigpath ());
+					PR_STRING path;
+
+					path = _r_app_getconfigpath ();
+
+					if (_r_fs_exists (path->buffer))
+						_r_shell_opendefault (path->buffer);
 
 					break;
 				}
@@ -1796,49 +1799,34 @@ INT_PTR CALLBACK DlgProc (_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wparam, _In
 
 INT APIENTRY wWinMain (_In_ HINSTANCE hinst, _In_opt_ HINSTANCE prev_hinst, _In_ LPWSTR cmdline, _In_ INT show_cmd)
 {
-	MSG msg;
-	HACCEL haccel;
 	HWND hwnd;
+	PR_STRING path;
 
-	if (_r_app_initialize ())
+	if (!_r_app_initialize ())
+		return ERROR_APP_INIT_FAILURE;
+
+	_app_initialize ();
+
+	path = _r_app_getdirectory ();
+
+	SetCurrentDirectory (path->buffer);
+
+	if (cmdline)
 	{
-		_app_initialize ();
+		init_browser_info (browser_info);
 
-		SetCurrentDirectory (_r_app_getdirectory ());
-
-		if (cmdline)
+		if (browser_info->is_hasurls && _r_fs_exists (browser_info->binary_path->buffer))
 		{
-			init_browser_info (browser_info);
+			_app_openbrowser (browser_info);
 
-			if (browser_info->is_hasurls && _r_fs_exists (browser_info->binary_path->buffer))
-			{
-				_app_openbrowser (browser_info);
-
-				return ERROR_SUCCESS;
-			}
-		}
-
-		hwnd = _r_app_createwindow (IDD_MAIN, IDI_MAIN, &DlgProc);
-
-		if (hwnd)
-		{
-			haccel = LoadAccelerators (_r_sys_getimagebase (), MAKEINTRESOURCE (IDA_MAIN));
-
-			if (haccel)
-			{
-				while (GetMessage (&msg, NULL, 0, 0) > 0)
-				{
-					if (!TranslateAccelerator (hwnd, haccel, &msg) && !IsDialogMessage (hwnd, &msg))
-					{
-						TranslateMessage (&msg);
-						DispatchMessage (&msg);
-					}
-				}
-
-				DestroyAcceleratorTable (haccel);
-			}
+			return ERROR_SUCCESS;
 		}
 	}
 
-	return ERROR_SUCCESS;
+	hwnd = _r_app_createwindow (MAKEINTRESOURCE (IDD_MAIN), MAKEINTRESOURCE (IDI_MAIN), &DlgProc);
+
+	if (!hwnd)
+		return ERROR_APP_INIT_FAILURE;
+
+	return _r_wnd_messageloop (hwnd, MAKEINTRESOURCE (IDA_MAIN));
 }
