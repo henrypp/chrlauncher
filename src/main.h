@@ -32,8 +32,8 @@ typedef struct BROWSER_INFORMATION
 	LONG64 timestamp;
 	LONG64 reserved1;
 
-	INT check_period;
-	INT architecture;
+	LONG check_period;
+	LONG architecture;
 
 	BOOLEAN is_autodownload;
 	BOOLEAN is_bringtofront;
