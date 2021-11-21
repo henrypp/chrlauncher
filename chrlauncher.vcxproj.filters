@@ -159,6 +159,12 @@
     <ClCompile Include="src\include\miniz.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\include\LzFindOpt.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\include\Sha256Opt.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\main.h">

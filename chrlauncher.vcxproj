@@ -274,6 +274,7 @@
     <ClCompile Include="src\include\DllSecur.c" />
     <ClCompile Include="src\include\LzFind.c" />
     <ClCompile Include="src\include\LzFindMt.c" />
+    <ClCompile Include="src\include\LzFindOpt.c" />
     <ClCompile Include="src\include\Lzma2Dec.c" />
     <ClCompile Include="src\include\Lzma2DecMt.c" />
     <ClCompile Include="src\include\Lzma2Enc.c" />
@@ -289,6 +290,7 @@
     <ClCompile Include="src\include\Ppmd7Dec.c" />
     <ClCompile Include="src\include\Ppmd7Enc.c" />
     <ClCompile Include="src\include\Sha256.c" />
+    <ClCompile Include="src\include\Sha256Opt.c" />
     <ClCompile Include="src\include\Sort.c" />
     <ClCompile Include="src\include\Threads.c" />
     <ClCompile Include="src\include\Xz.c" />
