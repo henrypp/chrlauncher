@@ -194,7 +194,13 @@ VOID init_browser_info (_Inout_ PBROWSER_INFORMATION pbi)
 
 	_r_obj_dereference (binary_name);
 
-	_r_obj_movereference (&pbi->cache_path, _r_format_string (L"%s\\%s_%" TEXT (PR_ULONG) L".bin", _r_sys_gettempdirectory ()->buffer, _r_app_getnameshort (), _r_obj_getstringhash (pbi->binary_path, TRUE)));
+	_r_obj_movereference (&pbi->cache_path, _r_format_string (
+		L"%s\\%s_%" TEXT (PR_ULONG) L".bin",
+		_r_sys_gettempdirectory ()->buffer,
+		_r_app_getnameshort (),
+		_r_str_gethash2 (pbi->binary_path,
+		TRUE
+	)));
 
 	// Get browser architecture
 	pbi->architecture = _r_config_getlong (L"ChromiumArchitecture", 0);
@@ -228,13 +234,14 @@ VOID init_browser_info (_Inout_ PBROWSER_INFORMATION pbi)
 		pbi->architecture = 64; // default architecture
 
 	// Set common data
-	PR_STRING browser_type = _r_config_getstring (L"ChromiumType", L"dev-codecs-sync");
-	PR_STRING browser_arguments = _r_config_getstringexpand (L"ChromiumCommandLine", L"--user-data-dir=..\\profile --no-default-browser-check");
+	PR_STRING browser_type;
+	PR_STRING browser_arguments;
+
+	browser_type = _r_config_getstring (L"ChromiumType", L"dev-codecs-sync");
+	browser_arguments = _r_config_getstringexpand (L"ChromiumCommandLine", L"--user-data-dir=..\\profile --no-default-browser-check");
 
 	if (browser_type)
-	{
 		_r_obj_movereference (&pbi->browser_type, browser_type);
-	}
 
 	if (browser_arguments)
 	{
@@ -555,9 +562,9 @@ UINT _app_getactionid (_In_ PBROWSER_INFORMATION pbi)
 	return IDS_ACTION_CHECK;
 }
 
-BOOLEAN _app_checkupdate (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _Out_ PBOOLEAN pis_error)
+BOOLEAN _app_checkupdate (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _Out_ PBOOLEAN is_error_ptr)
 {
-	*pis_error = FALSE;
+	*is_error_ptr = FALSE;
 
 	if (_app_ishaveupdate (pbi))
 		return TRUE;
@@ -597,34 +604,37 @@ BOOLEAN _app_checkupdate (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _Out_ P
 		if (url)
 		{
 			HINTERNET hsession;
+			PR_STRING string;
 			ULONG code;
 
 			hsession = _r_inet_createsession (_r_app_getuseragent ());
 
 			if (hsession)
 			{
-				_r_inet_initializedownload (&download_info, NULL, NULL, NULL);
+				_r_inet_initializedownload (&download_info);
 
-				code = _r_inet_begindownload (hsession, url->buffer, &download_info);
+				code = _r_inet_begindownload (hsession, url, &download_info);
 
 				if (code == ERROR_SUCCESS)
 				{
-					if (_r_obj_isstringempty (download_info.string))
+					string = download_info.u.string;
+
+					if (_r_obj_isstringempty (string))
 					{
 						_r_show_message (hwnd, MB_OK | MB_ICONSTOP, NULL, NULL, L"Configuration not found.");
-						*pis_error = TRUE;
+						*is_error_ptr = TRUE;
 					}
 					else
 					{
-						result = _r_str_unserialize (&download_info.string->sr, L';', L'=');
-						*pis_error = FALSE;
+						result = _r_str_unserialize (&string->sr, L';', L'=');
+						*is_error_ptr = FALSE;
 					}
 				}
 				else
 				{
 					_r_log (LOG_LEVEL_ERROR, &GUID_TrayIcon, TEXT (__FUNCTION__), code, url->buffer);
 
-					*pis_error = TRUE;
+					*is_error_ptr = TRUE;
 				}
 
 				_r_inet_destroydownload (&download_info);
@@ -682,9 +692,9 @@ BOOLEAN WINAPI _app_downloadupdate_callback (_In_ ULONG total_written, _In_ ULON
 	return TRUE;
 }
 
-BOOLEAN _app_downloadupdate (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _Out_ PBOOLEAN pis_error)
+BOOLEAN _app_downloadupdate (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _Out_ PBOOLEAN is_error_ptr)
 {
-	*pis_error = FALSE;
+	*is_error_ptr = FALSE;
 
 	if (_app_isupdatedownloaded (pbi))
 		return TRUE;
@@ -712,16 +722,16 @@ BOOLEAN _app_downloadupdate (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _Out
 		{
 			_r_log (LOG_LEVEL_ERROR, &GUID_TrayIcon, L"CreateFile", GetLastError (), temp_file->buffer);
 
-			*pis_error = TRUE;
+			*is_error_ptr = TRUE;
 		}
 		else
 		{
 			R_DOWNLOAD_INFO download_info;
 			ULONG code;
 
-			_r_inet_initializedownload (&download_info, hfile, &_app_downloadupdate_callback, hwnd);
+			_r_inet_initializedownload_ex (&download_info, hfile, &_app_downloadupdate_callback, hwnd);
 
-			code = _r_inet_begindownload (hsession, pbi->download_url->buffer, &download_info);
+			code = _r_inet_begindownload (hsession, pbi->download_url, &download_info);
 
 			_r_inet_destroydownload (&download_info); // required!
 
@@ -733,7 +743,7 @@ BOOLEAN _app_downloadupdate (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _Out
 
 				result = TRUE;
 
-				*pis_error = FALSE;
+				*is_error_ptr = FALSE;
 			}
 			else
 			{
@@ -741,7 +751,7 @@ BOOLEAN _app_downloadupdate (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _Out
 
 				_r_fs_deletefile (pbi->cache_path->buffer, TRUE);
 
-				*pis_error = TRUE;
+				*is_error_ptr = TRUE;
 			}
 
 			_r_fs_deletefile (temp_file->buffer, TRUE);
@@ -1147,7 +1157,7 @@ CleanupExit:
 	return result;
 }
 
-BOOLEAN _app_installupdate (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _Out_ PBOOLEAN pis_error)
+BOOLEAN _app_installupdate (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _Out_ PBOOLEAN is_error_ptr)
 {
 	R_STRINGREF bin_name;
 	BOOLEAN result = FALSE;
@@ -1185,7 +1195,7 @@ BOOLEAN _app_installupdate (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _Out_
 
 	_r_fs_deletefile (pbi->cache_path->buffer, TRUE); // remove cache file when zip cannot be opened
 
-	*pis_error = !result;
+	*is_error_ptr = !result;
 
 	_r_queuedlock_releaseshared (&lock_download);
 
@@ -1394,7 +1404,7 @@ INT_PTR CALLBACK DlgProc (_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wparam, _In
 
 			HICON hicon;
 
-			dpi_value = _r_dc_getsystemdpi ();
+			dpi_value = _r_dc_gettaskbardpi ();
 
 			icon_small_x = _r_dc_getsystemmetrics (SM_CXSMICON, dpi_value);
 			icon_small_y = _r_dc_getsystemmetrics (SM_CYSMICON, dpi_value);
@@ -1462,7 +1472,7 @@ INT_PTR CALLBACK DlgProc (_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wparam, _In
 
 			HICON hicon;
 
-			dpi_value = _r_dc_getsystemdpi ();
+			dpi_value = _r_dc_gettaskbardpi ();
 
 			icon_small_x = _r_dc_getsystemmetrics (SM_CXSMICON, dpi_value);
 			icon_small_y = _r_dc_getsystemmetrics (SM_CYSMICON, dpi_value);
@@ -1483,7 +1493,7 @@ INT_PTR CALLBACK DlgProc (_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wparam, _In
 
 			HICON hicon;
 
-			dpi_value = _r_dc_getsystemdpi ();
+			dpi_value = _r_dc_gettaskbardpi ();
 
 			icon_small_x = _r_dc_getsystemmetrics (SM_CXSMICON, dpi_value);
 			icon_small_y = _r_dc_getsystemmetrics (SM_CYSMICON, dpi_value);
