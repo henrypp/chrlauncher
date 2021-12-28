@@ -493,6 +493,9 @@ BOOLEAN _app_browserisrunning (_In_ PBROWSER_INFORMATION pbi)
 
 VOID _app_openbrowser (_In_ PBROWSER_INFORMATION pbi)
 {
+	WCHAR args[512];
+	PR_STRING arg;
+	NTSTATUS status;
 	BOOLEAN is_running;
 
 	if (_r_obj_isstringempty (pbi->binary_path) || !_r_fs_exists (pbi->binary_path->buffer))
@@ -506,7 +509,6 @@ VOID _app_openbrowser (_In_ PBROWSER_INFORMATION pbi)
 		return;
 	}
 
-	WCHAR args[512];
 	_r_str_copy (args, RTL_NUMBER_OF (args), pbi->args);
 
 	if (pbi->is_hasurls)
@@ -520,12 +522,12 @@ VOID _app_openbrowser (_In_ PBROWSER_INFORMATION pbi)
 
 	pbi->is_opennewwindow = FALSE;
 
-	PR_STRING arg;
-
 	arg = _r_obj_concatstrings (4, L"\"", pbi->binary_path->buffer, L"\" ", args);
 
-	if (!_r_sys_createprocess (pbi->binary_path->buffer, arg->buffer, pbi->binary_dir->buffer))
-		_r_show_errormessage (_r_app_gethwnd (), NULL, GetLastError (), NULL);
+	status = _r_sys_createprocess (pbi->binary_path->buffer, arg->buffer, pbi->binary_dir->buffer);
+
+	if (status != STATUS_SUCCESS)
+		_r_show_errormessage (_r_app_gethwnd (), NULL, status, NULL);
 
 	_r_obj_dereference (arg);
 }
@@ -901,9 +903,7 @@ BOOLEAN _app_unpack_7zip (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _In_ PR
 				PR_STRING dest_path;
 
 				if (root_dir_name)
-				{
-					_r_str_skiplength (&path, root_dir_name->length + separator_sr.length);
-				}
+					_r_obj_skipstringlength (&path, root_dir_name->length + separator_sr.length);
 
 				dest_path = _r_obj_concatstringrefs (3, &pbi->binary_dir->sr, &separator_sr, &path);
 
@@ -1004,26 +1004,27 @@ BOOLEAN _app_unpack_7zip (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _In_ PR
 BOOLEAN _app_unpack_zip (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _In_ PR_STRINGREF bin_name)
 {
 	mz_zip_archive zip_archive;
-	mz_bool status;
+	mz_bool zip_bool;
 
 	PR_BYTE bytes;
 	PR_STRING root_dir_name = NULL;
 	BOOLEAN result = FALSE;
+	NTSTATUS status;
 
-	bytes = _r_str_unicode2multibyte (&pbi->cache_path->sr);
+	status = _r_str_unicode2multibyte (&pbi->cache_path->sr, &bytes);
 
-	if (!bytes)
+	if (status != STATUS_SUCCESS)
 	{
-		_r_log (LOG_LEVEL_ERROR, NULL, L"_r_str_unicode2multibyte", GetLastError (), NULL);
+		_r_log (LOG_LEVEL_ERROR, NULL, L"_r_str_unicode2multibyte", status, NULL);
 
 		goto CleanupExit;
 	}
 
 	RtlZeroMemory (&zip_archive, sizeof (zip_archive));
 
-	status = mz_zip_reader_init_file (&zip_archive, bytes->buffer, 0);
+	zip_bool = mz_zip_reader_init_file (&zip_archive, bytes->buffer, 0);
 
-	if (!status)
+	if (!zip_bool)
 	{
 		//_r_log (LOG_LEVEL_ERROR, NULL, L"mz_zip_reader_init_file", GetLastError (), NULL);
 
@@ -1058,9 +1059,7 @@ BOOLEAN _app_unpack_zip (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _In_ PR_
 		{
 			_r_obj_initializebyteref (&path_sr, file_stat.m_filename);
 
-			path = _r_str_multibyte2unicode (&path_sr);
-
-			if (!path)
+			if (_r_str_multibyte2unicode (&path_sr, &path) != STATUS_SUCCESS)
 				continue;
 
 			_r_str_replacechar (&path->sr, L'/', OBJ_NAME_PATH_SEPARATOR);
@@ -1085,9 +1084,7 @@ BOOLEAN _app_unpack_zip (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _In_ PR_
 
 		_r_obj_initializebyteref (&path_sr, file_stat.m_filename);
 
-		path = _r_str_multibyte2unicode (&path_sr);
-
-		if (!path)
+		if (_r_str_multibyte2unicode (&path_sr, &path) != STATUS_SUCCESS)
 			continue;
 
 		_r_str_replacechar (&path->sr, L'/', OBJ_NAME_PATH_SEPARATOR);
@@ -1100,9 +1097,7 @@ BOOLEAN _app_unpack_zip (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _In_ PR_
 		PR_STRING dest_path;
 
 		if (root_dir_name)
-		{
-			_r_str_skiplength (&path->sr, root_dir_name->length + separator_sr.length);
-		}
+			_r_obj_skipstringlength (&path->sr, root_dir_name->length + separator_sr.length);
 
 		dest_path = _r_obj_concatstringrefs (3, &pbi->binary_dir->sr, &separator_sr, &path->sr);
 
@@ -1124,9 +1119,7 @@ BOOLEAN _app_unpack_zip (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _In_ PR_
 				_r_obj_dereference (sub_dir);
 			}
 
-			bytes = _r_str_unicode2multibyte (&dest_path->sr);
-
-			if (!bytes)
+			if (_r_str_unicode2multibyte (&dest_path->sr, &bytes) != STATUS_SUCCESS)
 				continue;
 
 			if (!mz_zip_reader_extract_to_file (&zip_archive, i, bytes->buffer, MZ_ZIP_FLAG_DO_NOT_SORT_CENTRAL_DIRECTORY))
