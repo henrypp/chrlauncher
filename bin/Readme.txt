@@ -28,7 +28,7 @@ Settings:
 
 # Command line for Chromium (string):
 # See here: https://peter.sh/experiments/chromium-command-line-switches/
-ChromiumCommandLine=--flag-switches-begin --user-data-dir=..\profile --no-default-browser-check --allow-outdated-plugins --disable-logging --disable-breakpad --flag-switches-end
+ChromiumCommandLine=--flag-switches-begin --user-data-dir=..\profile --no-default-browser-check --flag-switches-end
 
 # Chromium executable file name (string):
 ChromiumBinary=chrome.exe
@@ -39,7 +39,7 @@ ChromiumDirectory=.\bin
 
 # Set Chromium binaries architecture (integer):
 #
-# 0	-> autodetect (default)
+# 0		-> 	autodetect (default)
 # 64	-> 64-bit
 # 32	-> 32-bit
 ChromiumArchitecture=0
@@ -111,20 +111,14 @@ ChromiumCheckPeriod=2
 # Last cached update checking timestamp (integer):
 ChromiumLastCheck=0
 
-##########################
+#
 # Internal settings (SDK)
-##########################
-
-# Enable classic theme UI (boolean):
-#ClassicUI=true
+#
 
 # Set custom useragent (string):
-#UserAgent=Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36
-
-# Set proxy configuration (string):
-#Proxy=127.0.0.1:80
+#UserAgent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.0.0 Safari/537.36
 
 Website: www.henrypp.org
 Support: support@henrypp.org
 
-(c) 2015-2021 Henry++
+(c) 2015-2022 Henry++
