@@ -15,7 +15,7 @@
 
 
 #define CHROMIUM_TYPE L"dev-official"
-#define CHROMIUM_COMMAND_LINE L"--flag-switches-begin --user-data-dir=..\profile --no-default-browser-check --flag-switches-end"
+#define CHROMIUM_COMMAND_LINE L"--flag-switches-begin --user-data-dir=..\\profile --no-default-browser-check --flag-switches-end"
 
 DEFINE_GUID (GUID_TrayIcon, 0xead41630, 0x90bb, 0x4836, 0x82, 0x41, 0xae, 0xae, 0x12, 0xe8, 0x69, 0x12);
 
