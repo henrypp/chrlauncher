@@ -320,8 +320,11 @@ VOID init_browser_info (
 	{
 		LPWSTR *arga;
 		LPWSTR key;
-		SIZE_T first_arg_length = 0;
+		LPWSTR key2;
+		SIZE_T first_arg_length;
 		INT numargs;
+
+		first_arg_length = 0;
 
 		arga = CommandLineToArgvW (_r_sys_getimagecommandline (), &numargs);
 
@@ -335,46 +338,48 @@ VOID init_browser_info (
 				{
 					key = arga[i];
 
-					if (*key == L'/')
+					if (*key == L'/' || *key == L'-')
 					{
-						if (_r_str_compare_length (key, L"/autodownload", 13) == 0)
+						key2 = PTR_ADD_OFFSET (key, sizeof (WCHAR));
+
+						if (_r_str_compare_length (key2, L"autodownload", 12) == 0)
 						{
 							pbi->is_autodownload = TRUE;
 						}
-						else if (_r_str_compare_length (key, L"/bringtofront", 13) == 0)
+						else if (_r_str_compare_length (key2, L"bringtofront", 12) == 0)
 						{
 							pbi->is_bringtofront = TRUE;
 						}
-						else if (_r_str_compare_length (key, L"/forcecheck", 11) == 0)
+						else if (_r_str_compare_length (key2, L"forcecheck", 10) == 0)
 						{
 							pbi->is_forcecheck = TRUE;
 						}
-						else if (_r_str_compare_length (key, L"/wait", 5) == 0)
+						else if (_r_str_compare_length (key2, L"wait", 4) == 0)
 						{
 							pbi->is_waitdownloadend = TRUE;
 						}
-						else if (_r_str_compare_length (key, L"/update", 7) == 0)
+						else if (_r_str_compare_length (key2, L"update", 6) == 0)
 						{
 							pbi->is_onlyupdate = TRUE;
 						}
-					}
-					else if (*key == L'-')
-					{
-						if (!pbi->is_opennewwindow)
+						else if (*key == L'-')
 						{
-							if (
-								_r_str_compare_length (key, L"-new-tab", 8) == 0 ||
-								_r_str_compare_length (key, L"-new-window", 11) == 0 ||
-								_r_str_compare_length (key, L"--new-window", 12) == 0 ||
-								_r_str_compare_length (key, L"-new-instance", 13) == 0
-								)
+							if (!pbi->is_opennewwindow)
 							{
-								pbi->is_opennewwindow = TRUE;
+								if (
+									_r_str_compare_length (key, L"-new-tab", 8) == 0 ||
+									_r_str_compare_length (key, L"-new-window", 11) == 0 ||
+									_r_str_compare_length (key, L"--new-window", 12) == 0 ||
+									_r_str_compare_length (key, L"-new-instance", 13) == 0
+									)
+								{
+									pbi->is_opennewwindow = TRUE;
+								}
 							}
-						}
 
-						// there is Chromium arguments
-						//_r_str_appendformat (pbi->urls, RTL_NUMBER_OF (pbi->urls), L" %s", key);
+							// there is Chromium arguments
+							//_r_str_appendformat (pbi->urls, RTL_NUMBER_OF (pbi->urls), L" %s", key);
+						}
 					}
 					else if (path_is_url (key))
 					{
