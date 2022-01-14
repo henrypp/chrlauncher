@@ -19,7 +19,7 @@
 
 #include "resource.h"
 
-PBROWSER_INFORMATION browser_info = NULL;
+BROWSER_INFORMATION browser_info = {0};
 
 R_QUEUED_LOCK lock_download = PR_QUEUED_LOCK_INIT;
 R_QUEUED_LOCK lock_thread = PR_QUEUED_LOCK_INIT;
@@ -73,25 +73,29 @@ BOOL CALLBACK activate_browser_window_callback (
 	return result;
 }
 
-FORCEINLINE VOID activate_browser_window (_In_ PBROWSER_INFORMATION pbi)
+FORCEINLINE VOID activate_browser_window (
+	_In_ PBROWSER_INFORMATION pbi
+)
 {
 	EnumWindows (&activate_browser_window_callback, (LPARAM)pbi);
 }
 
-BOOLEAN path_is_url (_In_ LPCWSTR path)
+BOOLEAN path_is_url (
+	_In_ LPCWSTR path
+)
 {
-	if (PathMatchSpec (path, L"*.ini"))
-		return FALSE;
-
-	if (PathIsURL (path) || PathIsHTMLFile (path))
-		return TRUE;
-
 	static LPCWSTR types[] = {
 		L"application/pdf",
 		L"image/svg+xml",
 		L"image/webp",
 		L"text/html",
 	};
+
+	if (PathMatchSpec (path, L"*.ini"))
+		return FALSE;
+
+	if (PathIsURL (path) || PathIsHTMLFile (path))
+		return TRUE;
 
 	for (SIZE_T i = 0; i < RTL_NUMBER_OF (types); i++)
 	{
@@ -102,36 +106,68 @@ BOOLEAN path_is_url (_In_ LPCWSTR path)
 	return FALSE;
 }
 
-VOID update_browser_info (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi)
+VOID update_browser_info (
+	_In_ HWND hwnd,
+	_In_ PBROWSER_INFORMATION pbi
+)
 {
 	PR_STRING date_dormat;
-	PR_STRING localized_string = NULL;
+	PR_STRING localized_string;
 	R_STRINGREF empty_string;
 
 	_r_obj_initializestringrefconst (&empty_string, _r_locale_getstring (IDS_STATUS_NOTFOUND));
 
 	date_dormat = _r_format_unixtime_ex (pbi->timestamp, FDTF_SHORTDATE | FDTF_SHORTTIME);
 
-	_r_obj_movereference (&localized_string, _r_format_string (L"%s:", _r_locale_getstring (IDS_BROWSER)));
-	_r_ctrl_settablestring (hwnd, IDC_BROWSER, &localized_string->sr, IDC_BROWSER_DATA, pbi->browser_name ? &pbi->browser_name->sr : &empty_string);
+	localized_string = _r_format_string (L"%s:", _r_locale_getstring (IDS_BROWSER));
+
+	_r_ctrl_settablestring (
+		hwnd,
+		IDC_BROWSER,
+		&localized_string->sr,
+		IDC_BROWSER_DATA,
+		pbi->browser_name ? &pbi->browser_name->sr : &empty_string
+	);
 
 	_r_obj_movereference (&localized_string, _r_format_string (L"%s:", _r_locale_getstring (IDS_CURRENTVERSION)));
-	_r_ctrl_settablestring (hwnd, IDC_CURRENTVERSION, &localized_string->sr, IDC_CURRENTVERSION_DATA, pbi->current_version ? &pbi->current_version->sr : &empty_string);
+
+	_r_ctrl_settablestring (
+		hwnd,
+		IDC_CURRENTVERSION,
+		&localized_string->sr,
+		IDC_CURRENTVERSION_DATA,
+		pbi->current_version ? &pbi->current_version->sr : &empty_string
+	);
 
 	_r_obj_movereference (&localized_string, _r_format_string (L"%s:", _r_locale_getstring (IDS_VERSION)));
-	_r_ctrl_settablestring (hwnd, IDC_VERSION, &localized_string->sr, IDC_VERSION_DATA, pbi->new_version ? &pbi->new_version->sr : &empty_string);
+
+	_r_ctrl_settablestring (
+		hwnd,
+		IDC_VERSION,
+		&localized_string->sr,
+		IDC_VERSION_DATA,
+		pbi->new_version ? &pbi->new_version->sr : &empty_string
+	);
 
 	_r_obj_movereference (&localized_string, _r_format_string (L"%s:", _r_locale_getstring (IDS_DATE)));
-	_r_ctrl_settablestring (hwnd, IDC_DATE, &localized_string->sr, IDC_DATE_DATA, date_dormat ? &date_dormat->sr : &empty_string);
+
+	_r_ctrl_settablestring (
+		hwnd,
+		IDC_DATE,
+		&localized_string->sr,
+		IDC_DATE_DATA,
+		date_dormat ? &date_dormat->sr : &empty_string
+	);
 
 	if (date_dormat)
 		_r_obj_dereference (date_dormat);
 
-	if (localized_string)
-		_r_obj_dereference (localized_string);
+	_r_obj_dereference (localized_string);
 }
 
-VOID init_browser_info (_Inout_ PBROWSER_INFORMATION pbi)
+VOID init_browser_info (
+	_Inout_ PBROWSER_INFORMATION pbi
+)
 {
 	static R_STRINGREF bin_names[] = {
 		PR_STRINGREF_INIT (L"brave.exe"),
@@ -151,6 +187,13 @@ VOID init_browser_info (_Inout_ PBROWSER_INFORMATION pbi)
 
 	static R_STRINGREF separator_sr = PR_STRINGREF_INIT (L"\\");
 
+	PR_STRING binary_dir;
+	PR_STRING binary_name;
+	PR_STRING browser_type;
+	PR_STRING browser_arguments;
+	PR_STRING string;
+	ULONG binary_type;
+
 	// Reset
 	pbi->is_hasurls = FALSE;
 
@@ -158,10 +201,6 @@ VOID init_browser_info (_Inout_ PBROWSER_INFORMATION pbi)
 	pbi->args[0] = UNICODE_NULL;
 
 	// Configure paths
-	PR_STRING binary_dir;
-	PR_STRING binary_name;
-	PR_STRING string;
-
 	binary_dir = _r_config_getstringexpand (L"ChromiumDirectory", L".\\bin");
 	binary_name = _r_config_getstring (L"ChromiumBinary", L"chrome.exe");
 
@@ -179,7 +218,9 @@ VOID init_browser_info (_Inout_ PBROWSER_INFORMATION pbi)
 	if (string)
 		_r_obj_movereference (&pbi->binary_dir, string);
 
-	_r_obj_movereference (&pbi->binary_path, _r_obj_concatstringrefs (3, &pbi->binary_dir->sr, &separator_sr, &binary_name->sr));
+	string = _r_obj_concatstringrefs (3, &pbi->binary_dir->sr, &separator_sr, &binary_name->sr);
+
+	_r_obj_movereference (&pbi->binary_path, string);
 
 	if (!pbi->binary_dir || !pbi->binary_path)
 	{
@@ -191,25 +232,41 @@ VOID init_browser_info (_Inout_ PBROWSER_INFORMATION pbi)
 	{
 		for (SIZE_T i = 0; i < RTL_NUMBER_OF (bin_names); i++)
 		{
-			_r_obj_movereference (&pbi->binary_path, _r_obj_concatstringrefs (3, &pbi->binary_dir->sr, &separator_sr, &bin_names[i]));
+			string = _r_obj_concatstringrefs (
+				3,
+				&pbi->binary_dir->sr,
+				&separator_sr, &bin_names[i]
+			);
+
+			_r_obj_movereference (&pbi->binary_path, string);
 
 			if (_r_fs_exists (pbi->binary_path->buffer))
 				break;
 		}
 
 		if (_r_obj_isstringempty (pbi->binary_path) || !_r_fs_exists (pbi->binary_path->buffer))
-			_r_obj_movereference (&pbi->binary_path, _r_obj_concatstringrefs (3, &pbi->binary_dir->sr, &separator_sr, &binary_name->sr)); // fallback (use defaults)
+		{
+			string = _r_obj_concatstringrefs (
+				3,
+				&pbi->binary_dir->sr,
+				&separator_sr,
+				&binary_name->sr
+			);
+
+			_r_obj_movereference (&pbi->binary_path, string); // fallback (use defaults)
+		}
 	}
 
 	_r_obj_dereference (binary_name);
 
-	_r_obj_movereference (&pbi->cache_path, _r_format_string (
+	string = _r_format_string (
 		L"%s\\%s_%" TEXT (PR_ULONG) L".bin",
 		_r_sys_gettempdirectory ()->buffer,
 		_r_app_getnameshort (),
-		_r_str_gethash2 (pbi->binary_path,
-		TRUE
-	)));
+		_r_str_gethash2 (pbi->binary_path, TRUE)
+	);
+
+	_r_obj_movereference (&pbi->cache_path, string);
 
 	// Get browser architecture
 	pbi->architecture = _r_config_getlong (L"ChromiumArchitecture", 0);
@@ -221,8 +278,6 @@ VOID init_browser_info (_Inout_ PBROWSER_INFORMATION pbi)
 		// ...by executable
 		if (_r_fs_exists (pbi->binary_path->buffer))
 		{
-			ULONG binary_type;
-
 			if (GetBinaryType (pbi->binary_path->buffer, &binary_type))
 			{
 				pbi->architecture = (binary_type == SCS_64BIT_BINARY) ? 64 : 32;
@@ -243,9 +298,6 @@ VOID init_browser_info (_Inout_ PBROWSER_INFORMATION pbi)
 		pbi->architecture = 64; // default architecture
 
 	// Set common data
-	PR_STRING browser_type;
-	PR_STRING browser_arguments;
-
 	browser_type = _r_config_getstring (L"ChromiumType", CHROMIUM_TYPE);
 	browser_arguments = _r_config_getstringexpand (L"ChromiumCommandLine", CHROMIUM_COMMAND_LINE);
 
@@ -259,7 +311,9 @@ VOID init_browser_info (_Inout_ PBROWSER_INFORMATION pbi)
 		_r_obj_dereference (browser_arguments);
 	}
 
-	_r_obj_movereference (&pbi->browser_name, _r_format_string (L"%s (%" PR_LONG L"-bit)", pbi->browser_type->buffer, pbi->architecture));
+	string = _r_format_string (L"%s (%" TEXT (PR_LONG) L"-bit)", pbi->browser_type->buffer, pbi->architecture);
+
+	_r_obj_movereference (&pbi->browser_name, string);
 	_r_obj_movereference (&pbi->current_version, _r_res_queryversionstring (pbi->binary_path->buffer));
 
 	// Parse command line
@@ -367,7 +421,12 @@ VOID init_browser_info (_Inout_ PBROWSER_INFORMATION pbi)
 	}
 }
 
-VOID _app_setstatus (_In_ HWND hwnd, _In_opt_ LPCWSTR text, _In_opt_ ULONG64 v, _In_opt_ ULONG64 t)
+VOID _app_setstatus (
+	_In_ HWND hwnd,
+	_In_opt_ LPCWSTR text,
+	_In_opt_ ULONG64 v,
+	_In_opt_ ULONG64 t
+)
 {
 	LONG64 percent = 0;
 
@@ -392,7 +451,14 @@ VOID _app_setstatus (_In_ HWND hwnd, _In_opt_ LPCWSTR text, _In_opt_ ULONG64 v, 
 
 		if (!_r_str_isempty (text))
 		{
-			_r_tray_setinfoformat (hwnd, &GUID_TrayIcon, NULL, L"%s\r\n%s: %" PR_LONG64 L"%%", _r_app_getname (), text, percent);
+			_r_tray_setinfoformat (
+				hwnd,
+				&GUID_TrayIcon,
+				NULL, L"%s\r\n%s: %" TEXT (PR_LONG64) L"%%",
+				_r_app_getname (),
+				text,
+				percent
+			);
 		}
 		else
 		{
@@ -416,7 +482,9 @@ VOID _app_setstatus (_In_ HWND hwnd, _In_opt_ LPCWSTR text, _In_opt_ ULONG64 v, 
 	SendDlgItemMessage (hwnd, IDC_PROGRESS, PBM_SETPOS, (WPARAM)(LONG)percent, 0);
 }
 
-VOID _app_cleanupoldbinary (_In_ PBROWSER_INFORMATION pbi)
+VOID _app_cleanupoldbinary (
+	_In_ PBROWSER_INFORMATION pbi
+)
 {
 	WIN32_FIND_DATA wfd;
 	PR_STRING path;
@@ -454,7 +522,9 @@ VOID _app_cleanupoldbinary (_In_ PBROWSER_INFORMATION pbi)
 	_r_obj_dereference (path);
 }
 
-VOID _app_cleanupoldmanifest (_In_ PBROWSER_INFORMATION pbi)
+VOID _app_cleanupoldmanifest (
+	_In_ PBROWSER_INFORMATION pbi
+)
 {
 	WIN32_FIND_DATA wfd;
 	PR_STRING path;
@@ -486,11 +556,21 @@ VOID _app_cleanupoldmanifest (_In_ PBROWSER_INFORMATION pbi)
 	_r_obj_dereference (path);
 }
 
-BOOLEAN _app_browserisrunning (_In_ PBROWSER_INFORMATION pbi)
+BOOLEAN _app_browserisrunning (
+	_In_ PBROWSER_INFORMATION pbi
+)
 {
 	HANDLE hfile;
 
-	hfile = CreateFile (pbi->binary_path->buffer, GENERIC_WRITE | GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
+	hfile = CreateFile (
+		pbi->binary_path->buffer,
+		GENERIC_WRITE | GENERIC_READ,
+		0,
+		NULL,
+		OPEN_EXISTING,
+		0,
+		NULL
+	);
 
 	if (!_r_fs_isvalidhandle (hfile))
 		return (GetLastError () == ERROR_SHARING_VIOLATION);
@@ -500,7 +580,9 @@ BOOLEAN _app_browserisrunning (_In_ PBROWSER_INFORMATION pbi)
 	return FALSE;
 }
 
-VOID _app_openbrowser (_In_ PBROWSER_INFORMATION pbi)
+VOID _app_openbrowser (
+	_In_ PBROWSER_INFORMATION pbi
+)
 {
 	WCHAR args[512];
 	PR_STRING arg;
@@ -541,28 +623,39 @@ VOID _app_openbrowser (_In_ PBROWSER_INFORMATION pbi)
 	_r_obj_dereference (arg);
 }
 
-BOOLEAN _app_ishaveupdate (_In_ PBROWSER_INFORMATION pbi)
+BOOLEAN _app_ishaveupdate (
+	_In_ PBROWSER_INFORMATION pbi
+)
 {
 	return !_r_obj_isstringempty (pbi->download_url) && !_r_obj_isstringempty (pbi->new_version);
 }
 
-BOOLEAN _app_isupdatedownloaded (_In_ PBROWSER_INFORMATION pbi)
+BOOLEAN _app_isupdatedownloaded (
+	_In_ PBROWSER_INFORMATION pbi
+)
 {
 	return !_r_obj_isstringempty (pbi->cache_path) && _r_fs_exists (pbi->cache_path->buffer);
 }
 
-BOOLEAN _app_isupdaterequired (_In_ PBROWSER_INFORMATION pbi)
+BOOLEAN _app_isupdaterequired (
+	_In_ PBROWSER_INFORMATION pbi
+)
 {
 	if (pbi->is_forcecheck)
 		return TRUE;
 
-	if (pbi->check_period && ((_r_unixtime_now () - _r_config_getlong64 (L"ChromiumLastCheck", 0)) >= _r_calc_days2seconds (pbi->check_period)))
-		return TRUE;
+	if (pbi->check_period)
+	{
+		if ((_r_unixtime_now () - _r_config_getlong64 (L"ChromiumLastCheck", 0)) >= _r_calc_days2seconds (pbi->check_period))
+			return TRUE;
+	}
 
 	return FALSE;
 }
 
-UINT _app_getactionid (_In_ PBROWSER_INFORMATION pbi)
+UINT _app_getactionid (
+	_In_ PBROWSER_INFORMATION pbi
+)
 {
 	if (_app_isupdatedownloaded (pbi))
 		return IDS_ACTION_INSTALL;
@@ -573,19 +666,36 @@ UINT _app_getactionid (_In_ PBROWSER_INFORMATION pbi)
 	return IDS_ACTION_CHECK;
 }
 
-BOOLEAN _app_checkupdate (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _Out_ PBOOLEAN is_error_ptr)
+BOOLEAN _app_checkupdate (
+	_In_ HWND hwnd,
+	_In_ PBROWSER_INFORMATION pbi,
+	_Out_ PBOOLEAN is_error_ptr
+)
 {
 	*is_error_ptr = FALSE;
 
 	if (_app_ishaveupdate (pbi))
 		return TRUE;
 
-	PR_HASHTABLE result = NULL;
+	PR_HASHTABLE hashtable = NULL;
 
-	BOOLEAN is_exists = _r_fs_exists (pbi->binary_path->buffer);
-	BOOLEAN is_checkupdate = _app_isupdaterequired (pbi);
+	R_DOWNLOAD_INFO download_info;
+	PR_STRING update_url;
+	PR_STRING url;
 
-	BOOLEAN result2 = FALSE;
+	HINTERNET hsession;
+	PR_STRING string;
+	ULONG code;
+
+	BOOLEAN is_exists;
+	BOOLEAN is_checkupdate;
+
+	BOOLEAN result;
+
+	result = FALSE;
+
+	is_exists = _r_fs_exists (pbi->binary_path->buffer);
+	is_checkupdate = _app_isupdaterequired (pbi);
 
 	_app_setstatus (hwnd, _r_locale_getstring (IDS_STATUS_CHECK), 0, 0);
 
@@ -596,10 +706,6 @@ BOOLEAN _app_checkupdate (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _Out_ P
 
 	if (!is_exists || is_checkupdate)
 	{
-		R_DOWNLOAD_INFO download_info;
-		PR_STRING update_url;
-		PR_STRING url;
-
 		update_url = _r_config_getstring (L"ChromiumUpdateUrl", CHROMIUM_UPDATE_URL);
 
 		if (!update_url)
@@ -614,10 +720,6 @@ BOOLEAN _app_checkupdate (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _Out_ P
 
 		if (url)
 		{
-			HINTERNET hsession;
-			PR_STRING string;
-			ULONG code;
-
 			hsession = _r_inet_createsession (_r_app_getuseragent ());
 
 			if (hsession)
@@ -637,7 +739,7 @@ BOOLEAN _app_checkupdate (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _Out_ P
 					}
 					else
 					{
-						result = _r_str_unserialize (&string->sr, L';', L'=');
+						hashtable = _r_str_unserialize (&string->sr, L';', L'=');
 						*is_error_ptr = FALSE;
 					}
 				}
@@ -657,30 +759,28 @@ BOOLEAN _app_checkupdate (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _Out_ P
 		}
 	}
 
-	if (!_r_obj_ishashtableempty (result))
+	if (hashtable)
 	{
-		PR_STRING value_string;
+		string = _r_obj_findhashtablepointer (hashtable, _r_str_gethash (L"download", TRUE));
+		_r_obj_movereference (&pbi->download_url, string);
 
-		value_string = _r_obj_findhashtablepointer (result, _r_str_gethash (L"download", TRUE));
-		_r_obj_movereference (&pbi->download_url, value_string);
+		string = _r_obj_findhashtablepointer (hashtable, _r_str_gethash (L"version", TRUE));
+		_r_obj_movereference (&pbi->new_version, string);
 
-		value_string = _r_obj_findhashtablepointer (result, _r_str_gethash (L"version", TRUE));
-		_r_obj_movereference (&pbi->new_version, value_string);
+		string = _r_obj_findhashtablepointer (hashtable, _r_str_gethash (L"timestamp", TRUE));
 
-		value_string = _r_obj_findhashtablepointer (result, _r_str_gethash (L"timestamp", TRUE));
-
-		if (value_string)
+		if (string)
 		{
-			pbi->timestamp = _r_str_tolong64 (&value_string->sr);
+			pbi->timestamp = _r_str_tolong64 (&string->sr);
 
-			_r_obj_dereference (value_string);
+			_r_obj_dereference (string);
 		}
 
-		update_browser_info (hwnd, browser_info);
+		update_browser_info (hwnd, &browser_info);
 
 		if (!is_exists || (pbi->new_version && _r_str_versioncompare (&pbi->current_version->sr, &pbi->new_version->sr) == -1))
 		{
-			result2 = TRUE;
+			result = TRUE;
 		}
 		else
 		{
@@ -688,14 +788,20 @@ BOOLEAN _app_checkupdate (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _Out_ P
 
 			_r_config_setlong64 (L"ChromiumLastCheck", _r_unixtime_now ());
 		}
+
+		_r_obj_dereference (hashtable);
 	}
 
 	_app_setstatus (hwnd, NULL, 0, 0);
 
-	return result2;
+	return result;
 }
 
-BOOLEAN WINAPI _app_downloadupdate_callback (_In_ ULONG total_written, _In_ ULONG total_length, _In_opt_ PVOID lparam)
+BOOLEAN WINAPI _app_downloadupdate_callback (
+	_In_ ULONG total_written,
+	_In_ ULONG total_length,
+	_In_opt_ PVOID lparam
+)
 {
 	if (lparam)
 		_app_setstatus ((HWND)lparam, _r_locale_getstring (IDS_STATUS_DOWNLOAD), total_written, total_length);
@@ -703,17 +809,25 @@ BOOLEAN WINAPI _app_downloadupdate_callback (_In_ ULONG total_written, _In_ ULON
 	return TRUE;
 }
 
-BOOLEAN _app_downloadupdate (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _Out_ PBOOLEAN is_error_ptr)
+BOOLEAN _app_downloadupdate (
+	_In_ HWND hwnd,
+	_In_ PBROWSER_INFORMATION pbi,
+	_Out_ PBOOLEAN is_error_ptr
+)
 {
+	R_DOWNLOAD_INFO download_info;
+	PR_STRING temp_file;
+	HINTERNET hsession;
+	HANDLE hfile;
+	ULONG status;
+	BOOLEAN result;
+
 	*is_error_ptr = FALSE;
 
 	if (_app_isupdatedownloaded (pbi))
 		return TRUE;
 
-	PR_STRING temp_file;
-	BOOLEAN result = FALSE;
-	HINTERNET hsession;
-	HANDLE hfile;
+	result = FALSE;
 
 	temp_file = _r_obj_concatstrings (2, pbi->cache_path->buffer, L".tmp");
 
@@ -727,7 +841,15 @@ BOOLEAN _app_downloadupdate (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _Out
 
 	if (hsession)
 	{
-		hfile = CreateFile (temp_file->buffer, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		hfile = CreateFile (
+			temp_file->buffer,
+			GENERIC_WRITE,
+			FILE_SHARE_READ,
+			NULL,
+			CREATE_ALWAYS,
+			FILE_ATTRIBUTE_NORMAL,
+			NULL
+		);
 
 		if (!_r_fs_isvalidhandle (hfile))
 		{
@@ -737,16 +859,21 @@ BOOLEAN _app_downloadupdate (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _Out
 		}
 		else
 		{
-			R_DOWNLOAD_INFO download_info;
-			ULONG code;
-
 			_r_inet_initializedownload_ex (&download_info, hfile, &_app_downloadupdate_callback, hwnd);
 
-			code = _r_inet_begindownload (hsession, pbi->download_url, &download_info);
+			status = _r_inet_begindownload (hsession, pbi->download_url, &download_info);
 
 			_r_inet_destroydownload (&download_info); // required!
 
-			if (code == ERROR_SUCCESS)
+			if (status != ERROR_SUCCESS)
+			{
+				_r_log (LOG_LEVEL_ERROR, &GUID_TrayIcon, TEXT (__FUNCTION__), status, pbi->download_url->buffer);
+
+				_r_fs_deletefile (pbi->cache_path->buffer, TRUE);
+
+				*is_error_ptr = TRUE;
+			}
+			else
 			{
 				SAFE_DELETE_REFERENCE (pbi->download_url); // clear download url
 
@@ -755,14 +882,6 @@ BOOLEAN _app_downloadupdate (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _Out
 				result = TRUE;
 
 				*is_error_ptr = FALSE;
-			}
-			else
-			{
-				_r_log (LOG_LEVEL_ERROR, &GUID_TrayIcon, TEXT (__FUNCTION__), code, pbi->download_url->buffer);
-
-				_r_fs_deletefile (pbi->cache_path->buffer, TRUE);
-
-				*is_error_ptr = TRUE;
 			}
 
 			_r_fs_deletefile (temp_file->buffer, TRUE);
@@ -780,7 +899,11 @@ BOOLEAN _app_downloadupdate (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _Out
 	return result;
 }
 
-BOOLEAN _app_unpack_7zip (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _In_ PR_STRINGREF bin_name)
+BOOLEAN _app_unpack_7zip (
+	_In_ HWND hwnd,
+	_In_ PBROWSER_INFORMATION pbi,
+	_In_ PR_STRINGREF bin_name
+)
 {
 #define kInputBufSize ((SIZE_T)1 << 18)
 
@@ -883,9 +1006,15 @@ BOOLEAN _app_unpack_7zip (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _In_ PR
 
 					length = path.length - bin_name->length - separator_sr.length;
 
-					if (_r_str_isendsswith (&path, bin_name, TRUE) && path.buffer[length / sizeof (WCHAR)] == OBJ_NAME_PATH_SEPARATOR)
+					if (
+						_r_str_isendsswith (&path, bin_name, TRUE) &&
+						path.buffer[length / sizeof (WCHAR)] == OBJ_NAME_PATH_SEPARATOR
+						)
 					{
-						_r_obj_movereference (&root_dir_name, _r_obj_createstring_ex (path.buffer, path.length - bin_name->length));
+						_r_obj_movereference (
+							&root_dir_name,
+							_r_obj_createstring_ex (path.buffer, path.length - bin_name->length)
+						);
 
 						_r_str_trimstring (root_dir_name, &separator_sr, 0);
 					}
@@ -905,8 +1034,13 @@ BOOLEAN _app_unpack_7zip (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _In_ PR
 				_r_str_trimstringref (&path, &separator_sr, 0);
 
 				// skip non-root dirs
-				if (!_r_obj_isstringempty (root_dir_name) && (path.length <= root_dir_name->length || !_r_str_isstartswith (&path, &root_dir_name->sr, TRUE)))
+				if (
+					!_r_obj_isstringempty (root_dir_name) &&
+					(path.length <= root_dir_name->length || !_r_str_isstartswith (&path, &root_dir_name->sr, TRUE))
+					)
+				{
 					continue;
+				}
 
 				CSzFile out_file;
 				PR_STRING dest_path;
@@ -942,7 +1076,18 @@ BOOLEAN _app_unpack_7zip (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _In_ PR
 					size_t offset = 0;
 					size_t out_size_processed = 0;
 
-					code = SzArEx_Extract (&db, &look_stream.vt, i, &block_index, &out_buffer, &out_buffer_size, &offset, &out_size_processed, &alloc_imp, &alloc_temp_imp);
+					code = SzArEx_Extract (
+						&db,
+						&look_stream.vt,
+						i,
+						&block_index,
+						&out_buffer,
+						&out_buffer_size,
+						&offset,
+						&out_size_processed,
+						&alloc_imp,
+						&alloc_temp_imp
+					);
 
 					if (code != SZ_OK)
 					{
@@ -1010,7 +1155,11 @@ BOOLEAN _app_unpack_7zip (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _In_ PR
 	return result;
 }
 
-BOOLEAN _app_unpack_zip (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _In_ PR_STRINGREF bin_name)
+BOOLEAN _app_unpack_zip (
+	_In_ HWND hwnd,
+	_In_ PBROWSER_INFORMATION pbi,
+	_In_ PR_STRINGREF bin_name
+)
 {
 	mz_zip_archive zip_archive;
 	mz_bool zip_bool;
@@ -1100,8 +1249,13 @@ BOOLEAN _app_unpack_zip (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _In_ PR_
 		_r_str_trimstring (path, &separator_sr, 0);
 
 		// skip non-root dirs
-		if (!_r_obj_isstringempty (root_dir_name) && (path->length <= root_dir_name->length || !_r_str_isstartswith (&path->sr, &root_dir_name->sr, TRUE)))
+		if (
+			!_r_obj_isstringempty (root_dir_name) &&
+			(path->length <= root_dir_name->length || !_r_str_isstartswith (&path->sr, &root_dir_name->sr, TRUE))
+			)
+		{
 			continue;
+		}
 
 		PR_STRING dest_path;
 
@@ -1159,7 +1313,11 @@ CleanupExit:
 	return result;
 }
 
-BOOLEAN _app_installupdate (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _Out_ PBOOLEAN is_error_ptr)
+BOOLEAN _app_installupdate (
+	_In_ HWND hwnd,
+	_In_ PBROWSER_INFORMATION pbi,
+	_Out_ PBOOLEAN is_error_ptr
+)
 {
 	R_STRINGREF bin_name;
 	BOOLEAN result = FALSE;
@@ -1208,7 +1366,10 @@ BOOLEAN _app_installupdate (_In_ HWND hwnd, _In_ PBROWSER_INFORMATION pbi, _Out_
 	return result;
 }
 
-VOID _app_thread_check (_In_ PVOID arglist, _In_ ULONG busy_count)
+VOID _app_thread_check (
+	_In_ PVOID arglist,
+	_In_ ULONG busy_count
+)
 {
 	PBROWSER_INFORMATION pbi;
 	HWND hwnd;
@@ -1300,7 +1461,13 @@ VOID _app_thread_check (_In_ PVOID arglist, _In_ ULONG busy_count)
 					}
 					else
 					{
-						_r_tray_popup (hwnd, &GUID_TrayIcon, NIIF_INFO, _r_app_getname (), _r_locale_getstring (IDS_STATUS_DOWNLOADED)); // inform user
+						_r_tray_popup (
+							hwnd,
+							&GUID_TrayIcon,
+							NIIF_INFO,
+							_r_app_getname (),
+							_r_locale_getstring (IDS_STATUS_DOWNLOADED)
+						); // inform user
 
 						_r_ctrl_setstring (hwnd, IDC_START_BTN, _r_locale_getstring (_app_getactionid (pbi)));
 						_r_ctrl_enable (hwnd, IDC_START_BTN, TRUE);
@@ -1310,7 +1477,14 @@ VOID _app_thread_check (_In_ PVOID arglist, _In_ ULONG busy_count)
 				}
 				else
 				{
-					_r_tray_popupformat (hwnd, &GUID_TrayIcon, NIIF_INFO, _r_app_getname (), _r_locale_getstring (IDS_STATUS_FOUND), pbi->new_version->buffer); // just inform user
+					_r_tray_popupformat (
+						hwnd,
+						&GUID_TrayIcon,
+						NIIF_INFO,
+						_r_app_getname (),
+						_r_locale_getstring (IDS_STATUS_FOUND),
+						pbi->new_version->buffer
+					); // just inform user
 
 					_r_ctrl_setstring (hwnd, IDC_START_BTN, _r_locale_getstring (_app_getactionid (pbi)));
 					_r_ctrl_enable (hwnd, IDC_START_BTN, TRUE);
@@ -1321,7 +1495,14 @@ VOID _app_thread_check (_In_ PVOID arglist, _In_ ULONG busy_count)
 
 			if (!pbi->is_autodownload && !_app_isupdatedownloaded (pbi))
 			{
-				_r_tray_popupformat (hwnd, &GUID_TrayIcon, NIIF_INFO, _r_app_getname (), _r_locale_getstring (IDS_STATUS_FOUND), pbi->new_version->buffer); // just inform user
+				_r_tray_popupformat (
+					hwnd,
+					&GUID_TrayIcon,
+					NIIF_INFO,
+					_r_app_getname (),
+					_r_locale_getstring (IDS_STATUS_FOUND),
+					pbi->new_version->buffer
+				); // just inform user
 
 				_r_ctrl_setstring (hwnd, IDC_START_BTN, _r_locale_getstring (_app_getactionid (pbi)));
 				_r_ctrl_enable (hwnd, IDC_START_BTN, TRUE);
@@ -1340,7 +1521,14 @@ VOID _app_thread_check (_In_ PVOID arglist, _In_ ULONG busy_count)
 
 		if (is_haveerror)
 		{
-			_r_tray_popup (hwnd, &GUID_TrayIcon, NIIF_INFO, _r_app_getname (), _r_locale_getstring (IDS_STATUS_ERROR)); // just inform user
+			_r_tray_popup (
+				hwnd,
+				&GUID_TrayIcon,
+				NIIF_INFO,
+				_r_app_getname (),
+				_r_locale_getstring (IDS_STATUS_ERROR)
+			); // just inform user
+
 			_app_setstatus (hwnd, _r_locale_getstring (IDS_STATUS_ERROR), 0, 0);
 		}
 
@@ -1362,21 +1550,12 @@ VOID _app_thread_check (_In_ PVOID arglist, _In_ ULONG busy_count)
 	}
 }
 
-VOID _app_initialize ()
-{
-	static R_INITONCE init_once = PR_INITONCE_INIT;
-
-	if (_r_initonce_begin (&init_once))
-	{
-		_r_workqueue_initialize (&workqueue, 0, 1, 1000, NULL);
-
-		browser_info = _r_mem_allocatezero (sizeof (BROWSER_INFORMATION));
-
-		_r_initonce_end (&init_once);
-	}
-}
-
-INT_PTR CALLBACK DlgProc (_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wparam, _In_ LPARAM lparam)
+INT_PTR CALLBACK DlgProc (
+	_In_ HWND hwnd,
+	_In_ UINT msg,
+	_In_ WPARAM wparam,
+	_In_ LPARAM lparam
+)
 {
 	switch (msg)
 	{
@@ -1413,15 +1592,27 @@ INT_PTR CALLBACK DlgProc (_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wparam, _In
 
 			hicon = _r_sys_loadsharedicon (_r_sys_getimagebase (), MAKEINTRESOURCE (IDI_MAIN), icon_small_y, icon_small_x);
 
-			init_browser_info (browser_info);
+			init_browser_info (&browser_info);
 
-			_r_tray_create (hwnd, &GUID_TrayIcon, RM_TRAYICON, hicon, _r_app_getname (), (_r_queuedlock_islocked (&lock_download) || _app_isupdatedownloaded (browser_info)) ? FALSE : TRUE);
+			_r_tray_create (
+				hwnd,
+				&GUID_TrayIcon,
+				RM_TRAYICON,
+				hicon,
+				_r_app_getname (),
+				(_r_queuedlock_islocked (&lock_download) || _app_isupdatedownloaded (&browser_info)) ? FALSE : TRUE
+			);
 
-			_r_workqueue_queueitem (&workqueue, &_app_thread_check, browser_info);
+			_r_workqueue_queueitem (&workqueue, &_app_thread_check, &browser_info);
 
-			if (!browser_info->is_waitdownloadend && !browser_info->is_onlyupdate && _r_fs_exists (browser_info->binary_path->buffer) && !_app_isupdatedownloaded (browser_info))
+			if (
+				!browser_info.is_waitdownloadend &&
+				!browser_info.is_onlyupdate &&
+				_r_fs_exists (browser_info.binary_path->buffer) &&
+				!_app_isupdatedownloaded (&browser_info)
+				)
 			{
-				_app_openbrowser (browser_info);
+				_app_openbrowser (&browser_info);
 			}
 
 			break;
@@ -1437,6 +1628,7 @@ INT_PTR CALLBACK DlgProc (_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wparam, _In
 		{
 			// localize menu
 			HMENU hmenu;
+			HMENU hsubmenu;
 
 			hmenu = GetMenu (hwnd);
 
@@ -1444,7 +1636,12 @@ INT_PTR CALLBACK DlgProc (_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wparam, _In
 			{
 				_r_menu_setitemtext (hmenu, 0, TRUE, _r_locale_getstring (IDS_FILE));
 				_r_menu_setitemtext (hmenu, 1, TRUE, _r_locale_getstring (IDS_SETTINGS));
-				_r_menu_setitemtextformat (GetSubMenu (hmenu, 1), LANG_MENU, TRUE, L"%s (Language)", _r_locale_getstring (IDS_LANGUAGE));
+
+				hsubmenu = GetSubMenu (hmenu, 1);
+
+				if (hsubmenu)
+					_r_menu_setitemtextformat (hsubmenu, LANG_MENU, TRUE, L"%s (Language)", _r_locale_getstring (IDS_LANGUAGE));
+
 				_r_menu_setitemtext (hmenu, 2, TRUE, _r_locale_getstring (IDS_HELP));
 
 				_r_menu_setitemtextformat (hmenu, IDM_RUN, FALSE, L"%s...", _r_locale_getstring (IDS_RUN));
@@ -1456,11 +1653,11 @@ INT_PTR CALLBACK DlgProc (_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wparam, _In
 				_r_locale_enum ((HWND)GetSubMenu (hmenu, 1), LANG_MENU, IDX_LANGUAGE); // enum localizations
 			}
 
-			update_browser_info (hwnd, browser_info);
+			update_browser_info (hwnd, &browser_info);
 
-			_r_ctrl_setstring (hwnd, IDC_LINKS, L"<a href=\"https://github.com/henrypp\">github.com/henrypp</a>\r\n<a href=\"https://chromium.woolyss.com\">chromium.woolyss.com</a>");
+			_r_ctrl_setstring (hwnd, IDC_LINKS, FOOTER_STRING);
 
-			_r_ctrl_setstring (hwnd, IDC_START_BTN, _r_locale_getstring (_app_getactionid (browser_info)));
+			_r_ctrl_setstring (hwnd, IDC_START_BTN, _r_locale_getstring (_app_getactionid (&browser_info)));
 
 			break;
 		}
@@ -1481,7 +1678,14 @@ INT_PTR CALLBACK DlgProc (_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wparam, _In
 
 			hicon = _r_sys_loadsharedicon (_r_sys_getimagebase (), MAKEINTRESOURCE (IDI_MAIN), icon_small_x, icon_small_y);
 
-			_r_tray_create (hwnd, &GUID_TrayIcon, RM_TRAYICON, hicon, _r_app_getname (), (_r_queuedlock_islocked (&lock_download) || _app_isupdatedownloaded (browser_info)) ? FALSE : TRUE);
+			_r_tray_create (
+				hwnd,
+				&GUID_TrayIcon,
+				RM_TRAYICON,
+				hicon,
+				_r_app_getname (),
+				(_r_queuedlock_islocked (&lock_download) || _app_isupdatedownloaded (&browser_info)) ? FALSE : TRUE
+			);
 
 			break;
 		}
@@ -1511,7 +1715,10 @@ INT_PTR CALLBACK DlgProc (_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wparam, _In
 
 		case WM_CLOSE:
 		{
-			if (_r_queuedlock_islocked (&lock_download) && _r_show_message (hwnd, MB_YESNO | MB_ICONQUESTION, NULL, NULL, _r_locale_getstring (IDS_QUESTION_STOP)) != IDYES)
+			if (
+				_r_queuedlock_islocked (&lock_download) &&
+				_r_show_message (hwnd, MB_YESNO | MB_ICONQUESTION, NULL, NULL, _r_locale_getstring (IDS_QUESTION_STOP)) != IDYES
+				)
 			{
 				SetWindowLongPtr (hwnd, DWLP_MSGRESULT, TRUE);
 				return TRUE;
@@ -1526,11 +1733,11 @@ INT_PTR CALLBACK DlgProc (_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wparam, _In
 		{
 			_r_tray_destroy (hwnd, &GUID_TrayIcon);
 
-			if (browser_info->is_waitdownloadend && !browser_info->is_onlyupdate)
-				_app_openbrowser (browser_info);
+			if (browser_info.is_waitdownloadend && !browser_info.is_onlyupdate)
+				_app_openbrowser (&browser_info);
 
-			_r_workqueue_waitforfinish (&workqueue);
-			_r_workqueue_destroy (&workqueue);
+			//_r_workqueue_waitforfinish (&workqueue);
+			//_r_workqueue_destroy (&workqueue);
 
 			PostQuitMessage (0);
 
@@ -1558,49 +1765,6 @@ INT_PTR CALLBACK DlgProc (_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wparam, _In
 			SetCursor (LoadCursor (NULL, (msg == WM_ENTERSIZEMOVE) ? IDC_SIZEALL : IDC_ARROW));
 
 			break;
-		}
-
-		case WM_DRAWITEM:
-		{
-			LPDRAWITEMSTRUCT draw_info;
-			HDC buffer_hdc;
-			HBITMAP buffer_bitmap;
-			HGDIOBJ old_buffer_bitmap;
-
-			draw_info = (LPDRAWITEMSTRUCT)lparam;
-
-			if (draw_info->CtlID != IDC_LINE)
-				break;
-
-			buffer_hdc = CreateCompatibleDC (draw_info->hDC);
-
-			if (buffer_hdc)
-			{
-				buffer_bitmap = CreateCompatibleBitmap (draw_info->hDC, _r_calc_rectwidth (&draw_info->rcItem), _r_calc_rectheight (&draw_info->rcItem));
-
-				if (buffer_bitmap)
-				{
-					old_buffer_bitmap = SelectObject (buffer_hdc, buffer_bitmap);
-
-					SetBkMode (buffer_hdc, TRANSPARENT);
-
-					_r_dc_fillrect (buffer_hdc, &draw_info->rcItem, GetSysColor (COLOR_WINDOW));
-
-					for (INT i = draw_info->rcItem.left; i < _r_calc_rectwidth (&draw_info->rcItem); i++)
-						SetPixelV (buffer_hdc, i, draw_info->rcItem.top, GetSysColor (COLOR_APPWORKSPACE));
-
-					BitBlt (draw_info->hDC, draw_info->rcItem.left, draw_info->rcItem.top, draw_info->rcItem.right, draw_info->rcItem.bottom, buffer_hdc, 0, 0, SRCCOPY);
-
-					SelectObject (buffer_hdc, old_buffer_bitmap);
-
-					SAFE_DELETE_OBJECT (buffer_bitmap);
-				}
-
-				SAFE_DELETE_DC (buffer_hdc);
-			}
-
-			SetWindowLongPtr (hwnd, DWLP_MSGRESULT, TRUE);
-			return TRUE;
 		}
 
 		case WM_NOTIFY:
@@ -1710,7 +1874,7 @@ INT_PTR CALLBACK DlgProc (_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wparam, _In
 							_r_menu_setitemtext (hsubmenu, IDM_TRAY_ABOUT, FALSE, _r_locale_getstring (IDS_ABOUT));
 							_r_menu_setitemtext (hsubmenu, IDM_TRAY_EXIT, FALSE, _r_locale_getstring (IDS_EXIT));
 
-							if (_r_obj_isstringempty (browser_info->binary_path) || !_r_fs_exists (browser_info->binary_path->buffer))
+							if (_r_obj_isstringempty (browser_info.binary_path) || !_r_fs_exists (browser_info.binary_path->buffer))
 								_r_menu_enableitem (hsubmenu, IDM_TRAY_RUN, MF_BYCOMMAND, FALSE);
 
 							_r_menu_popup (hsubmenu, hwnd, NULL, TRUE);
@@ -1753,7 +1917,7 @@ INT_PTR CALLBACK DlgProc (_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wparam, _In
 				case IDM_RUN:
 				case IDM_TRAY_RUN:
 				{
-					_app_openbrowser (browser_info);
+					_app_openbrowser (&browser_info);
 					break;
 				}
 
@@ -1772,10 +1936,10 @@ INT_PTR CALLBACK DlgProc (_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wparam, _In
 
 				case IDM_EXPLORE:
 				{
-					if (browser_info->binary_dir)
+					if (browser_info.binary_dir)
 					{
-						if (_r_fs_exists (browser_info->binary_dir->buffer))
-							_r_shell_opendefault (browser_info->binary_dir->buffer);
+						if (_r_fs_exists (browser_info.binary_dir->buffer))
+							_r_shell_opendefault (browser_info.binary_dir->buffer);
 					}
 
 					break;
@@ -1797,7 +1961,7 @@ INT_PTR CALLBACK DlgProc (_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wparam, _In
 
 				case IDC_START_BTN:
 				{
-					_r_workqueue_queueitem (&workqueue, &_app_thread_check, browser_info);
+					_r_workqueue_queueitem (&workqueue, &_app_thread_check, &browser_info);
 					break;
 				}
 			}
@@ -1809,7 +1973,12 @@ INT_PTR CALLBACK DlgProc (_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wparam, _In
 	return FALSE;
 }
 
-INT APIENTRY wWinMain (_In_ HINSTANCE hinst, _In_opt_ HINSTANCE prev_hinst, _In_ LPWSTR cmdline, _In_ INT show_cmd)
+INT APIENTRY wWinMain (
+	_In_ HINSTANCE hinst,
+	_In_opt_ HINSTANCE prev_hinst,
+	_In_ LPWSTR cmdline,
+	_In_ INT show_cmd
+)
 {
 	HWND hwnd;
 	PR_STRING path;
@@ -1817,7 +1986,7 @@ INT APIENTRY wWinMain (_In_ HINSTANCE hinst, _In_opt_ HINSTANCE prev_hinst, _In_
 	if (!_r_app_initialize ())
 		return ERROR_APP_INIT_FAILURE;
 
-	_app_initialize ();
+	_r_workqueue_initialize (&workqueue, 0, 1, 250, NULL);
 
 	path = _r_app_getdirectory ();
 
@@ -1825,11 +1994,11 @@ INT APIENTRY wWinMain (_In_ HINSTANCE hinst, _In_opt_ HINSTANCE prev_hinst, _In_
 
 	if (cmdline)
 	{
-		init_browser_info (browser_info);
+		init_browser_info (&browser_info);
 
-		if (browser_info->is_hasurls && _r_fs_exists (browser_info->binary_path->buffer))
+		if (browser_info.is_hasurls && _r_fs_exists (browser_info.binary_path->buffer))
 		{
-			_app_openbrowser (browser_info);
+			_app_openbrowser (&browser_info);
 
 			return ERROR_SUCCESS;
 		}
