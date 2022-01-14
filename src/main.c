@@ -1,5 +1,5 @@
 // chrlauncher
-// Copyright (c) 2015-2021 Henry++
+// Copyright (c) 2015-2022 Henry++
 
 #include "routine.h"
 
@@ -237,8 +237,8 @@ VOID init_browser_info (_Inout_ PBROWSER_INFORMATION pbi)
 	PR_STRING browser_type;
 	PR_STRING browser_arguments;
 
-	browser_type = _r_config_getstring (L"ChromiumType", L"dev-codecs-sync");
-	browser_arguments = _r_config_getstringexpand (L"ChromiumCommandLine", L"--user-data-dir=..\\profile --no-default-browser-check");
+	browser_type = _r_config_getstring (L"ChromiumType", CHROMIUM_TYPE);
+	browser_arguments = _r_config_getstringexpand (L"ChromiumCommandLine", CHROMIUM_COMMAND_LINE);
 
 	if (browser_type)
 		_r_obj_movereference (&pbi->browser_type, browser_type);
