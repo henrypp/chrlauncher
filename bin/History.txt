@@ -1,3 +1,14 @@
+v2.6 (14 January 2022)
+- set win7sp1 as minimum required version
+- prevent system sleep until download complete
+- added brave browser launch support
+- fixed command line with spaces bug (issue #186)
+- fixed cleanup old chromium versions (issue #180)
+- fixed opening windows twice (issue #172)
+- removed flash player support
+- cosmetics fixes
+- fixed bugs
+
 v2.5.7 (17 November 2019)
 - added updater only mode (issue #84 & #119)
 - updated project sdk
