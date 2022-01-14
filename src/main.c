@@ -26,13 +26,17 @@ R_QUEUED_LOCK lock_thread = PR_QUEUED_LOCK_INIT;
 
 R_WORKQUEUE workqueue;
 
-BOOL CALLBACK activate_browser_window_callback (_In_ HWND hwnd, _In_ LPARAM lparam)
+BOOL CALLBACK activate_browser_window_callback (
+	_In_ HWND hwnd,
+	_In_ LPARAM lparam
+)
 {
 	PBROWSER_INFORMATION pbi;
-	WCHAR path[1024];
+	PR_STRING process_path;
+	HANDLE hprocess;
 	ULONG pid;
-	ULONG length;
-	HANDLE hproc;
+	NTSTATUS status;
+	BOOL result;
 
 	GetWindowThreadProcessId (hwnd, &pid);
 
@@ -42,26 +46,31 @@ BOOL CALLBACK activate_browser_window_callback (_In_ HWND hwnd, _In_ LPARAM lpar
 	if (!_r_wnd_isvisible (hwnd))
 		return TRUE;
 
-	hproc = OpenProcess (PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+	status = _r_sys_openprocess (UlongToHandle (pid), PROCESS_QUERY_LIMITED_INFORMATION, &hprocess);
 
-	if (!_r_fs_isvalidhandle (hproc))
+	if (!NT_SUCCESS (status))
 		return TRUE;
 
-	pbi = (PBROWSER_INFORMATION)lparam;
+	result = TRUE;
 
-	length = RTL_NUMBER_OF (path);
+	status = _r_sys_queryprocessstring (hprocess, ProcessImageFileNameWin32, (PVOID_PTR)&process_path);
 
-	QueryFullProcessImageName (hproc, 0, path, &length);
-
-	CloseHandle (hproc);
-
-	if (_r_str_isequal2 (&pbi->binary_path->sr, path, TRUE))
+	if (NT_SUCCESS (status))
 	{
-		_r_wnd_toggle (hwnd, TRUE);
-		return FALSE;
+		pbi = (PBROWSER_INFORMATION)lparam;
+
+		if (_r_str_isequal (&pbi->binary_path->sr, &process_path->sr, TRUE))
+		{
+			_r_wnd_toggle (hwnd, TRUE);
+			result = FALSE;
+		}
+
+		_r_obj_dereference (process_path);
 	}
 
-	return TRUE;
+	NtClose (hprocess);
+
+	return result;
 }
 
 FORCEINLINE VOID activate_browser_window (_In_ PBROWSER_INFORMATION pbi)
