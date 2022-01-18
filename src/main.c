@@ -739,7 +739,7 @@ BOOLEAN _app_checkupdate (
 
 					if (_r_obj_isstringempty (string))
 					{
-						_r_show_message (hwnd, MB_OK | MB_ICONSTOP, NULL, NULL, L"Configuration not found.");
+						_r_show_message (hwnd, MB_OK | MB_ICONSTOP, NULL, L"Configuration was not found.");
 						*is_error_ptr = TRUE;
 					}
 					else
@@ -1720,10 +1720,8 @@ INT_PTR CALLBACK DlgProc (
 
 		case WM_CLOSE:
 		{
-			if (
-				_r_queuedlock_islocked (&lock_download) &&
-				_r_show_message (hwnd, MB_YESNO | MB_ICONQUESTION, NULL, NULL, _r_locale_getstring (IDS_QUESTION_STOP)) != IDYES
-				)
+			if (_r_queuedlock_islocked (&lock_download) &&
+				_r_show_message (hwnd, MB_YESNO | MB_ICONQUESTION, NULL, _r_locale_getstring (IDS_QUESTION_STOP)) != IDYES)
 			{
 				SetWindowLongPtr (hwnd, DWLP_MSGRESULT, TRUE);
 				return TRUE;
