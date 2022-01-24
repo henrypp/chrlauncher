@@ -1445,7 +1445,7 @@ VOID _app_thread_check (
 		{
 			_r_tray_toggle (hwnd, &GUID_TrayIcon, TRUE); // show tray icon
 
-			if ((!is_exists || pbi->is_autodownload) || _app_ishaveupdate (pbi))
+			if ((!is_exists || pbi->is_autodownload) && _app_ishaveupdate (pbi))
 			{
 				if (pbi->is_bringtofront)
 					_r_wnd_toggle (hwnd, TRUE); // show window
