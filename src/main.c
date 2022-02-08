@@ -233,8 +233,6 @@ VOID init_browser_info (
 		return;
 	}
 
-	RDBG2 (L"%s\r\n%s", pbi->binary_dir->buffer, pbi->binary_path->buffer);
-
 	if (!_r_fs_exists (pbi->binary_path->buffer))
 	{
 		for (SIZE_T i = 0; i < RTL_NUMBER_OF (bin_names); i++)
