@@ -213,12 +213,17 @@ VOID init_browser_info (
 	_r_obj_movereference (&pbi->binary_dir, binary_dir);
 	_r_str_trimstring2 (pbi->binary_dir, L"\\", 0);
 
-	string = _r_path_search (pbi->binary_dir->buffer);
+	string = _r_path_search (pbi->binary_dir->buffer, NULL, TRUE);
 
 	if (string)
 		_r_obj_movereference (&pbi->binary_dir, string);
 
-	string = _r_obj_concatstringrefs (3, &pbi->binary_dir->sr, &separator_sr, &binary_name->sr);
+	string = _r_obj_concatstringrefs (
+		3,
+		&pbi->binary_dir->sr,
+		&separator_sr,
+		&binary_name->sr
+	);
 
 	_r_obj_movereference (&pbi->binary_path, string);
 
@@ -227,6 +232,8 @@ VOID init_browser_info (
 		RtlRaiseStatus (STATUS_OBJECT_PATH_NOT_FOUND);
 		return;
 	}
+
+	RDBG2 (L"%s\r\n%s", pbi->binary_dir->buffer, pbi->binary_path->buffer);
 
 	if (!_r_fs_exists (pbi->binary_path->buffer))
 	{
@@ -501,7 +508,11 @@ VOID _app_cleanupoldbinary (
 	// remove old binary directory
 	// https://github.com/henrypp/chrlauncher/issues/180
 
-	path = _r_obj_concatstrings (2, pbi->binary_dir->buffer, L"\\*");
+	path = _r_obj_concatstrings (
+		2,
+		pbi->binary_dir->buffer,
+		L"\\*"
+	);
 
 	hfile = FindFirstFile (path->buffer, &wfd);
 
@@ -538,7 +549,11 @@ VOID _app_cleanupoldmanifest (
 	if (!pbi->binary_dir || !pbi->current_version)
 		return;
 
-	path = _r_obj_concatstrings (2, pbi->binary_dir->buffer, L"\\*.manifest");
+	path = _r_obj_concatstrings (
+		2,
+		pbi->binary_dir->buffer,
+		L"\\*.manifest"
+	);
 
 	hfile = FindFirstFile (path->buffer, &wfd);
 
@@ -618,7 +633,13 @@ VOID _app_openbrowser (
 
 	pbi->is_opennewwindow = FALSE;
 
-	arg = _r_obj_concatstrings (4, L"\"", pbi->binary_path->buffer, L"\" ", args);
+	arg = _r_obj_concatstrings (
+		4,
+		L"\"",
+		pbi->binary_path->buffer,
+		L"\" ",
+		args
+	);
 
 	status = _r_sys_createprocess (pbi->binary_path->buffer, arg->buffer, pbi->binary_dir->buffer);
 
@@ -834,7 +855,11 @@ BOOLEAN _app_downloadupdate (
 
 	result = FALSE;
 
-	temp_file = _r_obj_concatstrings (2, pbi->cache_path->buffer, L".tmp");
+	temp_file = _r_obj_concatstrings (
+		2,
+		pbi->cache_path->buffer,
+		L".tmp"
+	);
 
 	_r_fs_deletefile (pbi->cache_path->buffer, TRUE);
 
@@ -1053,7 +1078,12 @@ BOOLEAN _app_unpack_7zip (
 				if (root_dir_name)
 					_r_obj_skipstringlength (&path, root_dir_name->length + separator_sr.length);
 
-				dest_path = _r_obj_concatstringrefs (3, &pbi->binary_dir->sr, &separator_sr, &path);
+				dest_path = _r_obj_concatstringrefs (
+					3,
+					&pbi->binary_dir->sr,
+					&separator_sr,
+					&path
+				);
 
 				if (SzArEx_IsDir (&db, i))
 				{
@@ -1267,7 +1297,12 @@ BOOLEAN _app_unpack_zip (
 		if (root_dir_name)
 			_r_obj_skipstringlength (&path->sr, root_dir_name->length + separator_sr.length);
 
-		dest_path = _r_obj_concatstringrefs (3, &pbi->binary_dir->sr, &separator_sr, &path->sr);
+		dest_path = _r_obj_concatstringrefs (
+			3,
+			&pbi->binary_dir->sr,
+			&separator_sr,
+			&path->sr
+		);
 
 		_app_setstatus (hwnd, _r_locale_getstring (IDS_STATUS_INSTALL), total_read, total_size);
 
