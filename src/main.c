@@ -1616,19 +1616,16 @@ INT_PTR CALLBACK DlgProc (
 
 		case RM_INITIALIZE:
 		{
-			LONG dpi_value;
-
-			LONG icon_small_x;
-			LONG icon_small_y;
-
 			HICON hicon;
+
+			LONG dpi_value;
+			LONG icon_small;
 
 			dpi_value = _r_dc_gettaskbardpi ();
 
-			icon_small_x = _r_dc_getsystemmetrics (SM_CXSMICON, dpi_value);
-			icon_small_y = _r_dc_getsystemmetrics (SM_CYSMICON, dpi_value);
+			icon_small = _r_dc_getsystemmetrics (SM_CXSMICON, dpi_value);
 
-			hicon = _r_sys_loadsharedicon (_r_sys_getimagebase (), MAKEINTRESOURCE (IDI_MAIN), icon_small_y, icon_small_x);
+			hicon = _r_sys_loadsharedicon (_r_sys_getimagebase (), MAKEINTRESOURCE (IDI_MAIN), icon_small);
 
 			init_browser_info (&browser_info);
 
@@ -1702,19 +1699,16 @@ INT_PTR CALLBACK DlgProc (
 
 		case RM_TASKBARCREATED:
 		{
-			LONG dpi_value;
-
-			LONG icon_small_x;
-			LONG icon_small_y;
-
 			HICON hicon;
+
+			LONG dpi_value;
+			LONG icon_small;
 
 			dpi_value = _r_dc_gettaskbardpi ();
 
-			icon_small_x = _r_dc_getsystemmetrics (SM_CXSMICON, dpi_value);
-			icon_small_y = _r_dc_getsystemmetrics (SM_CYSMICON, dpi_value);
+			icon_small = _r_dc_getsystemmetrics (SM_CXSMICON, dpi_value);
 
-			hicon = _r_sys_loadsharedicon (_r_sys_getimagebase (), MAKEINTRESOURCE (IDI_MAIN), icon_small_x, icon_small_y);
+			hicon = _r_sys_loadsharedicon (_r_sys_getimagebase (), MAKEINTRESOURCE (IDI_MAIN), icon_small);
 
 			_r_tray_create (
 				hwnd,
@@ -1730,19 +1724,16 @@ INT_PTR CALLBACK DlgProc (
 
 		case WM_DPICHANGED:
 		{
-			LONG dpi_value;
-
-			LONG icon_small_x;
-			LONG icon_small_y;
-
 			HICON hicon;
+
+			LONG dpi_value;
+			LONG icon_small;
 
 			dpi_value = _r_dc_gettaskbardpi ();
 
-			icon_small_x = _r_dc_getsystemmetrics (SM_CXSMICON, dpi_value);
-			icon_small_y = _r_dc_getsystemmetrics (SM_CYSMICON, dpi_value);
+			icon_small = _r_dc_getsystemmetrics (SM_CXSMICON, dpi_value);
 
-			hicon = _r_sys_loadsharedicon (_r_sys_getimagebase (), MAKEINTRESOURCE (IDI_MAIN), icon_small_x, icon_small_y);
+			hicon = _r_sys_loadsharedicon (_r_sys_getimagebase (), MAKEINTRESOURCE (IDI_MAIN), icon_small);
 
 			_r_tray_setinfo (hwnd, &GUID_TrayIcon, hicon, _r_app_getname ());
 
@@ -2045,5 +2036,5 @@ INT APIENTRY wWinMain (
 	if (!hwnd)
 		return ERROR_APP_INIT_FAILURE;
 
-	return _r_wnd_messageloop (hwnd, MAKEINTRESOURCE (IDA_MAIN));
+	return _r_wnd_message_callback (hwnd, MAKEINTRESOURCE (IDA_MAIN));
 }
