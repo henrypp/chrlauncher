@@ -36,7 +36,7 @@ BOOL CALLBACK activate_browser_window_callback (
 	HANDLE hprocess;
 	ULONG pid;
 	NTSTATUS status;
-	BOOL result;
+	BOOL is_success;
 
 	GetWindowThreadProcessId (hwnd, &pid);
 
@@ -51,9 +51,9 @@ BOOL CALLBACK activate_browser_window_callback (
 	if (!NT_SUCCESS (status))
 		return TRUE;
 
-	result = TRUE;
+	is_success = TRUE;
 
-	status = _r_sys_queryprocessstring (hprocess, ProcessImageFileNameWin32, (PVOID_PTR)&process_path);
+	status = _r_sys_queryprocessstring (hprocess, ProcessImageFileNameWin32, &process_path);
 
 	if (NT_SUCCESS (status))
 	{
@@ -62,7 +62,7 @@ BOOL CALLBACK activate_browser_window_callback (
 		if (_r_str_isequal (&pbi->binary_path->sr, &process_path->sr, TRUE))
 		{
 			_r_wnd_toggle (hwnd, TRUE);
-			result = FALSE;
+			is_success = FALSE;
 		}
 
 		_r_obj_dereference (process_path);
@@ -70,7 +70,7 @@ BOOL CALLBACK activate_browser_window_callback (
 
 	NtClose (hprocess);
 
-	return result;
+	return is_success;
 }
 
 FORCEINLINE VOID activate_browser_window (
@@ -714,9 +714,9 @@ BOOLEAN _app_checkupdate (
 	BOOLEAN is_exists;
 	BOOLEAN is_checkupdate;
 
-	BOOLEAN result;
+	BOOLEAN is_success;
 
-	result = FALSE;
+	is_success = FALSE;
 
 	is_exists = _r_fs_exists (pbi->binary_path->buffer);
 	is_checkupdate = _app_isupdaterequired (pbi);
@@ -804,7 +804,7 @@ BOOLEAN _app_checkupdate (
 
 		if (!is_exists || (pbi->new_version && _r_str_versioncompare (&pbi->current_version->sr, &pbi->new_version->sr) == -1))
 		{
-			result = TRUE;
+			is_success = TRUE;
 		}
 		else
 		{
@@ -818,7 +818,7 @@ BOOLEAN _app_checkupdate (
 
 	_app_setstatus (hwnd, NULL, 0, 0);
 
-	return result;
+	return is_success;
 }
 
 BOOLEAN WINAPI _app_downloadupdate_callback (
@@ -847,14 +847,14 @@ BOOLEAN _app_downloadupdate (
 	HINTERNET hsession;
 	HANDLE hfile;
 	ULONG status;
-	BOOLEAN result;
+	BOOLEAN is_success;
 
 	*is_error_ptr = FALSE;
 
 	if (_app_isupdatedownloaded (pbi))
 		return TRUE;
 
-	result = FALSE;
+	is_success = FALSE;
 
 	temp_file = _r_obj_concatstrings (
 		2,
@@ -910,7 +910,7 @@ BOOLEAN _app_downloadupdate (
 
 				_r_fs_movefile (temp_file->buffer, pbi->cache_path->buffer, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED);
 
-				result = TRUE;
+				is_success = TRUE;
 
 				*is_error_ptr = FALSE;
 			}
@@ -927,7 +927,7 @@ BOOLEAN _app_downloadupdate (
 
 	_app_setstatus (hwnd, NULL, 0, 0);
 
-	return result;
+	return is_success;
 }
 
 BOOLEAN _app_unpack_7zip (
