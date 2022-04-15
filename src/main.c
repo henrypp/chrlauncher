@@ -936,8 +936,7 @@ BOOLEAN _app_unpack_7zip (
 #define kInputBufSize ((SIZE_T)1 << 18)
 
 	static const ISzAlloc g_Alloc = {SzAlloc, SzFree};
-
-	BOOLEAN result = FALSE;
+	static R_STRINGREF separator_sr = PR_STRINGREF_INIT (L"\\");
 
 	ISzAlloc alloc_imp = g_Alloc;
 	ISzAlloc alloc_temp_imp = g_Alloc;
@@ -945,247 +944,258 @@ BOOLEAN _app_unpack_7zip (
 	CFileInStream archive_stream;
 	CLookToRead2 look_stream;
 	CSzArEx db;
-	UInt16 *temp_buff = NULL;
-	SIZE_T temp_size = 0;
+	UInt16 *temp_buff;
+	SIZE_T temp_size;
 
-	SRes code = InFile_OpenW (&archive_stream.file, pbi->cache_path->buffer);
+	// if you need cache, use these 3 variables.
+	// if you use external function, you can make these variable as static.
 
-	if (code != ERROR_SUCCESS)
+	UInt32 block_index = UINT32_MAX; // it can have any value before first call (if out_buffer = 0)
+	Byte *out_buffer = NULL; // it must be 0 before first call for each new archive.
+	size_t out_buffer_size = 0; // it can have any value before first call (if out_buffer = 0)
+
+	R_STRINGREF path;
+	PR_STRING root_dir_name;
+	PR_STRING dest_path;
+	PR_STRING sub_dir;
+	CSzFile out_file;
+	size_t offset;
+	size_t out_size_processed;
+	UInt32 attrib;
+	UInt64 total_size;
+	UInt64 total_read;
+	SIZE_T processed_size;
+	SIZE_T length;
+	SRes status;
+	BOOLEAN is_success;
+
+	status = InFile_OpenW (&archive_stream.file, pbi->cache_path->buffer);
+
+	if (status != ERROR_SUCCESS)
 	{
-		_r_log (LOG_LEVEL_ERROR, NULL, L"InFile_OpenW", code, pbi->cache_path->buffer);
+		_r_log (LOG_LEVEL_ERROR, NULL, L"InFile_OpenW", status, pbi->cache_path->buffer);
 		return FALSE;
 	}
 
+	temp_buff = NULL;
+	root_dir_name = NULL;
+
+	is_success = FALSE;
+
 	FileInStream_CreateVTable (&archive_stream);
 	LookToRead2_CreateVTable (&look_stream, 0);
+
+	SzArEx_Init (&db);
 
 	look_stream.buf = (byte *)ISzAlloc_Alloc (&alloc_imp, kInputBufSize);
 
 	if (!look_stream.buf)
 	{
 		_r_log (LOG_LEVEL_ERROR, NULL, L"ISzAlloc_Alloc", SZ_ERROR_MEM, NULL);
+		goto CleanupExit;
 	}
-	else
+
+	total_size = 0;
+	total_read = 0;
+
+	look_stream.bufSize = kInputBufSize;
+	look_stream.realStream = &archive_stream.vt;
+	LookToRead2_Init (&look_stream);
+
+	CrcGenerateTable ();
+
+	status = SzArEx_Open (&db, &look_stream.vt, &alloc_imp, &alloc_temp_imp);
+
+	if (status != SZ_OK)
 	{
-		look_stream.bufSize = kInputBufSize;
-		look_stream.realStream = &archive_stream.vt;
-		LookToRead2_Init (&look_stream);
+		_r_log (LOG_LEVEL_ERROR, NULL, L"SzArEx_Open", status, pbi->cache_path->buffer);
+		goto CleanupExit;
+	}
 
-		CrcGenerateTable ();
+	temp_size = 0;
 
-		SzArEx_Init (&db);
+	// find root directory which contains main executable
+	for (UInt32 i = 0; i < db.NumFiles; i++)
+	{
+		if (SzArEx_IsDir (&db, i))
+			continue;
 
-		code = SzArEx_Open (&db, &look_stream.vt, &alloc_imp, &alloc_temp_imp);
+		length = SzArEx_GetFileNameUtf16 (&db, i, NULL);
+		total_size += SzArEx_GetFileSize (&db, i);
 
-		if (code != SZ_OK)
+		if (length > temp_size)
 		{
-			_r_log (LOG_LEVEL_ERROR, NULL, L"SzArEx_Open", code, pbi->cache_path->buffer);
+			temp_size = length;
+
+			if (temp_buff)
+			{
+				temp_buff = _r_mem_reallocatezero (temp_buff, temp_size * sizeof (UInt16));
+			}
+			else
+			{
+				temp_buff = _r_mem_allocatezero (temp_size * sizeof (UInt16));
+			}
+		}
+
+		if (!root_dir_name)
+		{
+			length = SzArEx_GetFileNameUtf16 (&db, i, temp_buff);
+
+			if (!length)
+				continue;
+
+			_r_obj_initializestringref_ex (&path, (LPWSTR)temp_buff, (length - 1) * sizeof (WCHAR));
+
+			_r_str_replacechar (&path, L'/', OBJ_NAME_PATH_SEPARATOR);
+
+			length = path.length - bin_name->length - separator_sr.length;
+
+			if (_r_str_isendsswith (&path, bin_name, TRUE) &&
+				path.buffer[length / sizeof (WCHAR)] == OBJ_NAME_PATH_SEPARATOR)
+			{
+				_r_obj_movereference (
+					&root_dir_name,
+					_r_obj_createstring_ex (path.buffer, path.length - bin_name->length)
+				);
+
+				_r_str_trimstring (root_dir_name, &separator_sr, 0);
+			}
+		}
+	}
+
+	for (UInt32 i = 0; i < db.NumFiles; i++)
+	{
+		length = SzArEx_GetFileNameUtf16 (&db, i, temp_buff);
+
+		if (!length)
+			continue;
+
+		_r_obj_initializestringref_ex (&path, (LPWSTR)temp_buff, (length - 1) * sizeof (WCHAR));
+
+		_r_str_replacechar (&path, L'/', OBJ_NAME_PATH_SEPARATOR);
+		_r_str_trimstringref (&path, &separator_sr, 0);
+
+		// skip non-root dirs
+		if (!_r_obj_isstringempty (root_dir_name) &&
+			(path.length <= root_dir_name->length || !_r_str_isstartswith (&path, &root_dir_name->sr, TRUE)))
+		{
+			continue;
+		}
+
+		if (root_dir_name)
+			_r_obj_skipstringlength (&path, root_dir_name->length + separator_sr.length);
+
+		dest_path = _r_obj_concatstringrefs (
+			3,
+			&pbi->binary_dir->sr,
+			&separator_sr,
+			&path
+		);
+
+		if (SzArEx_IsDir (&db, i))
+		{
+			_r_fs_mkdir (dest_path->buffer);
 		}
 		else
 		{
-			// if you need cache, use these 3 variables.
-			// if you use external function, you can make these variable as static.
+			total_read += SzArEx_GetFileSize (&db, i);
 
-			UInt32 block_index = UINT32_MAX; // it can have any value before first call (if out_buffer = 0)
-			Byte *out_buffer = NULL; // it must be 0 before first call for each new archive.
-			size_t out_buffer_size = 0; // it can have any value before first call (if out_buffer = 0)
+			_app_setstatus (hwnd, _r_locale_getstring (IDS_STATUS_INSTALL), total_read, total_size);
 
-			R_STRINGREF separator_sr = PR_STRINGREF_INIT (L"\\");
-			R_STRINGREF path;
-			PR_STRING root_dir_name = NULL;
+			// create directory if not-exist
+			sub_dir = _r_path_getbasedirectory (&dest_path->sr);
 
-			UInt64 total_size = 0;
-			UInt64 total_read = 0;
-			SIZE_T length;
-
-			// find root directory which contains main executable
-			for (UInt32 i = 0; i < db.NumFiles; i++)
+			if (sub_dir)
 			{
-				if (SzArEx_IsDir (&db, i))
-					continue;
+				if (!_r_fs_exists (sub_dir->buffer))
+					_r_fs_mkdir (sub_dir->buffer);
 
-				length = SzArEx_GetFileNameUtf16 (&db, i, NULL);
-				total_size += SzArEx_GetFileSize (&db, i);
-
-				if (length > temp_size)
-				{
-					temp_size = length;
-
-					if (temp_buff)
-					{
-						temp_buff = _r_mem_reallocatezero (temp_buff, temp_size * sizeof (UInt16));
-					}
-					else
-					{
-						temp_buff = _r_mem_allocatezero (temp_size * sizeof (UInt16));
-					}
-				}
-
-				if (!root_dir_name)
-				{
-					length = SzArEx_GetFileNameUtf16 (&db, i, temp_buff);
-
-					if (!length)
-						continue;
-
-					_r_obj_initializestringref_ex (&path, (LPWSTR)temp_buff, (length - 1) * sizeof (WCHAR));
-
-					_r_str_replacechar (&path, L'/', OBJ_NAME_PATH_SEPARATOR);
-
-					length = path.length - bin_name->length - separator_sr.length;
-
-					if (
-						_r_str_isendsswith (&path, bin_name, TRUE) &&
-						path.buffer[length / sizeof (WCHAR)] == OBJ_NAME_PATH_SEPARATOR
-						)
-					{
-						_r_obj_movereference (
-							&root_dir_name,
-							_r_obj_createstring_ex (path.buffer, path.length - bin_name->length)
-						);
-
-						_r_str_trimstring (root_dir_name, &separator_sr, 0);
-					}
-				}
+				_r_obj_dereference (sub_dir);
 			}
 
-			for (UInt32 i = 0; i < db.NumFiles; i++)
+			offset = 0;
+			out_size_processed = 0;
+
+			status = SzArEx_Extract (
+				&db,
+				&look_stream.vt,
+				i,
+				&block_index,
+				&out_buffer,
+				&out_buffer_size,
+				&offset,
+				&out_size_processed,
+				&alloc_imp,
+				&alloc_temp_imp
+			);
+
+			if (status != SZ_OK)
 			{
-				length = SzArEx_GetFileNameUtf16 (&db, i, temp_buff);
+				_r_log (LOG_LEVEL_ERROR, NULL, L"SzArEx_Extract", status, dest_path->buffer);
+			}
+			else
+			{
+				status = OutFile_OpenW (&out_file, dest_path->buffer);
 
-				if (!length)
-					continue;
-
-				_r_obj_initializestringref_ex (&path, (LPWSTR)temp_buff, (length - 1) * sizeof (WCHAR));
-
-				_r_str_replacechar (&path, L'/', OBJ_NAME_PATH_SEPARATOR);
-				_r_str_trimstringref (&path, &separator_sr, 0);
-
-				// skip non-root dirs
-				if (
-					!_r_obj_isstringempty (root_dir_name) &&
-					(path.length <= root_dir_name->length || !_r_str_isstartswith (&path, &root_dir_name->sr, TRUE))
-					)
+				if (status != SZ_OK)
 				{
-					continue;
-				}
-
-				CSzFile out_file;
-				PR_STRING dest_path;
-
-				if (root_dir_name)
-					_r_obj_skipstringlength (&path, root_dir_name->length + separator_sr.length);
-
-				dest_path = _r_obj_concatstringrefs (
-					3,
-					&pbi->binary_dir->sr,
-					&separator_sr,
-					&path
-				);
-
-				if (SzArEx_IsDir (&db, i))
-				{
-					_r_fs_mkdir (dest_path->buffer);
+					_r_log (LOG_LEVEL_ERROR, NULL, L"OutFile_OpenW", status, dest_path->buffer);
 				}
 				else
 				{
-					total_read += SzArEx_GetFileSize (&db, i);
+					processed_size = out_size_processed;
 
-					_app_setstatus (hwnd, _r_locale_getstring (IDS_STATUS_INSTALL), total_read, total_size);
+					status = File_Write (&out_file, out_buffer + offset, &processed_size);
 
-					// create directory if not-exist
+					if (status != SZ_OK || processed_size != out_size_processed)
 					{
-						PR_STRING sub_dir = _r_path_getbasedirectory (&dest_path->sr);
-
-						if (sub_dir)
-						{
-							if (!_r_fs_exists (sub_dir->buffer))
-								_r_fs_mkdir (sub_dir->buffer);
-
-							_r_obj_dereference (sub_dir);
-						}
-					}
-
-					size_t offset = 0;
-					size_t out_size_processed = 0;
-
-					code = SzArEx_Extract (
-						&db,
-						&look_stream.vt,
-						i,
-						&block_index,
-						&out_buffer,
-						&out_buffer_size,
-						&offset,
-						&out_size_processed,
-						&alloc_imp,
-						&alloc_temp_imp
-					);
-
-					if (code != SZ_OK)
-					{
-						_r_log (LOG_LEVEL_ERROR, NULL, L"SzArEx_Extract", code, dest_path->buffer);
+						_r_log (LOG_LEVEL_ERROR, NULL, L"File_Write", status, dest_path->buffer);
 					}
 					else
 					{
-						code = OutFile_OpenW (&out_file, dest_path->buffer);
-
-						if (code != SZ_OK)
+						if (SzBitWithVals_Check (&db.Attribs, i))
 						{
-							_r_log (LOG_LEVEL_ERROR, NULL, L"OutFile_OpenW", code, dest_path->buffer);
-						}
-						else
-						{
-							SIZE_T processed_size = out_size_processed;
+							attrib = db.Attribs.Vals[i];
 
-							code = File_Write (&out_file, out_buffer + offset, &processed_size);
+							//	p7zip stores posix attributes in high 16 bits and adds 0x8000 as marker.
+							//	We remove posix bits, if we detect posix mode field
+							if ((attrib & 0xF0000000) != 0)
+								attrib &= 0x7FFF;
 
-							if (code != SZ_OK || processed_size != out_size_processed)
-							{
-								_r_log (LOG_LEVEL_ERROR, NULL, L"File_Write", code, dest_path->buffer);
-							}
-							else
-							{
-								if (SzBitWithVals_Check (&db.Attribs, i))
-								{
-									UInt32 attrib = db.Attribs.Vals[i];
-
-									//	p7zip stores posix attributes in high 16 bits and adds 0x8000 as marker.
-									//	We remove posix bits, if we detect posix mode field
-
-									if ((attrib & 0xF0000000) != 0)
-										attrib &= 0x7FFF;
-
-									SetFileAttributes (dest_path->buffer, attrib);
-								}
-							}
-
-							File_Close (&out_file);
+							SetFileAttributes (dest_path->buffer, attrib);
 						}
 					}
+
+					File_Close (&out_file);
 				}
-
-				_r_obj_dereference (dest_path);
-
-				if (!result)
-					result = TRUE;
 			}
-
-			if (root_dir_name)
-				_r_obj_dereference (root_dir_name);
-
-			ISzAlloc_Free (&alloc_imp, out_buffer);
 		}
+
+		_r_obj_dereference (dest_path);
+
+		if (!is_success)
+			is_success = TRUE;
 	}
 
-	_r_mem_free (temp_buff);
-	SzArEx_Free (&db, &alloc_imp);
+CleanupExit:
 
-	ISzAlloc_Free (&alloc_imp, look_stream.buf);
+	if (root_dir_name)
+		_r_obj_dereference (root_dir_name);
+
+	if (out_buffer)
+		ISzAlloc_Free (&alloc_imp, out_buffer);
+
+	if (look_stream.buf)
+		ISzAlloc_Free (&alloc_imp, look_stream.buf);
+
+	if (temp_buff)
+		_r_mem_free (temp_buff);
+
+	SzArEx_Free (&db, &alloc_imp);
 
 	File_Close (&archive_stream.file);
 
-	return result;
+	return is_success;
 }
 
 BOOLEAN _app_unpack_zip (
@@ -1194,13 +1204,27 @@ BOOLEAN _app_unpack_zip (
 	_In_ PR_STRINGREF bin_name
 )
 {
+	static R_STRINGREF separator_sr = PR_STRINGREF_INIT (L"\\");
+
 	mz_zip_archive zip_archive;
 	mz_bool zip_bool;
 
 	PR_BYTE bytes;
-	PR_STRING root_dir_name = NULL;
-	BOOLEAN result = FALSE;
+	PR_STRING root_dir_name;
+	R_BYTEREF path_sr;
+	PR_STRING path;
+	PR_STRING dest_path;
+	PR_STRING sub_dir;
+	mz_zip_archive_file_stat file_stat;
+	ULONG64 total_size;
+	ULONG64 total_read; // this is our progress so far
+	SIZE_T length;
+	INT total_files;
+	BOOLEAN is_success;
 	NTSTATUS status;
+
+	root_dir_name = NULL;
+	is_success = FALSE;
 
 	status = _r_str_unicode2multibyte (&pbi->cache_path->sr, &bytes);
 
@@ -1222,15 +1246,8 @@ BOOLEAN _app_unpack_zip (
 		goto CleanupExit;
 	}
 
-	R_STRINGREF separator_sr = PR_STRINGREF_INIT (L"\\");
-	R_BYTEREF path_sr;
-	PR_STRING path;
-
-	mz_zip_archive_file_stat file_stat;
-	ULONG64 total_size = 0;
-	ULONG64 total_read = 0; // this is our progress so far
-	SIZE_T length;
-	INT total_files;
+	total_size = 0;
+	total_read = 0;
 
 	total_files = mz_zip_reader_get_num_files (&zip_archive);
 
@@ -1282,15 +1299,11 @@ BOOLEAN _app_unpack_zip (
 		_r_str_trimstring (path, &separator_sr, 0);
 
 		// skip non-root dirs
-		if (
-			!_r_obj_isstringempty (root_dir_name) &&
-			(path->length <= root_dir_name->length || !_r_str_isstartswith (&path->sr, &root_dir_name->sr, TRUE))
-			)
+		if (!_r_obj_isstringempty (root_dir_name) &&
+			(path->length <= root_dir_name->length || !_r_str_isstartswith (&path->sr, &root_dir_name->sr, TRUE)))
 		{
 			continue;
 		}
-
-		PR_STRING dest_path;
 
 		if (root_dir_name)
 			_r_obj_skipstringlength (&path->sr, root_dir_name->length + separator_sr.length);
@@ -1310,7 +1323,7 @@ BOOLEAN _app_unpack_zip (
 		}
 		else
 		{
-			PR_STRING sub_dir = _r_path_getbasedirectory (&dest_path->sr);
+			sub_dir = _r_path_getbasedirectory (&dest_path->sr);
 
 			if (sub_dir)
 			{
@@ -1334,8 +1347,8 @@ BOOLEAN _app_unpack_zip (
 
 		_r_obj_dereference (dest_path);
 
-		if (!result)
-			result = TRUE;
+		if (!is_success)
+			is_success = TRUE;
 	}
 
 CleanupExit:
@@ -1348,7 +1361,7 @@ CleanupExit:
 
 	mz_zip_reader_end (&zip_archive);
 
-	return result;
+	return is_success;
 }
 
 BOOLEAN _app_installupdate (
@@ -1358,7 +1371,7 @@ BOOLEAN _app_installupdate (
 )
 {
 	R_STRINGREF bin_name;
-	BOOLEAN result = FALSE;
+	BOOLEAN is_success;
 
 	_r_queuedlock_acquireshared (&lock_download);
 
@@ -1371,14 +1384,12 @@ BOOLEAN _app_installupdate (
 
 	_r_sys_setthreadexecutionstate (ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_AWAYMODE_REQUIRED);
 
-	result = _app_unpack_zip (hwnd, pbi, &bin_name);
+	is_success = _app_unpack_zip (hwnd, pbi, &bin_name);
 
-	if (!result)
-	{
-		result = _app_unpack_7zip (hwnd, pbi, &bin_name);
-	}
+	if (!is_success)
+		is_success = _app_unpack_7zip (hwnd, pbi, &bin_name);
 
-	if (result)
+	if (is_success)
 	{
 		_r_obj_movereference (&pbi->current_version, _r_res_queryversionstring (pbi->binary_path->buffer));
 
@@ -1393,7 +1404,7 @@ BOOLEAN _app_installupdate (
 
 	_r_fs_deletefile (pbi->cache_path->buffer, TRUE); // remove cache file when zip cannot be opened
 
-	*is_error_ptr = !result;
+	*is_error_ptr = !is_success;
 
 	_r_queuedlock_releaseshared (&lock_download);
 
@@ -1401,7 +1412,7 @@ BOOLEAN _app_installupdate (
 
 	_app_setstatus (hwnd, NULL, 0, 0);
 
-	return result;
+	return is_success;
 }
 
 VOID _app_thread_check (
@@ -1640,12 +1651,8 @@ INT_PTR CALLBACK DlgProc (
 
 			_r_workqueue_queueitem (&workqueue, &_app_thread_check, &browser_info);
 
-			if (
-				!browser_info.is_waitdownloadend &&
-				!browser_info.is_onlyupdate &&
-				_r_fs_exists (browser_info.binary_path->buffer) &&
-				!_app_isupdatedownloaded (&browser_info)
-				)
+			if (!browser_info.is_waitdownloadend && !browser_info.is_onlyupdate &&
+				_r_fs_exists (browser_info.binary_path->buffer) && !_app_isupdatedownloaded (&browser_info))
 			{
 				_app_openbrowser (&browser_info);
 			}
