@@ -165,6 +165,92 @@ VOID update_browser_info (
 	_r_obj_dereference (localized_string);
 }
 
+VOID parse_args (
+	_Inout_ PBROWSER_INFORMATION pbi
+)
+{
+	LPWSTR *arga;
+	LPWSTR key;
+	LPWSTR key2;
+	SIZE_T first_arg_length;
+	INT numargs;
+
+	first_arg_length = 0;
+
+	arga = CommandLineToArgvW (_r_sys_getimagecommandline (), &numargs);
+
+	if (!arga)
+		return;
+
+	first_arg_length = _r_str_getlength (arga[0]);
+
+	if (numargs > 1)
+	{
+		for (INT i = 1; i < numargs; i++)
+		{
+			key = arga[i];
+
+			if (*key == L'/' || *key == L'-')
+			{
+				key2 = PTR_ADD_OFFSET (key, sizeof (WCHAR));
+
+				if (_r_str_compare_length (key2, L"autodownload", 12) == 0)
+				{
+					pbi->is_autodownload = TRUE;
+				}
+				else if (_r_str_compare_length (key2, L"bringtofront", 12) == 0)
+				{
+					pbi->is_bringtofront = TRUE;
+				}
+				else if (_r_str_compare_length (key2, L"forcecheck", 10) == 0)
+				{
+					pbi->is_forcecheck = TRUE;
+				}
+				else if (_r_str_compare_length (key2, L"wait", 4) == 0)
+				{
+					pbi->is_waitdownloadend = TRUE;
+				}
+				else if (_r_str_compare_length (key2, L"update", 6) == 0)
+				{
+					pbi->is_onlyupdate = TRUE;
+				}
+				else if (*key == L'-')
+				{
+					if (!pbi->is_opennewwindow)
+					{
+						if (
+							_r_str_compare_length (key, L"-new-tab", 8) == 0 ||
+							_r_str_compare_length (key, L"-new-window", 11) == 0 ||
+							_r_str_compare_length (key, L"--new-window", 12) == 0 ||
+							_r_str_compare_length (key, L"-new-instance", 13) == 0
+							)
+						{
+							pbi->is_opennewwindow = TRUE;
+						}
+					}
+
+					// there is Chromium arguments
+					//_r_str_appendformat (pbi->urls, RTL_NUMBER_OF (pbi->urls), L" %s", key);
+				}
+			}
+			else if (path_is_url (key))
+			{
+				// there is Chromium url
+				pbi->is_hasurls = TRUE;
+			}
+		}
+	}
+
+	if (pbi->is_hasurls)
+	{
+		_r_str_copy (pbi->urls, RTL_NUMBER_OF (pbi->urls), _r_sys_getimagecommandline () + first_arg_length + 2);
+		_r_str_trim (pbi->urls, L" ");
+	}
+
+	LocalFree (arga);
+
+}
+
 VOID init_browser_info (
 	_Inout_ PBROWSER_INFORMATION pbi
 )
@@ -321,88 +407,8 @@ VOID init_browser_info (
 	_r_obj_movereference (&pbi->browser_name, string);
 	_r_obj_movereference (&pbi->current_version, _r_res_queryversionstring (pbi->binary_path->buffer));
 
-	// Parse command line
-	{
-		LPWSTR *arga;
-		LPWSTR key;
-		LPWSTR key2;
-		SIZE_T first_arg_length;
-		INT numargs;
-
-		first_arg_length = 0;
-
-		arga = CommandLineToArgvW (_r_sys_getimagecommandline (), &numargs);
-
-		if (arga)
-		{
-			first_arg_length = _r_str_getlength (arga[0]);
-
-			if (numargs > 1)
-			{
-				for (INT i = 1; i < numargs; i++)
-				{
-					key = arga[i];
-
-					if (*key == L'/' || *key == L'-')
-					{
-						key2 = PTR_ADD_OFFSET (key, sizeof (WCHAR));
-
-						if (_r_str_compare_length (key2, L"autodownload", 12) == 0)
-						{
-							pbi->is_autodownload = TRUE;
-						}
-						else if (_r_str_compare_length (key2, L"bringtofront", 12) == 0)
-						{
-							pbi->is_bringtofront = TRUE;
-						}
-						else if (_r_str_compare_length (key2, L"forcecheck", 10) == 0)
-						{
-							pbi->is_forcecheck = TRUE;
-						}
-						else if (_r_str_compare_length (key2, L"wait", 4) == 0)
-						{
-							pbi->is_waitdownloadend = TRUE;
-						}
-						else if (_r_str_compare_length (key2, L"update", 6) == 0)
-						{
-							pbi->is_onlyupdate = TRUE;
-						}
-						else if (*key == L'-')
-						{
-							if (!pbi->is_opennewwindow)
-							{
-								if (
-									_r_str_compare_length (key, L"-new-tab", 8) == 0 ||
-									_r_str_compare_length (key, L"-new-window", 11) == 0 ||
-									_r_str_compare_length (key, L"--new-window", 12) == 0 ||
-									_r_str_compare_length (key, L"-new-instance", 13) == 0
-									)
-								{
-									pbi->is_opennewwindow = TRUE;
-								}
-							}
-
-							// there is Chromium arguments
-							//_r_str_appendformat (pbi->urls, RTL_NUMBER_OF (pbi->urls), L" %s", key);
-						}
-					}
-					else if (path_is_url (key))
-					{
-						// there is Chromium url
-						pbi->is_hasurls = TRUE;
-					}
-				}
-			}
-
-			LocalFree (arga);
-		}
-
-		if (pbi->is_hasurls)
-		{
-			_r_str_copy (pbi->urls, RTL_NUMBER_OF (pbi->urls), _r_sys_getimagecommandline () + first_arg_length + 2);
-			_r_str_trim (pbi->urls, L" ");
-		}
-	}
+	// parse arguments
+	parse_args (pbi);
 
 	pbi->check_period = _r_config_getlong (L"ChromiumCheckPeriod", 2);
 
