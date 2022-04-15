@@ -23,8 +23,8 @@ DEFINE_GUID (GUID_TrayIcon, 0xead41630, 0x90bb, 0x4836, 0x82, 0x41, 0xae, 0xae, 
 
 typedef struct _BROWSER_INFORMATION
 {
-	WCHAR args[512];
-	WCHAR urls[512];
+	PR_STRING args_str;
+	PR_STRING urls_str;
 
 	PR_STRING browser_name;
 	PR_STRING browser_type;

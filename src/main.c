@@ -243,8 +243,8 @@ VOID parse_args (
 
 	if (pbi->is_hasurls)
 	{
-		_r_str_copy (pbi->urls, RTL_NUMBER_OF (pbi->urls), _r_sys_getimagecommandline () + first_arg_length + 2);
-		_r_str_trim (pbi->urls, L" ");
+		pbi->urls_str = _r_obj_createstring (_r_sys_getimagecommandline () + first_arg_length + 2);
+		_r_str_trimstring2 (pbi->urls_str, L" ", 0);
 	}
 
 	LocalFree (arga);
@@ -283,8 +283,8 @@ VOID init_browser_info (
 	// Reset
 	pbi->is_hasurls = FALSE;
 
-	pbi->urls[0] = UNICODE_NULL;
-	pbi->args[0] = UNICODE_NULL;
+	_r_obj_clearreference (&pbi->urls_str);
+	_r_obj_clearreference (&pbi->args_str);
 
 	// Configure paths
 	binary_dir = _r_config_getstringexpand (L"ChromiumDirectory", L".\\bin");
@@ -396,11 +396,7 @@ VOID init_browser_info (
 		_r_obj_movereference (&pbi->browser_type, browser_type);
 
 	if (browser_arguments)
-	{
-		_r_str_copy (pbi->args, RTL_NUMBER_OF (pbi->args), browser_arguments->buffer);
-
-		_r_obj_dereference (browser_arguments);
-	}
+		_r_obj_movereference (&pbi->args_str, browser_arguments);
 
 	string = _r_format_string (L"%s (%" TEXT (PR_LONG) L"-bit)", pbi->browser_type->buffer, pbi->architecture);
 
@@ -608,8 +604,9 @@ VOID _app_openbrowser (
 	_In_ PBROWSER_INFORMATION pbi
 )
 {
-	WCHAR args[512];
-	PR_STRING arg;
+	PR_STRING command_line;
+	PR_STRING args_string;
+	SIZE_T args_length;
 	NTSTATUS status;
 	BOOLEAN is_running;
 
@@ -624,33 +621,74 @@ VOID _app_openbrowser (
 		return;
 	}
 
-	_r_str_copy (args, RTL_NUMBER_OF (args), pbi->args);
+	args_length = 0;
+
+	if (pbi->args_str)
+		args_length += pbi->args_str->length;
+
+	if (pbi->is_hasurls && pbi->urls_str)
+		args_length += pbi->urls_str->length;
+
+	args_length += sizeof (WCHAR); // for space
+
+	args_string = _r_obj_createstring_ex (NULL, args_length);
+
+	if (pbi->args_str)
+		RtlCopyMemory (args_string->buffer, pbi->args_str->buffer, pbi->args_str->length);
 
 	if (pbi->is_hasurls)
 	{
-		_r_str_appendformat (args, RTL_NUMBER_OF (args), L" %s", pbi->urls);
+		if (pbi->urls_str)
+		{
+			if (pbi->args_str)
+			{
+				RtlCopyMemory (
+					PTR_ADD_OFFSET (args_string->buffer, pbi->args_str->length),
+					L" ",
+					sizeof (WCHAR)
+				); // insert space
+
+				RtlCopyMemory (
+					PTR_ADD_OFFSET (args_string->buffer, pbi->args_str->length + sizeof (WCHAR)),
+					pbi->urls_str->buffer,
+					pbi->urls_str->length
+				);
+			}
+			else
+			{
+				RtlCopyMemory (
+					args_string->buffer,
+					pbi->urls_str->buffer,
+					pbi->urls_str->length
+				);
+			}
+
+			_r_obj_clearreference (&pbi->urls_str);
+		}
 
 		// reset
 		pbi->is_hasurls = FALSE;
-		pbi->urls[0] = UNICODE_NULL;
 	}
+
+	_r_obj_trimstringtonullterminator (args_string);
 
 	pbi->is_opennewwindow = FALSE;
 
-	arg = _r_obj_concatstrings (
+	command_line = _r_obj_concatstrings (
 		4,
 		L"\"",
 		pbi->binary_path->buffer,
 		L"\" ",
-		args
+		args_string->buffer
 	);
 
-	status = _r_sys_createprocess (pbi->binary_path->buffer, arg->buffer, pbi->binary_dir->buffer);
+	status = _r_sys_createprocess (pbi->binary_path->buffer, command_line->buffer, pbi->binary_dir->buffer);
 
 	if (status != STATUS_SUCCESS)
 		_r_show_errormessage (_r_app_gethwnd (), NULL, status, NULL);
 
-	_r_obj_dereference (arg);
+	_r_obj_dereference (args_string);
+	_r_obj_dereference (command_line);
 }
 
 BOOLEAN _app_ishaveupdate (
