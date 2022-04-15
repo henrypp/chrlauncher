@@ -824,11 +824,14 @@ BOOLEAN _app_checkupdate (
 BOOLEAN WINAPI _app_downloadupdate_callback (
 	_In_ ULONG total_written,
 	_In_ ULONG total_length,
-	_In_opt_ PVOID lparam
+	_In_ PVOID lparam
 )
 {
-	if (lparam)
-		_app_setstatus ((HWND)lparam, _r_locale_getstring (IDS_STATUS_DOWNLOAD), total_written, total_length);
+	HWND hwnd;
+
+	hwnd = lparam;
+
+	_app_setstatus (hwnd, _r_locale_getstring (IDS_STATUS_DOWNLOAD), total_written, total_length);
 
 	return TRUE;
 }
