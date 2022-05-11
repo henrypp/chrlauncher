@@ -114,6 +114,7 @@ VOID update_browser_info (
 	PR_STRING date_dormat;
 	PR_STRING localized_string;
 	R_STRINGREF empty_string;
+	HDWP hdefer;
 
 	_r_obj_initializestringrefconst (&empty_string, _r_locale_getstring (IDS_STATUS_NOTFOUND));
 
@@ -121,8 +122,11 @@ VOID update_browser_info (
 
 	localized_string = _r_format_string (L"%s:", _r_locale_getstring (IDS_BROWSER));
 
+	hdefer = BeginDeferWindowPos (2);
+
 	_r_ctrl_settablestring (
 		hwnd,
+		&hdefer,
 		IDC_BROWSER,
 		&localized_string->sr,
 		IDC_BROWSER_DATA,
@@ -133,6 +137,7 @@ VOID update_browser_info (
 
 	_r_ctrl_settablestring (
 		hwnd,
+		&hdefer,
 		IDC_CURRENTVERSION,
 		&localized_string->sr,
 		IDC_CURRENTVERSION_DATA,
@@ -143,6 +148,7 @@ VOID update_browser_info (
 
 	_r_ctrl_settablestring (
 		hwnd,
+		&hdefer,
 		IDC_VERSION,
 		&localized_string->sr,
 		IDC_VERSION_DATA,
@@ -153,11 +159,15 @@ VOID update_browser_info (
 
 	_r_ctrl_settablestring (
 		hwnd,
+		&hdefer,
 		IDC_DATE,
 		&localized_string->sr,
 		IDC_DATE_DATA,
 		date_dormat ? &date_dormat->sr : &empty_string
 	);
+
+	if (hdefer)
+		EndDeferWindowPos (hdefer);
 
 	if (date_dormat)
 		_r_obj_dereference (date_dormat);
@@ -2067,7 +2077,7 @@ INT APIENTRY wWinMain (
 	if (!_r_app_initialize ())
 		return ERROR_APP_INIT_FAILURE;
 
-	_r_workqueue_initialize (&workqueue, 0, 1, 250, NULL);
+	_r_workqueue_initialize (&workqueue, 0, 1, 250, NULL, NULL);
 
 	path = _r_app_getdirectory ();
 
