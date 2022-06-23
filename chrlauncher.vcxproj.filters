@@ -165,6 +165,33 @@
     <ClCompile Include="..\routine\src\routine.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\include\Blake2s.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\include\BwtSort.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\include\HuffEnc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\include\Ppmd8.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\include\Ppmd8Dec.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\include\Ppmd8Enc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\include\Ppmd7aDec.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\include\Sha1Opt.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\include\Sha1.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\main.h">
@@ -306,6 +333,21 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\routine\src\routine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\Blake2.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\BwtSort.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\HuffEnc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\Ppmd8.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\Sha1.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
