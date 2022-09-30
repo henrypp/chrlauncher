@@ -46,14 +46,22 @@ BOOL CALLBACK activate_browser_window_callback (
 	if (!_r_wnd_isvisible (hwnd))
 		return TRUE;
 
-	status = _r_sys_openprocess (UlongToHandle (pid), PROCESS_QUERY_LIMITED_INFORMATION, &hprocess);
+	status = _r_sys_openprocess (
+		UlongToHandle (pid),
+		PROCESS_QUERY_LIMITED_INFORMATION,
+		&hprocess
+	);
 
 	if (!NT_SUCCESS (status))
 		return TRUE;
 
 	is_success = TRUE;
 
-	status = _r_sys_queryprocessstring (hprocess, ProcessImageFileNameWin32, &process_path);
+	status = _r_sys_queryprocessstring (
+		hprocess,
+		ProcessImageFileNameWin32,
+		&process_path
+	);
 
 	if (NT_SUCCESS (status))
 	{
@@ -116,7 +124,10 @@ VOID update_browser_info (
 	R_STRINGREF empty_string;
 	HDWP hdefer;
 
-	_r_obj_initializestringrefconst (&empty_string, _r_locale_getstring (IDS_STATUS_NOTFOUND));
+	_r_obj_initializestringrefconst (
+		&empty_string,
+		_r_locale_getstring (IDS_STATUS_NOTFOUND)
+	);
 
 	date_dormat = _r_format_unixtime_ex (pbi->timestamp, FDTF_SHORTDATE | FDTF_SHORTTIME);
 
@@ -133,7 +144,10 @@ VOID update_browser_info (
 		pbi->browser_name ? &pbi->browser_name->sr : &empty_string
 	);
 
-	_r_obj_movereference (&localized_string, _r_format_string (L"%s:", _r_locale_getstring (IDS_CURRENTVERSION)));
+	_r_obj_movereference (
+		&localized_string,
+		_r_format_string (L"%s:", _r_locale_getstring (IDS_CURRENTVERSION))
+	);
 
 	_r_ctrl_settablestring (
 		hwnd,
@@ -144,7 +158,10 @@ VOID update_browser_info (
 		pbi->current_version ? &pbi->current_version->sr : &empty_string
 	);
 
-	_r_obj_movereference (&localized_string, _r_format_string (L"%s:", _r_locale_getstring (IDS_VERSION)));
+	_r_obj_movereference (
+		&localized_string,
+		_r_format_string (L"%s:", _r_locale_getstring (IDS_VERSION))
+	);
 
 	_r_ctrl_settablestring (
 		hwnd,
@@ -155,7 +172,10 @@ VOID update_browser_info (
 		pbi->new_version ? &pbi->new_version->sr : &empty_string
 	);
 
-	_r_obj_movereference (&localized_string, _r_format_string (L"%s:", _r_locale_getstring (IDS_DATE)));
+	_r_obj_movereference (
+		&localized_string,
+		_r_format_string (L"%s:", _r_locale_getstring (IDS_DATE))
+	);
 
 	_r_ctrl_settablestring (
 		hwnd,
@@ -228,12 +248,10 @@ VOID parse_args (
 				{
 					if (!pbi->is_opennewwindow)
 					{
-						if (
-							_r_str_compare_length (key, L"-new-tab", 8) == 0 ||
+						if (_r_str_compare_length (key, L"-new-tab", 8) == 0 ||
 							_r_str_compare_length (key, L"-new-window", 11) == 0 ||
 							_r_str_compare_length (key, L"--new-window", 12) == 0 ||
-							_r_str_compare_length (key, L"-new-instance", 13) == 0
-							)
+							_r_str_compare_length (key, L"-new-instance", 13) == 0)
 						{
 							pbi->is_opennewwindow = TRUE;
 						}
@@ -254,6 +272,7 @@ VOID parse_args (
 	if (pbi->is_hasurls)
 	{
 		pbi->urls_str = _r_obj_createstring (_r_sys_getimagecommandline () + first_arg_length + 2);
+
 		_r_str_trimstring2 (pbi->urls_str, L" ", 0);
 	}
 
@@ -283,6 +302,7 @@ VOID init_browser_info (
 
 	static R_STRINGREF separator_sr = PR_STRINGREF_INIT (L"\\");
 
+	SYSTEM_INFO si;
 	PR_STRING binary_dir;
 	PR_STRING binary_name;
 	PR_STRING browser_type;
@@ -326,6 +346,7 @@ VOID init_browser_info (
 	if (!pbi->binary_dir || !pbi->binary_path)
 	{
 		RtlRaiseStatus (STATUS_OBJECT_PATH_NOT_FOUND);
+
 		return;
 	}
 
@@ -354,7 +375,8 @@ VOID init_browser_info (
 				&binary_name->sr
 			);
 
-			_r_obj_movereference (&pbi->binary_path, string); // fallback (use defaults)
+			// fallback (use defaults)
+			_r_obj_movereference (&pbi->binary_path, string);
 		}
 	}
 
@@ -380,15 +402,12 @@ VOID init_browser_info (
 		if (_r_fs_exists (pbi->binary_path->buffer))
 		{
 			if (GetBinaryType (pbi->binary_path->buffer, &binary_type))
-			{
 				pbi->architecture = (binary_type == SCS_64BIT_BINARY) ? 64 : 32;
-			}
 		}
 
 		// ...by processor architecture
 		if (!pbi->architecture)
 		{
-			SYSTEM_INFO si = {0};
 			GetNativeSystemInfo (&si);
 
 			pbi->architecture = (si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64) ? 64 : 32;
@@ -408,10 +427,18 @@ VOID init_browser_info (
 	if (browser_arguments)
 		_r_obj_movereference (&pbi->args_str, browser_arguments);
 
-	string = _r_format_string (L"%s (%" TEXT (PR_LONG) L"-bit)", pbi->browser_type->buffer, pbi->architecture);
+	string = _r_format_string (
+		L"%s (%" TEXT (PR_LONG) L"-bit)",
+		pbi->browser_type->buffer,
+		pbi->architecture
+	);
 
 	_r_obj_movereference (&pbi->browser_name, string);
-	_r_obj_movereference (&pbi->current_version, _r_res_queryversionstring (pbi->binary_path->buffer));
+
+	_r_obj_movereference (
+		&pbi->current_version,
+		_r_res_queryversionstring (pbi->binary_path->buffer)
+	);
 
 	// parse arguments
 	parse_args (pbi);
@@ -458,7 +485,14 @@ VOID _app_setstatus (
 
 		if (!_r_str_isempty (text))
 		{
-			_r_tray_setinfoformat (hwnd, &GUID_TrayIcon, NULL, L"%s\r\n%s: 0%%", _r_app_getname (), text);
+			_r_tray_setinfoformat (
+				hwnd,
+				&GUID_TrayIcon,
+				NULL,
+				L"%s\r\n%s: 0%%",
+				_r_app_getname (),
+				text
+			);
 		}
 		else
 		{
@@ -469,7 +503,14 @@ VOID _app_setstatus (
 	{
 		percent = _r_calc_clamp64 (_r_calc_percentof64 (v, t), 0, 100);
 
-		_r_status_settextformat (hwnd, IDC_STATUSBAR, 0, L"%s %" PR_LONG64 L"%%", text, percent);
+		_r_status_settextformat (
+			hwnd,
+			IDC_STATUSBAR,
+			0,
+			L"%s %" PR_LONG64 L"%%",
+			text,
+			percent
+		);
 
 		if (!_r_str_isempty (text))
 		{
@@ -493,7 +534,14 @@ VOID _app_setstatus (
 
 		if (!_r_str_isempty (text))
 		{
-			_r_tray_setinfoformat (hwnd, &GUID_TrayIcon, NULL, L"%s\r\n%s", _r_app_getname (), text);
+			_r_tray_setinfoformat (
+				hwnd,
+				&GUID_TrayIcon,
+				NULL,
+				L"%s\r\n%s",
+				_r_app_getname (),
+				text
+			);
 		}
 		else
 		{
@@ -501,7 +549,12 @@ VOID _app_setstatus (
 		}
 	}
 
-	SendDlgItemMessage (hwnd, IDC_PROGRESS, PBM_SETPOS, (WPARAM)(LONG)percent, 0);
+	SendDlgItemMessage (
+		hwnd,
+		IDC_PROGRESS,
+		PBM_SETPOS,
+		(WPARAM)(LONG)percent,
+		0);
 }
 
 VOID _app_cleanupoldbinary (
@@ -536,7 +589,10 @@ VOID _app_cleanupoldbinary (
 			if (wfd.cFileName[0] == L'.')
 				continue;
 
-			_r_obj_movereference (&path, _r_obj_concatstrings (3, pbi->binary_dir->buffer, L"\\", wfd.cFileName));
+			_r_obj_movereference (
+				&path,
+				_r_obj_concatstrings (3, pbi->binary_dir->buffer, L"\\", wfd.cFileName)
+			);
 
 			_r_fs_deletedirectory (path->buffer, TRUE);
 		}
@@ -573,7 +629,10 @@ VOID _app_cleanupoldmanifest (
 		{
 			if (_r_str_isstartswith2 (&pbi->current_version->sr, wfd.cFileName, TRUE))
 			{
-				_r_obj_movereference (&path, _r_obj_concatstrings (3, pbi->binary_dir->buffer, L"\\", wfd.cFileName));
+				_r_obj_movereference (
+					&path,
+					_r_obj_concatstrings (3, pbi->binary_dir->buffer, L"\\", wfd.cFileName)
+				);
 
 				_r_fs_deletefile (path->buffer, 0);
 			}
@@ -644,7 +703,13 @@ VOID _app_openbrowser (
 	args_string = _r_obj_createstring_ex (NULL, args_length);
 
 	if (pbi->args_str)
-		RtlCopyMemory (args_string->buffer, pbi->args_str->buffer, pbi->args_str->length);
+	{
+		RtlCopyMemory (
+			args_string->buffer,
+			pbi->args_str->buffer,
+			pbi->args_str->length
+		);
+	}
 
 	if (pbi->is_hasurls)
 	{
@@ -692,7 +757,11 @@ VOID _app_openbrowser (
 		args_string->buffer
 	);
 
-	status = _r_sys_createprocess (pbi->binary_path->buffer, command_line->buffer, pbi->binary_dir->buffer);
+	status = _r_sys_createprocess (
+		pbi->binary_path->buffer,
+		command_line->buffer,
+		pbi->binary_dir->buffer
+	);
 
 	if (status != STATUS_SUCCESS)
 		_r_show_errormessage (_r_app_gethwnd (), NULL, status, NULL);
@@ -705,26 +774,33 @@ BOOLEAN _app_ishaveupdate (
 	_In_ PBROWSER_INFORMATION pbi
 )
 {
-	return !_r_obj_isstringempty (pbi->download_url) && !_r_obj_isstringempty (pbi->new_version);
+	return !_r_obj_isstringempty (pbi->download_url) &&
+		!_r_obj_isstringempty (pbi->new_version);
 }
 
 BOOLEAN _app_isupdatedownloaded (
 	_In_ PBROWSER_INFORMATION pbi
 )
 {
-	return !_r_obj_isstringempty (pbi->cache_path) && _r_fs_exists (pbi->cache_path->buffer);
+	return !_r_obj_isstringempty (pbi->cache_path) &&
+		_r_fs_exists (pbi->cache_path->buffer);
 }
 
 BOOLEAN _app_isupdaterequired (
 	_In_ PBROWSER_INFORMATION pbi
 )
 {
+	LONG64 timestamp;
+
 	if (pbi->is_forcecheck)
 		return TRUE;
 
 	if (pbi->check_period)
 	{
-		if ((_r_unixtime_now () - _r_config_getlong64 (L"ChromiumLastCheck", 0)) >= _r_calc_days2seconds (pbi->check_period))
+		timestamp = _r_unixtime_now ();
+		timestamp -= _r_config_getlong64 (L"ChromiumLastCheck", 0);
+
+		if (timestamp >= _r_calc_days2seconds (pbi->check_period))
 			return TRUE;
 	}
 
@@ -767,6 +843,7 @@ BOOLEAN _app_checkupdate (
 
 	BOOLEAN is_exists;
 	BOOLEAN is_checkupdate;
+	BOOLEAN is_newversion;
 
 	BOOLEAN is_success;
 
@@ -792,7 +869,11 @@ BOOLEAN _app_checkupdate (
 			return FALSE;
 		}
 
-		url = _r_format_string (update_url->buffer, pbi->architecture, pbi->browser_type->buffer);
+		url = _r_format_string (
+			update_url->buffer,
+			pbi->architecture,
+			pbi->browser_type->buffer
+		);
 
 		_r_obj_dereference (update_url);
 
@@ -812,18 +893,31 @@ BOOLEAN _app_checkupdate (
 
 					if (_r_obj_isstringempty (string))
 					{
-						_r_show_message (hwnd, MB_OK | MB_ICONSTOP, NULL, L"Configuration was not found.");
+						_r_show_message (
+							hwnd,
+							MB_OK | MB_ICONSTOP,
+							NULL,
+							L"Configuration was not found."
+						);
+
 						*is_error_ptr = TRUE;
 					}
 					else
 					{
 						hashtable = _r_str_unserialize (&string->sr, L';', L'=');
+
 						*is_error_ptr = FALSE;
 					}
 				}
 				else
 				{
-					_r_log (LOG_LEVEL_ERROR, &GUID_TrayIcon, TEXT (__FUNCTION__), code, url->buffer);
+					_r_log (
+						LOG_LEVEL_ERROR,
+						&GUID_TrayIcon,
+						TEXT (__FUNCTION__),
+						code,
+						url->buffer
+					);
 
 					*is_error_ptr = TRUE;
 				}
@@ -839,13 +933,24 @@ BOOLEAN _app_checkupdate (
 
 	if (hashtable)
 	{
-		string = _r_obj_findhashtablepointer (hashtable, _r_str_gethash (L"download", TRUE));
+		string = _r_obj_findhashtablepointer (
+			hashtable,
+			_r_str_gethash (L"download", TRUE)
+		);
+
 		_r_obj_movereference (&pbi->download_url, string);
 
-		string = _r_obj_findhashtablepointer (hashtable, _r_str_gethash (L"version", TRUE));
+		string = _r_obj_findhashtablepointer (
+			hashtable,
+			_r_str_gethash (L"version", TRUE)
+		);
+
 		_r_obj_movereference (&pbi->new_version, string);
 
-		string = _r_obj_findhashtablepointer (hashtable, _r_str_gethash (L"timestamp", TRUE));
+		string = _r_obj_findhashtablepointer (
+			hashtable,
+			_r_str_gethash (L"timestamp", TRUE)
+		);
 
 		if (string)
 		{
@@ -856,7 +961,16 @@ BOOLEAN _app_checkupdate (
 
 		update_browser_info (hwnd, &browser_info);
 
-		if (!is_exists || (pbi->new_version && _r_str_versioncompare (&pbi->current_version->sr, &pbi->new_version->sr) == -1))
+		if (pbi->new_version && pbi->current_version)
+		{
+			is_newversion = (_r_str_versioncompare (&pbi->current_version->sr, &pbi->new_version->sr) == -1);
+		}
+		else
+		{
+			is_newversion = FALSE;
+		}
+
+		if (!is_exists || is_newversion)
 		{
 			is_success = TRUE;
 		}
@@ -885,7 +999,12 @@ BOOLEAN WINAPI _app_downloadupdate_callback (
 
 	hwnd = lparam;
 
-	_app_setstatus (hwnd, _r_locale_getstring (IDS_STATUS_DOWNLOAD), total_written, total_length);
+	_app_setstatus (
+		hwnd,
+		_r_locale_getstring (IDS_STATUS_DOWNLOAD),
+		total_written,
+		total_length
+	);
 
 	return TRUE;
 }
@@ -918,7 +1037,12 @@ BOOLEAN _app_downloadupdate (
 
 	_r_fs_deletefile (pbi->cache_path->buffer, TRUE);
 
-	_app_setstatus (hwnd, _r_locale_getstring (IDS_STATUS_DOWNLOAD), 0, 1);
+	_app_setstatus (
+		hwnd,
+		_r_locale_getstring (IDS_STATUS_DOWNLOAD),
+		0,
+		1
+	);
 
 	_r_queuedlock_acquireshared (&lock_download);
 
@@ -938,21 +1062,42 @@ BOOLEAN _app_downloadupdate (
 
 		if (!_r_fs_isvalidhandle (hfile))
 		{
-			_r_log (LOG_LEVEL_ERROR, &GUID_TrayIcon, L"CreateFile", GetLastError (), temp_file->buffer);
+			_r_log (
+				LOG_LEVEL_ERROR,
+				&GUID_TrayIcon,
+				L"CreateFile",
+				GetLastError (),
+				temp_file->buffer
+			);
 
 			*is_error_ptr = TRUE;
 		}
 		else
 		{
-			_r_inet_initializedownload_ex (&download_info, hfile, &_app_downloadupdate_callback, hwnd);
+			_r_inet_initializedownload_ex (
+				&download_info,
+				hfile,
+				&_app_downloadupdate_callback,
+				hwnd
+			);
 
-			status = _r_inet_begindownload (hsession, pbi->download_url, &download_info);
+			status = _r_inet_begindownload (
+				hsession,
+				pbi->download_url,
+				&download_info
+			);
 
 			_r_inet_destroydownload (&download_info); // required!
 
 			if (status != ERROR_SUCCESS)
 			{
-				_r_log (LOG_LEVEL_ERROR, &GUID_TrayIcon, TEXT (__FUNCTION__), status, pbi->download_url->buffer);
+				_r_log (
+					LOG_LEVEL_ERROR,
+					&GUID_TrayIcon,
+					TEXT (__FUNCTION__),
+					status,
+					pbi->download_url->buffer
+				);
 
 				_r_fs_deletefile (pbi->cache_path->buffer, TRUE);
 
@@ -962,7 +1107,11 @@ BOOLEAN _app_downloadupdate (
 			{
 				SAFE_DELETE_REFERENCE (pbi->download_url); // clear download url
 
-				_r_fs_movefile (temp_file->buffer, pbi->cache_path->buffer, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED);
+				_r_fs_movefile (
+					temp_file->buffer,
+					pbi->cache_path->buffer,
+					MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED
+				);
 
 				is_success = TRUE;
 
@@ -1031,6 +1180,7 @@ BOOLEAN _app_unpack_7zip (
 	if (status != ERROR_SUCCESS)
 	{
 		_r_log (LOG_LEVEL_ERROR, NULL, L"InFile_OpenW", status, pbi->cache_path->buffer);
+
 		return FALSE;
 	}
 
@@ -1049,6 +1199,7 @@ BOOLEAN _app_unpack_7zip (
 	if (!look_stream.buf)
 	{
 		_r_log (LOG_LEVEL_ERROR, NULL, L"ISzAlloc_Alloc", SZ_ERROR_MEM, NULL);
+
 		goto CleanupExit;
 	}
 
@@ -1066,6 +1217,7 @@ BOOLEAN _app_unpack_7zip (
 	if (status != SZ_OK)
 	{
 		_r_log (LOG_LEVEL_ERROR, NULL, L"SzArEx_Open", status, pbi->cache_path->buffer);
+
 		goto CleanupExit;
 	}
 
@@ -1127,7 +1279,11 @@ BOOLEAN _app_unpack_7zip (
 		if (!length)
 			continue;
 
-		_r_obj_initializestringref_ex (&path, (LPWSTR)temp_buff, (length - 1) * sizeof (WCHAR));
+		_r_obj_initializestringref_ex (
+			&path,
+			(LPWSTR)temp_buff,
+			(length - 1) * sizeof (WCHAR)
+		);
 
 		_r_str_replacechar (&path, L'/', OBJ_NAME_PATH_SEPARATOR);
 		_r_str_trimstringref (&path, &separator_sr, 0);
@@ -1287,7 +1443,13 @@ BOOLEAN _app_unpack_zip (
 
 	if (status != STATUS_SUCCESS)
 	{
-		_r_log (LOG_LEVEL_ERROR, NULL, L"_r_str_unicode2multibyte", status, NULL);
+		_r_log (
+			LOG_LEVEL_ERROR,
+			NULL,
+			L"_r_str_unicode2multibyte",
+			status,
+			NULL
+		);
 
 		goto CleanupExit;
 	}
@@ -1311,8 +1473,11 @@ BOOLEAN _app_unpack_zip (
 	// find root directory which contains main executable
 	for (INT i = 0; i < total_files; i++)
 	{
-		if (mz_zip_reader_is_file_a_directory (&zip_archive, i) || !mz_zip_reader_file_stat (&zip_archive, i, &file_stat))
+		if (mz_zip_reader_is_file_a_directory (&zip_archive, i) ||
+			!mz_zip_reader_file_stat (&zip_archive, i, &file_stat))
+		{
 			continue;
+		}
 
 		if (file_stat.m_is_directory)
 			continue;
@@ -1331,9 +1496,13 @@ BOOLEAN _app_unpack_zip (
 
 			length = path->length - bin_name->length - separator_sr.length;
 
-			if (_r_str_isendsswith (&path->sr, bin_name, TRUE) && path->buffer[length / sizeof (WCHAR)] == OBJ_NAME_PATH_SEPARATOR)
+			if (_r_str_isendsswith (&path->sr, bin_name, TRUE) &&
+				path->buffer[length / sizeof (WCHAR)] == OBJ_NAME_PATH_SEPARATOR)
 			{
-				_r_obj_movereference (&root_dir_name, _r_obj_createstring_ex (path->buffer, path->length - bin_name->length));
+				_r_obj_movereference (
+					&root_dir_name,
+					_r_obj_createstring_ex (path->buffer, path->length - bin_name->length)
+				);
 
 				_r_str_trimstring (root_dir_name, &separator_sr, 0);
 			}
@@ -1357,7 +1526,8 @@ BOOLEAN _app_unpack_zip (
 
 		// skip non-root dirs
 		if (!_r_obj_isstringempty (root_dir_name) &&
-			(path->length <= root_dir_name->length || !_r_str_isstartswith (&path->sr, &root_dir_name->sr, TRUE)))
+			(path->length <= root_dir_name->length ||
+			!_r_str_isstartswith (&path->sr, &root_dir_name->sr, TRUE)))
 		{
 			continue;
 		}
@@ -1372,7 +1542,12 @@ BOOLEAN _app_unpack_zip (
 			&path->sr
 		);
 
-		_app_setstatus (hwnd, _r_locale_getstring (IDS_STATUS_INSTALL), total_read, total_size);
+		_app_setstatus (
+			hwnd,
+			_r_locale_getstring (IDS_STATUS_INSTALL),
+			total_read,
+			total_size
+		);
 
 		if (mz_zip_reader_is_file_a_directory (&zip_archive, i))
 		{
@@ -1393,9 +1568,20 @@ BOOLEAN _app_unpack_zip (
 			if (_r_str_unicode2multibyte (&dest_path->sr, &bytes) != STATUS_SUCCESS)
 				continue;
 
-			if (!mz_zip_reader_extract_to_file (&zip_archive, i, bytes->buffer, MZ_ZIP_FLAG_DO_NOT_SORT_CENTRAL_DIRECTORY))
+			if (!mz_zip_reader_extract_to_file (
+				&zip_archive,
+				i,
+				bytes->buffer,
+				MZ_ZIP_FLAG_DO_NOT_SORT_CENTRAL_DIRECTORY))
 			{
-				_r_log (LOG_LEVEL_ERROR, NULL, L"mz_zip_reader_extract_to_file", GetLastError (), dest_path->buffer);
+				_r_log (
+					LOG_LEVEL_ERROR,
+					NULL,
+					L"mz_zip_reader_extract_to_file",
+					GetLastError (),
+					dest_path->buffer
+				);
+
 				continue;
 			}
 
@@ -1448,18 +1634,29 @@ BOOLEAN _app_installupdate (
 
 	if (is_success)
 	{
-		_r_obj_movereference (&pbi->current_version, _r_res_queryversionstring (pbi->binary_path->buffer));
+		_r_obj_movereference (
+			&pbi->current_version,
+			_r_res_queryversionstring (pbi->binary_path->buffer)
+		);
 
 		_app_cleanupoldmanifest (pbi);
 	}
 	else
 	{
-		_r_log (LOG_LEVEL_ERROR, NULL, TEXT (__FUNCTION__), GetLastError (), pbi->cache_path->buffer);
+		_r_log (
+			LOG_LEVEL_ERROR,
+			NULL,
+			TEXT (__FUNCTION__),
+			GetLastError (),
+			pbi->cache_path->buffer
+		);
 
-		_r_fs_deletedirectory (pbi->binary_dir->buffer, FALSE); // no recurse
+		// no recurse
+		_r_fs_deletedirectory (pbi->binary_dir->buffer, FALSE);
 	}
 
-	_r_fs_deletefile (pbi->cache_path->buffer, TRUE); // remove cache file when zip cannot be opened
+	// remove cache file when zip cannot be opened
+	_r_fs_deletefile (pbi->cache_path->buffer, TRUE);
 
 	*is_error_ptr = !is_success;
 
@@ -1484,6 +1681,9 @@ VOID _app_thread_check (
 	BOOLEAN is_stayopen = FALSE;
 	BOOLEAN is_installed = FALSE;
 
+	BOOLEAN is_exists;
+	BOOLEAN is_checkupdate;
+
 	pbi = (PBROWSER_INFORMATION)arglist;
 	hwnd = _r_app_gethwnd ();
 
@@ -1493,7 +1693,11 @@ VOID _app_thread_check (
 
 	_r_progress_setmarquee (hwnd, IDC_PROGRESS, TRUE);
 
-	_r_ctrl_setstring (hwnd, IDC_START_BTN, _r_locale_getstring (_app_getactionid (pbi)));
+	_r_ctrl_setstring (
+		hwnd,
+		IDC_START_BTN,
+		_r_locale_getstring (_app_getactionid (pbi))
+	);
 
 	// unpack downloaded package
 	if (_app_isupdatedownloaded (pbi))
@@ -1529,8 +1733,8 @@ VOID _app_thread_check (
 	{
 		_r_progress_setmarquee (hwnd, IDC_PROGRESS, TRUE);
 
-		BOOLEAN is_exists = _r_fs_exists (pbi->binary_path->buffer);
-		BOOLEAN is_checkupdate = _app_isupdaterequired (pbi);
+		is_exists = _r_fs_exists (pbi->binary_path->buffer);
+		is_checkupdate = _app_isupdaterequired (pbi);
 
 		// show launcher gui
 		if (!is_exists || pbi->is_onlyupdate || pbi->is_bringtofront)
@@ -1551,8 +1755,11 @@ VOID _app_thread_check (
 				if (pbi->is_bringtofront)
 					_r_wnd_toggle (hwnd, TRUE); // show window
 
-				if (is_exists && !pbi->is_onlyupdate && !pbi->is_waitdownloadend && !_app_isupdatedownloaded (pbi))
+				if (is_exists && !pbi->is_onlyupdate &&
+					!pbi->is_waitdownloadend && !_app_isupdatedownloaded (pbi))
+				{
 					_app_openbrowser (pbi);
+				}
 
 				_r_progress_setmarquee (hwnd, IDC_PROGRESS, FALSE);
 
@@ -1575,7 +1782,12 @@ VOID _app_thread_check (
 							_r_locale_getstring (IDS_STATUS_DOWNLOADED)
 						); // inform user
 
-						_r_ctrl_setstring (hwnd, IDC_START_BTN, _r_locale_getstring (_app_getactionid (pbi)));
+						_r_ctrl_setstring (
+							hwnd,
+							IDC_START_BTN,
+							_r_locale_getstring (_app_getactionid (pbi))
+						);
+
 						_r_ctrl_enable (hwnd, IDC_START_BTN, TRUE);
 
 						is_stayopen = TRUE;
@@ -1592,7 +1804,12 @@ VOID _app_thread_check (
 						pbi->new_version->buffer
 					); // just inform user
 
-					_r_ctrl_setstring (hwnd, IDC_START_BTN, _r_locale_getstring (_app_getactionid (pbi)));
+					_r_ctrl_setstring (
+						hwnd,
+						IDC_START_BTN,
+						_r_locale_getstring (_app_getactionid (pbi))
+					);
+
 					_r_ctrl_enable (hwnd, IDC_START_BTN, TRUE);
 
 					is_stayopen = TRUE;
@@ -1610,7 +1827,12 @@ VOID _app_thread_check (
 					pbi->new_version->buffer
 				); // just inform user
 
-				_r_ctrl_setstring (hwnd, IDC_START_BTN, _r_locale_getstring (_app_getactionid (pbi)));
+				_r_ctrl_setstring (
+					hwnd,
+					IDC_START_BTN,
+					_r_locale_getstring (_app_getactionid (pbi))
+				);
+
 				_r_ctrl_enable (hwnd, IDC_START_BTN, TRUE);
 
 				is_stayopen = TRUE;
@@ -1622,7 +1844,12 @@ VOID _app_thread_check (
 
 	if (is_haveerror || pbi->is_onlyupdate)
 	{
-		_r_ctrl_setstring (hwnd, IDC_START_BTN, _r_locale_getstring (_app_getactionid (pbi)));
+		_r_ctrl_setstring (
+			hwnd,
+			IDC_START_BTN,
+			_r_locale_getstring (_app_getactionid (pbi))
+		);
+
 		_r_ctrl_enable (hwnd, IDC_START_BTN, TRUE);
 
 		if (is_haveerror)
@@ -1693,7 +1920,11 @@ INT_PTR CALLBACK DlgProc (
 
 			icon_small = _r_dc_getsystemmetrics (SM_CXSMICON, dpi_value);
 
-			hicon = _r_sys_loadsharedicon (_r_sys_getimagebase (), MAKEINTRESOURCE (IDI_MAIN), icon_small);
+			hicon = _r_sys_loadsharedicon (
+				_r_sys_getimagebase (),
+				MAKEINTRESOURCE (IDI_MAIN),
+				icon_small
+			);
 
 			init_browser_info (&browser_info);
 
@@ -1739,24 +1970,69 @@ INT_PTR CALLBACK DlgProc (
 				hsubmenu = GetSubMenu (hmenu, 1);
 
 				if (hsubmenu)
-					_r_menu_setitemtextformat (hsubmenu, LANG_MENU, TRUE, L"%s (Language)", _r_locale_getstring (IDS_LANGUAGE));
+				{
+					_r_menu_setitemtextformat (
+						hsubmenu,
+						LANG_MENU,
+						TRUE,
+						L"%s (Language)",
+						_r_locale_getstring (IDS_LANGUAGE)
+					);
+				}
 
 				_r_menu_setitemtext (hmenu, 2, TRUE, _r_locale_getstring (IDS_HELP));
 
-				_r_menu_setitemtextformat (hmenu, IDM_RUN, FALSE, L"%s...", _r_locale_getstring (IDS_RUN));
-				_r_menu_setitemtextformat (hmenu, IDM_OPEN, FALSE, L"%s...", _r_locale_getstring (IDS_OPEN));
-				_r_menu_setitemtext (hmenu, IDM_EXIT, FALSE, _r_locale_getstring (IDS_EXIT));
-				_r_menu_setitemtext (hmenu, IDM_WEBSITE, FALSE, _r_locale_getstring (IDS_WEBSITE));
-				_r_menu_setitemtextformat (hmenu, IDM_ABOUT, FALSE, L"%s\tF1", _r_locale_getstring (IDS_ABOUT));
+				_r_menu_setitemtextformat (
+					hmenu,
+					IDM_RUN,
+					FALSE,
+					L"%s...",
+					_r_locale_getstring (IDS_RUN)
+				);
 
-				_r_locale_enum ((HWND)GetSubMenu (hmenu, 1), LANG_MENU, IDX_LANGUAGE); // enum localizations
+				_r_menu_setitemtextformat (
+					hmenu,
+					IDM_OPEN,
+					FALSE,
+					L"%s...",
+					_r_locale_getstring (IDS_OPEN)
+				);
+
+				_r_menu_setitemtext (
+					hmenu,
+					IDM_EXIT,
+					FALSE,
+					_r_locale_getstring (IDS_EXIT)
+				);
+
+				_r_menu_setitemtext (
+					hmenu,
+					IDM_WEBSITE,
+					FALSE,
+					_r_locale_getstring (IDS_WEBSITE)
+				);
+
+				_r_menu_setitemtextformat (
+					hmenu,
+					IDM_ABOUT,
+					FALSE,
+					L"%s\tF1",
+					_r_locale_getstring (IDS_ABOUT)
+				);
+
+				// enum localizations
+				_r_locale_enum ((HWND)GetSubMenu (hmenu, 1), LANG_MENU, IDX_LANGUAGE);
 			}
 
 			update_browser_info (hwnd, &browser_info);
 
 			_r_ctrl_setstring (hwnd, IDC_LINKS, FOOTER_STRING);
 
-			_r_ctrl_setstring (hwnd, IDC_START_BTN, _r_locale_getstring (_app_getactionid (&browser_info)));
+			_r_ctrl_setstring (
+				hwnd,
+				IDC_START_BTN,
+				_r_locale_getstring (_app_getactionid (&browser_info))
+			);
 
 			break;
 		}
@@ -1772,7 +2048,11 @@ INT_PTR CALLBACK DlgProc (
 
 			icon_small = _r_dc_getsystemmetrics (SM_CXSMICON, dpi_value);
 
-			hicon = _r_sys_loadsharedicon (_r_sys_getimagebase (), MAKEINTRESOURCE (IDI_MAIN), icon_small);
+			hicon = _r_sys_loadsharedicon (
+				_r_sys_getimagebase (),
+				MAKEINTRESOURCE (IDI_MAIN),
+				icon_small
+			);
 
 			_r_tray_create (
 				hwnd,
@@ -1797,7 +2077,11 @@ INT_PTR CALLBACK DlgProc (
 
 			icon_small = _r_dc_getsystemmetrics (SM_CXSMICON, dpi_value);
 
-			hicon = _r_sys_loadsharedicon (_r_sys_getimagebase (), MAKEINTRESOURCE (IDI_MAIN), icon_small);
+			hicon = _r_sys_loadsharedicon (
+				_r_sys_getimagebase (),
+				MAKEINTRESOURCE (IDI_MAIN),
+				icon_small
+			);
 
 			_r_tray_setinfo (hwnd, &GUID_TrayIcon, hicon, _r_app_getname ());
 
@@ -1808,11 +2092,17 @@ INT_PTR CALLBACK DlgProc (
 
 		case WM_CLOSE:
 		{
-			if (_r_queuedlock_islocked (&lock_download) &&
-				_r_show_message (hwnd, MB_YESNO | MB_ICONQUESTION, NULL, _r_locale_getstring (IDS_QUESTION_STOP)) != IDYES)
+			if (_r_queuedlock_islocked (&lock_download))
 			{
-				SetWindowLongPtr (hwnd, DWLP_MSGRESULT, TRUE);
-				return TRUE;
+				if (_r_show_message (
+					hwnd,
+					MB_YESNO | MB_ICONQUESTION,
+					NULL,
+					_r_locale_getstring (IDS_QUESTION_STOP)) != IDYES)
+				{
+					SetWindowLongPtr (hwnd, DWLP_MSGRESULT, TRUE);
+					return TRUE;
+				}
 			}
 
 			DestroyWindow (hwnd);
@@ -1852,7 +2142,13 @@ INT_PTR CALLBACK DlgProc (
 			if ((exstyle & WS_EX_LAYERED) == 0)
 				_r_wnd_setstyle_ex (hwnd, exstyle | WS_EX_LAYERED);
 
-			SetLayeredWindowAttributes (hwnd, 0, (msg == WM_ENTERSIZEMOVE) ? 100 : 255, LWA_ALPHA);
+			SetLayeredWindowAttributes (
+				hwnd,
+				0,
+				(msg == WM_ENTERSIZEMOVE) ? 100 : 255,
+				LWA_ALPHA
+			);
+
 			SetCursor (LoadCursor (NULL, (msg == WM_ENTERSIZEMOVE) ? IDC_SIZEALL : IDC_ARROW));
 
 			break;
@@ -1958,15 +2254,55 @@ INT_PTR CALLBACK DlgProc (
 						if (hsubmenu)
 						{
 							// localize
-							_r_menu_setitemtext (hsubmenu, IDM_TRAY_SHOW, FALSE, _r_locale_getstring (IDS_TRAY_SHOW));
-							_r_menu_setitemtextformat (hsubmenu, IDM_TRAY_RUN, FALSE, L"%s...", _r_locale_getstring (IDS_RUN));
-							_r_menu_setitemtextformat (hsubmenu, IDM_TRAY_OPEN, FALSE, L"%s...", _r_locale_getstring (IDS_OPEN));
-							_r_menu_setitemtext (hsubmenu, IDM_TRAY_WEBSITE, FALSE, _r_locale_getstring (IDS_WEBSITE));
-							_r_menu_setitemtext (hsubmenu, IDM_TRAY_ABOUT, FALSE, _r_locale_getstring (IDS_ABOUT));
-							_r_menu_setitemtext (hsubmenu, IDM_TRAY_EXIT, FALSE, _r_locale_getstring (IDS_EXIT));
+							_r_menu_setitemtext (
+								hsubmenu,
+								IDM_TRAY_SHOW,
+								FALSE,
+								_r_locale_getstring (IDS_TRAY_SHOW)
+							);
 
-							if (_r_obj_isstringempty (browser_info.binary_path) || !_r_fs_exists (browser_info.binary_path->buffer))
+							_r_menu_setitemtextformat (
+								hsubmenu,
+								IDM_TRAY_RUN,
+								FALSE,
+								L"%s...",
+								_r_locale_getstring (IDS_RUN)
+							);
+
+							_r_menu_setitemtextformat (
+								hsubmenu,
+								IDM_TRAY_OPEN,
+								FALSE,
+								L"%s...",
+								_r_locale_getstring (IDS_OPEN)
+							);
+
+							_r_menu_setitemtext (
+								hsubmenu,
+								IDM_TRAY_WEBSITE,
+								FALSE,
+								_r_locale_getstring (IDS_WEBSITE)
+							);
+
+							_r_menu_setitemtext (
+								hsubmenu,
+								IDM_TRAY_ABOUT,
+								FALSE,
+								_r_locale_getstring (IDS_ABOUT)
+							);
+
+							_r_menu_setitemtext (
+								hsubmenu,
+								IDM_TRAY_EXIT,
+								FALSE,
+								_r_locale_getstring (IDS_EXIT)
+							);
+
+							if (_r_obj_isstringempty (browser_info.binary_path) ||
+								!_r_fs_exists (browser_info.binary_path->buffer))
+							{
 								_r_menu_enableitem (hsubmenu, IDM_TRAY_RUN, MF_BYCOMMAND, FALSE);
+							}
 
 							_r_menu_popup (hsubmenu, hwnd, NULL, TRUE);
 						}
@@ -1983,9 +2319,17 @@ INT_PTR CALLBACK DlgProc (
 
 		case WM_COMMAND:
 		{
-			if (HIWORD (wparam) == 0 && LOWORD (wparam) >= IDX_LANGUAGE && LOWORD (wparam) <= IDX_LANGUAGE + _r_locale_getcount ())
+			if (HIWORD (wparam) == 0 && LOWORD (wparam) >= IDX_LANGUAGE &&
+				LOWORD (wparam) <= IDX_LANGUAGE + _r_locale_getcount ())
 			{
-				_r_locale_apply (GetSubMenu (GetSubMenu (GetMenu (hwnd), 1), LANG_MENU), LOWORD (wparam), IDX_LANGUAGE);
+				HMENU hsubmenu;
+
+				hsubmenu = GetMenu (hwnd);
+				hsubmenu = GetSubMenu (hsubmenu, 1);
+				hsubmenu = GetSubMenu (hsubmenu, LANG_MENU);
+
+				_r_locale_apply (hsubmenu, LOWORD (wparam), IDX_LANGUAGE);
+
 				return FALSE;
 			}
 
@@ -2095,7 +2439,12 @@ INT APIENTRY wWinMain (
 		}
 	}
 
-	hwnd = _r_app_createwindow (hinst, MAKEINTRESOURCE (IDD_MAIN), MAKEINTRESOURCE (IDI_MAIN), &DlgProc);
+	hwnd = _r_app_createwindow (
+		hinst,
+		MAKEINTRESOURCE (IDD_MAIN),
+		MAKEINTRESOURCE (IDI_MAIN),
+		&DlgProc
+	);
 
 	if (!hwnd)
 		return ERROR_APP_INIT_FAILURE;
