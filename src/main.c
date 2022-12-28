@@ -1613,13 +1613,19 @@ BOOLEAN _app_installupdate (
 	_Out_ PBOOLEAN is_error_ptr
 )
 {
+	PR_STRING directory;
 	R_STRINGREF bin_name;
 	BOOLEAN is_success;
 
 	_r_queuedlock_acquireshared (&lock_download);
 
-	if (!_r_fs_exists (pbi->binary_dir->buffer))
-		_r_fs_mkdir (pbi->binary_dir->buffer);
+	directory = _r_path_getfullpath (pbi->binary_dir->buffer);
+
+	if (directory)
+	{
+		if (!_r_fs_exists (directory->buffer))
+			_r_fs_mkdir (directory->buffer);
+	}
 
 	_app_cleanupoldbinary (pbi);
 
@@ -1665,6 +1671,9 @@ BOOLEAN _app_installupdate (
 	_r_sys_setthreadexecutionstate (ES_CONTINUOUS);
 
 	_app_setstatus (hwnd, NULL, 0, 0);
+
+	if (directory)
+		_r_obj_dereference (directory);
 
 	return is_success;
 }
