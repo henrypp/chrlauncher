@@ -634,7 +634,7 @@ VOID _app_cleanupoldmanifest (
 					_r_obj_concatstrings (3, pbi->binary_dir->buffer, L"\\", wfd.cFileName)
 				);
 
-				_r_fs_deletefile (path->buffer, 0);
+				_r_fs_deletefile (path->buffer, TRUE);
 			}
 		}
 		while (FindNextFile (hfile, &wfd));
