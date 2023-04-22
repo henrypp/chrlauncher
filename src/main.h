@@ -1,5 +1,5 @@
 // chrlauncher
-// Copyright (c) 2015-2022 Henry++
+// Copyright (c) 2015-2023 Henry++
 
 #pragma once
 
