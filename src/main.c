@@ -46,11 +46,7 @@ BOOL CALLBACK activate_browser_window_callback (
 	if (!_r_wnd_isvisible (hwnd))
 		return TRUE;
 
-	status = _r_sys_openprocess (
-		UlongToHandle (pid),
-		PROCESS_QUERY_LIMITED_INFORMATION,
-		&hprocess
-	);
+	status = _r_sys_openprocess (UlongToHandle (pid), PROCESS_QUERY_LIMITED_INFORMATION, &hprocess);
 
 	if (!NT_SUCCESS (status))
 		return TRUE;
@@ -307,6 +303,7 @@ VOID init_browser_info (
 	if (!binary_dir || !binary_name)
 	{
 		RtlRaiseStatus (STATUS_INVALID_PARAMETER);
+
 		return;
 	}
 
@@ -457,14 +454,7 @@ VOID _app_setstatus (
 
 		if (!_r_str_isempty (text))
 		{
-			_r_tray_setinfoformat (
-				hwnd,
-				&GUID_TrayIcon,
-				NULL,
-				L"%s\r\n%s: 0%%",
-				_r_app_getname (),
-				text
-			);
+			_r_tray_setinfoformat (hwnd, &GUID_TrayIcon, NULL, L"%s\r\n%s: 0%%", _r_app_getname (), text);
 		}
 		else
 		{
@@ -475,25 +465,11 @@ VOID _app_setstatus (
 	{
 		percent = _r_calc_clamp64 (_r_calc_percentof64 (v, t), 0, 100);
 
-		_r_status_settextformat (
-			hwnd,
-			IDC_STATUSBAR,
-			0,
-			L"%s %" PR_LONG64 L"%%",
-			text,
-			percent
-		);
+		_r_status_settextformat (hwnd, IDC_STATUSBAR, 0, L"%s %" PR_LONG64 L"%%", text, percent);
 
 		if (!_r_str_isempty (text))
 		{
-			_r_tray_setinfoformat (
-				hwnd,
-				&GUID_TrayIcon,
-				NULL, L"%s\r\n%s: %" TEXT (PR_LONG64) L"%%",
-				_r_app_getname (),
-				text,
-				percent
-			);
+			_r_tray_setinfoformat (hwnd, &GUID_TrayIcon, NULL, L"%s\r\n%s: %" TEXT (PR_LONG64) L"%%", _r_app_getname (), text, percent);
 		}
 		else
 		{
@@ -506,14 +482,7 @@ VOID _app_setstatus (
 
 		if (!_r_str_isempty (text))
 		{
-			_r_tray_setinfoformat (
-				hwnd,
-				&GUID_TrayIcon,
-				NULL,
-				L"%s\r\n%s",
-				_r_app_getname (),
-				text
-			);
+			_r_tray_setinfoformat (hwnd, &GUID_TrayIcon, NULL, L"%s\r\n%s", _r_app_getname (), text);
 		}
 		else
 		{
@@ -556,10 +525,7 @@ VOID _app_cleanupoldbinary (
 			if (wfd.cFileName[0] == L'.')
 				continue;
 
-			_r_obj_movereference (
-				&path,
-				_r_obj_concatstrings (3, pbi->binary_dir->buffer, L"\\", wfd.cFileName)
-			);
+			_r_obj_movereference (&path, _r_obj_concatstrings (3, pbi->binary_dir->buffer, L"\\", wfd.cFileName));
 
 			_r_fs_deletedirectory (path->buffer, TRUE, TRUE);
 		}
@@ -615,15 +581,7 @@ BOOLEAN _app_browserisrunning (
 {
 	HANDLE hfile;
 
-	hfile = CreateFile (
-		pbi->binary_path->buffer,
-		GENERIC_WRITE | GENERIC_READ,
-		0,
-		NULL,
-		OPEN_EXISTING,
-		0,
-		NULL
-	);
+	hfile = CreateFile (pbi->binary_path->buffer, GENERIC_WRITE | GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
 
 	if (!_r_fs_isvalidhandle (hfile))
 		return (GetLastError () == ERROR_SHARING_VIOLATION);
@@ -652,6 +610,7 @@ VOID _app_openbrowser (
 	if (is_running && !pbi->is_hasurls && !pbi->is_opennewwindow)
 	{
 		activate_browser_window (pbi);
+
 		return;
 	}
 
@@ -771,23 +730,22 @@ BOOLEAN _app_checkupdate (
 	_Out_ PBOOLEAN is_error_ptr
 )
 {
-	*is_error_ptr = FALSE;
-
-	if (_app_ishaveupdate (pbi))
-		return TRUE;
-
 	PR_HASHTABLE hashtable = NULL;
 	R_DOWNLOAD_INFO download_info;
 	PR_STRING update_url;
 	PR_STRING url;
 	HINTERNET hsession;
 	PR_STRING string;
-	ULONG code;
+	ULONG status;
 	BOOLEAN is_exists;
 	BOOLEAN is_checkupdate;
 	BOOLEAN is_newversion;
-
 	BOOLEAN is_success;
+
+	*is_error_ptr = FALSE;
+
+	if (_app_ishaveupdate (pbi))
+		return TRUE;
 
 	is_success = FALSE;
 
@@ -808,6 +766,7 @@ BOOLEAN _app_checkupdate (
 		if (!update_url)
 		{
 			RtlRaiseStatus (STATUS_INVALID_PARAMETER);
+
 			return FALSE;
 		}
 
@@ -823,9 +782,9 @@ BOOLEAN _app_checkupdate (
 			{
 				_r_inet_initializedownload (&download_info);
 
-				code = _r_inet_begindownload (hsession, url, &download_info);
+				status = _r_inet_begindownload (hsession, url, &download_info);
 
-				if (code == ERROR_SUCCESS)
+				if (status == ERROR_SUCCESS)
 				{
 					string = download_info.u.string;
 
@@ -844,13 +803,7 @@ BOOLEAN _app_checkupdate (
 				}
 				else
 				{
-					_r_log (
-						LOG_LEVEL_ERROR,
-						&GUID_TrayIcon,
-						TEXT (__FUNCTION__),
-						code,
-						url->buffer
-					);
+					_r_log (LOG_LEVEL_ERROR, &GUID_TrayIcon, TEXT (__FUNCTION__), status, url->buffer);
 
 					*is_error_ptr = TRUE;
 				}
@@ -964,25 +917,11 @@ BOOLEAN _app_downloadupdate (
 
 	if (hsession)
 	{
-		hfile = CreateFile (
-			temp_file->buffer,
-			GENERIC_WRITE,
-			FILE_SHARE_READ,
-			NULL,
-			CREATE_ALWAYS,
-			FILE_ATTRIBUTE_NORMAL,
-			NULL
-		);
+		hfile = CreateFile (temp_file->buffer, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 
 		if (!_r_fs_isvalidhandle (hfile))
 		{
-			_r_log (
-				LOG_LEVEL_ERROR,
-				&GUID_TrayIcon,
-				L"CreateFile",
-				GetLastError (),
-				temp_file->buffer
-			);
+			_r_log (LOG_LEVEL_ERROR, &GUID_TrayIcon, L"CreateFile", GetLastError (), temp_file->buffer);
 
 			*is_error_ptr = TRUE;
 		}
@@ -996,13 +935,7 @@ BOOLEAN _app_downloadupdate (
 
 			if (status != ERROR_SUCCESS)
 			{
-				_r_log (
-					LOG_LEVEL_ERROR,
-					&GUID_TrayIcon,
-					TEXT (__FUNCTION__),
-					status,
-					pbi->download_url->buffer
-				);
+				_r_log (LOG_LEVEL_ERROR, &GUID_TrayIcon, TEXT (__FUNCTION__), status, pbi->download_url->buffer);
 
 				_r_fs_deletefile (pbi->cache_path->buffer, TRUE);
 
@@ -1158,8 +1091,7 @@ BOOLEAN _app_unpack_7zip (
 
 			length = path.length - bin_name->length - separator_sr.length;
 
-			if (_r_str_isendsswith (&path, bin_name, TRUE) &&
-				path.buffer[length / sizeof (WCHAR)] == OBJ_NAME_PATH_SEPARATOR)
+			if (_r_str_isendsswith (&path, bin_name, TRUE) && path.buffer[length / sizeof (WCHAR)] == OBJ_NAME_PATH_SEPARATOR)
 			{
 				_r_obj_movereference (&root_dir_name, _r_obj_createstring_ex (path.buffer, path.length - bin_name->length));
 
@@ -1182,9 +1114,7 @@ BOOLEAN _app_unpack_7zip (
 
 		// skip non-root dirs
 		if (!_r_obj_isstringempty (root_dir_name) && (path.length <= root_dir_name->length || !_r_str_isstartswith (&path, &root_dir_name->sr, TRUE)))
-		{
 			continue;
-		}
 
 		if (root_dir_name)
 			_r_obj_skipstringlength (&path, root_dir_name->length + separator_sr.length);
@@ -1323,13 +1253,7 @@ BOOLEAN _app_unpack_zip (
 
 	if (status != STATUS_SUCCESS)
 	{
-		_r_log (
-			LOG_LEVEL_ERROR,
-			NULL,
-			L"_r_str_unicode2multibyte",
-			status,
-			NULL
-		);
+		_r_log (LOG_LEVEL_ERROR, NULL, L"_r_str_unicode2multibyte", status, NULL);
 
 		goto CleanupExit;
 	}
@@ -1434,13 +1358,7 @@ BOOLEAN _app_unpack_zip (
 
 			if (!mz_zip_reader_extract_to_file (&zip_archive, i, bytes->buffer, MZ_ZIP_FLAG_DO_NOT_SORT_CENTRAL_DIRECTORY))
 			{
-				_r_log (
-					LOG_LEVEL_ERROR,
-					NULL,
-					L"mz_zip_reader_extract_to_file",
-					GetLastError (),
-					dest_path->buffer
-				);
+				_r_log (LOG_LEVEL_ERROR, NULL, L"mz_zip_reader_extract_to_file", GetLastError (), dest_path->buffer);
 
 				continue;
 			}
@@ -1500,22 +1418,13 @@ BOOLEAN _app_installupdate (
 
 	if (is_success)
 	{
-		_r_obj_movereference (
-			&pbi->current_version,
-			_r_res_queryversionstring (pbi->binary_path->buffer)
-		);
+		_r_obj_movereference (&pbi->current_version, _r_res_queryversionstring (pbi->binary_path->buffer));
 
 		_app_cleanupoldmanifest (pbi);
 	}
 	else
 	{
-		_r_log (
-			LOG_LEVEL_ERROR,
-			NULL,
-			TEXT (__FUNCTION__),
-			GetLastError (),
-			pbi->cache_path->buffer
-		);
+		_r_log (LOG_LEVEL_ERROR, NULL, TEXT (__FUNCTION__), GetLastError (), pbi->cache_path->buffer);
 
 		// no recurse
 		_r_fs_deletedirectory (pbi->binary_dir->buffer, TRUE, FALSE);
@@ -1587,6 +1496,7 @@ VOID _app_thread_check (
 		else
 		{
 			_r_ctrl_enable (hwnd, IDC_START_BTN, TRUE);
+
 			is_stayopen = TRUE;
 		}
 	}
@@ -1716,13 +1626,13 @@ INT_PTR CALLBACK DlgProc (
 
 			htip = _r_ctrl_createtip (hwnd);
 
-			if (htip)
-			{
-				_r_ctrl_settiptext (htip, hwnd, IDC_BROWSER_DATA, LPSTR_TEXTCALLBACK);
-				_r_ctrl_settiptext (htip, hwnd, IDC_CURRENTVERSION_DATA, LPSTR_TEXTCALLBACK);
-				_r_ctrl_settiptext (htip, hwnd, IDC_VERSION_DATA, LPSTR_TEXTCALLBACK);
-				_r_ctrl_settiptext (htip, hwnd, IDC_DATE_DATA, LPSTR_TEXTCALLBACK);
-			}
+			if (!htip)
+				break;
+
+			_r_ctrl_settiptext (htip, hwnd, IDC_BROWSER_DATA, LPSTR_TEXTCALLBACK);
+			_r_ctrl_settiptext (htip, hwnd, IDC_CURRENTVERSION_DATA, LPSTR_TEXTCALLBACK);
+			_r_ctrl_settiptext (htip, hwnd, IDC_VERSION_DATA, LPSTR_TEXTCALLBACK);
+			_r_ctrl_settiptext (htip, hwnd, IDC_DATE_DATA, LPSTR_TEXTCALLBACK);
 
 			break;
 		}
@@ -1730,7 +1640,6 @@ INT_PTR CALLBACK DlgProc (
 		case RM_INITIALIZE:
 		{
 			HICON hicon;
-
 			LONG dpi_value;
 			LONG icon_small;
 
@@ -1742,14 +1651,7 @@ INT_PTR CALLBACK DlgProc (
 
 			init_browser_info (&browser_info);
 
-			_r_tray_create (
-				hwnd,
-				&GUID_TrayIcon,
-				RM_TRAYICON,
-				hicon,
-				_r_app_getname (),
-				(_r_queuedlock_islocked (&lock_download) || _app_isupdatedownloaded (&browser_info)) ? FALSE : TRUE
-			);
+			_r_tray_create (hwnd, &GUID_TrayIcon, RM_TRAYICON, hicon, _r_app_getname (), (_r_queuedlock_islocked (&lock_download) || _app_isupdatedownloaded (&browser_info)) ? FALSE : TRUE);
 
 			_r_workqueue_queueitem (&workqueue, &_app_thread_check, &browser_info);
 
@@ -1798,11 +1700,7 @@ INT_PTR CALLBACK DlgProc (
 
 			_r_ctrl_setstring (hwnd, IDC_LINKS, FOOTER_STRING);
 
-			_r_ctrl_setstring (
-				hwnd,
-				IDC_START_BTN,
-				_r_locale_getstring (_app_getactionid (&browser_info))
-			);
+			_r_ctrl_setstring (hwnd, IDC_START_BTN, _r_locale_getstring (_app_getactionid (&browser_info)));
 
 			break;
 		}
@@ -1810,7 +1708,6 @@ INT_PTR CALLBACK DlgProc (
 		case RM_TASKBARCREATED:
 		{
 			HICON hicon;
-
 			LONG dpi_value;
 			LONG icon_small;
 
@@ -1820,14 +1717,7 @@ INT_PTR CALLBACK DlgProc (
 
 			hicon = _r_sys_loadsharedicon (_r_sys_getimagebase (), MAKEINTRESOURCE (IDI_MAIN), icon_small);
 
-			_r_tray_create (
-				hwnd,
-				&GUID_TrayIcon,
-				RM_TRAYICON,
-				hicon,
-				_r_app_getname (),
-				(_r_queuedlock_islocked (&lock_download) || _app_isupdatedownloaded (&browser_info)) ? FALSE : TRUE
-			);
+			_r_tray_create (hwnd, &GUID_TrayIcon, RM_TRAYICON, hicon, _r_app_getname (), (_r_queuedlock_islocked (&lock_download) || _app_isupdatedownloaded (&browser_info)) ? FALSE : TRUE);
 
 			break;
 		}
