@@ -33,17 +33,18 @@
 #define IDM_RUN 114
 #define IDM_EXPLORE 115
 #define IDM_OPEN 116
-#define IDM_EXIT 117
-#define IDM_WEBSITE 118
-#define IDM_ABOUT 119
+#define IDM_RUNATEND 117
+#define IDM_EXIT 118
+#define IDM_WEBSITE 119
+#define IDM_ABOUT 120
 
 // Tray Menu
-#define IDM_TRAY_SHOW 120
-#define IDM_TRAY_RUN 121
-#define IDM_TRAY_OPEN 122
-#define IDM_TRAY_WEBSITE 123
-#define IDM_TRAY_ABOUT 124
-#define IDM_TRAY_EXIT 125
+#define IDM_TRAY_SHOW 121
+#define IDM_TRAY_RUN 122
+#define IDM_TRAY_OPEN 123
+#define IDM_TRAY_WEBSITE 124
+#define IDM_TRAY_ABOUT 125
+#define IDM_TRAY_EXIT 126
 
 #define IDX_LANGUAGE 1000
 
@@ -85,5 +86,7 @@
 
 #define IDS_STATUS_ERROR 26
 #define IDS_STATUS_NOTFOUND 27
+
+#define IDS_RUNATEND 28
 
 #endif // __RESOURCE_H__

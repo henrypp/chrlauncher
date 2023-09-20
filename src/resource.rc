@@ -35,6 +35,8 @@ BEGIN
 	BEGIN
 		POPUP " "
 		BEGIN
+			MENUITEM " ", IDM_RUNATEND
+			MENUITEM SEPARATOR
 			MENUITEM " ", IDX_LANGUAGE
 		END
 	END
@@ -130,6 +132,8 @@ BEGIN
 	IDS_QUESTION_STOP "Are you sure you want to cancel the Chromium update process?"
 
 	IDS_CLOSE "Close"
+
+	IDS_RUNATEND "Start browser at end"
 END
 
 //
