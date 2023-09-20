@@ -2059,7 +2059,7 @@ INT APIENTRY wWinMain (
 	if (!_r_app_initialize (NULL))
 		return ERROR_APP_INIT_FAILURE;
 
-	_r_workqueue_initialize (&workqueue, 0, 1, NULL, NULL);
+	_r_workqueue_initialize (&workqueue, 1, NULL, NULL);
 
 	path = _r_app_getdirectory ();
 
