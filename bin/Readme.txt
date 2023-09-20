@@ -121,4 +121,4 @@ ChromiumLastCheck=0
 Website: www.henrypp.org
 Support: support@henrypp.org
 
-(c) 2015-2022 Henry++
+(c) 2015-2023 Henry++
