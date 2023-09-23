@@ -96,7 +96,7 @@ BOOLEAN path_is_url (
 	if (PathIsURL (path) || PathIsHTMLFile (path))
 		return TRUE;
 
-	for (SIZE_T i = 0; i < RTL_NUMBER_OF (types); i++)
+	for (ULONG_PTR i = 0; i < RTL_NUMBER_OF (types); i++)
 	{
 		if (PathIsContentType (path, types[i]))
 			return TRUE;
@@ -181,7 +181,7 @@ VOID parse_args (
 	LPWSTR *arga;
 	LPWSTR key;
 	LPWSTR key2;
-	SIZE_T first_arg_length = 0;
+	ULONG_PTR first_arg_length = 0;
 	INT numargs;
 
 	arga = CommandLineToArgvW (_r_sys_getimagecommandline (), &numargs);
@@ -331,7 +331,7 @@ VOID init_browser_info (
 
 	if (!_r_fs_exists (pbi->binary_path->buffer))
 	{
-		for (SIZE_T i = 0; i < RTL_NUMBER_OF (bin_names); i++)
+		for (ULONG_PTR i = 0; i < RTL_NUMBER_OF (bin_names); i++)
 		{
 			string = _r_obj_concatstringrefs (
 				3,
@@ -611,7 +611,7 @@ VOID _app_openbrowser (
 	PR_STRING command_line;
 	PR_STRING args_string;
 	LPWSTR ptr;
-	SIZE_T args_length;
+	ULONG_PTR args_length = 0;
 	NTSTATUS status;
 	BOOLEAN is_running;
 
@@ -626,8 +626,6 @@ VOID _app_openbrowser (
 
 		return;
 	}
-
-	args_length = 0;
 
 	if (pbi->args_str)
 		args_length += pbi->args_str->length;
@@ -994,7 +992,7 @@ BOOLEAN _app_unpack_7zip (
 	_In_ PR_STRINGREF bin_name
 )
 {
-#define kInputBufSize ((SIZE_T)1 << 18)
+#define kInputBufSize ((ULONG_PTR)1 << 18)
 
 	static const ISzAlloc g_Alloc = {SzAlloc, SzFree};
 	static R_STRINGREF separator_sr = PR_STRINGREF_INIT (L"\\");
@@ -1005,26 +1003,26 @@ BOOLEAN _app_unpack_7zip (
 	CLookToRead2 look_stream;
 	CSzArEx db;
 	UInt16 *temp_buff = NULL;
-	SIZE_T temp_size = 0;
+	ULONG_PTR temp_size = 0;
 
 	// if you need cache, use these 3 variables.
 	// if you use external function, you can make these variable as static.
 
 	UInt32 block_index = UINT32_MAX; // it can have any value before first call (if out_buffer = 0)
 	Byte *out_buffer = NULL; // it must be 0 before first call for each new archive.
-	size_t out_buffer_size = 0; // it can have any value before first call (if out_buffer = 0)
+	ULONG_PTR out_buffer_size = 0; // it can have any value before first call (if out_buffer = 0)
 	R_STRINGREF path;
 	PR_STRING root_dir_name = NULL;
 	PR_STRING dest_path;
 	PR_STRING sub_dir;
 	CSzFile out_file;
-	size_t offset;
-	size_t out_size_processed;
+	ULONG_PTR offset;
+	ULONG_PTR out_size_processed;
 	UInt32 attrib;
 	UInt64 total_size = 0;
 	UInt64 total_read = 0;
-	SIZE_T processed_size;
-	SIZE_T length;
+	ULONG_PTR processed_size;
+	ULONG_PTR length;
 	SRes status;
 	BOOLEAN is_success = FALSE;
 
@@ -1252,7 +1250,7 @@ BOOLEAN _app_unpack_zip (
 	mz_zip_archive_file_stat file_stat;
 	ULONG64 total_size = 0;
 	ULONG64 total_read = 0; // this is our progress so far
-	SIZE_T length;
+	ULONG_PTR length;
 	INT total_files;
 	BOOLEAN is_success = FALSE;
 	NTSTATUS status;
