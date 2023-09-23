@@ -116,7 +116,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <PreprocessorDefinitions>MICROSOFT_WINDOWS_WINBASE_H_DEFINE_INTERLOCKED_CPLUSPLUS_OVERLOADS;_UNICODE;UNICODE;WIN32_LEAN_AND_MEAN;APP_NO_APPDATA;APP_NO_DEPRECATIONS;APP_NO_MUTEX;APP_HAVE_TRAY;APP_STARTMINIMIZED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MICROSOFT_WINDOWS_WINBASE_H_DEFINE_INTERLOCKED_CPLUSPLUS_OVERLOADS;_UNICODE;UNICODE;WIN32_LEAN_AND_MEAN;APP_NO_APPDATA;APP_NO_MUTEX;APP_HAVE_TRAY;APP_STARTMINIMIZED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <TreatWarningAsError>true</TreatWarningAsError>
@@ -149,7 +149,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <PreprocessorDefinitions>MICROSOFT_WINDOWS_WINBASE_H_DEFINE_INTERLOCKED_CPLUSPLUS_OVERLOADS;_UNICODE;UNICODE;WIN32_LEAN_AND_MEAN;APP_NO_APPDATA;APP_NO_DEPRECATIONS;APP_NO_MUTEX;APP_HAVE_TRAY;APP_STARTMINIMIZED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MICROSOFT_WINDOWS_WINBASE_H_DEFINE_INTERLOCKED_CPLUSPLUS_OVERLOADS;_UNICODE;UNICODE;WIN32_LEAN_AND_MEAN;APP_NO_APPDATA;APP_NO_MUTEX;APP_HAVE_TRAY;APP_STARTMINIMIZED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <TreatWarningAsError>true</TreatWarningAsError>
@@ -186,7 +186,7 @@
       <CallingConvention>StdCall</CallingConvention>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <PreprocessorDefinitions>MICROSOFT_WINDOWS_WINBASE_H_DEFINE_INTERLOCKED_CPLUSPLUS_OVERLOADS;_UNICODE;UNICODE;WIN32_LEAN_AND_MEAN;APP_NO_APPDATA;APP_NO_DEPRECATIONS;APP_NO_MUTEX;APP_HAVE_TRAY;APP_STARTMINIMIZED;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MICROSOFT_WINDOWS_WINBASE_H_DEFINE_INTERLOCKED_CPLUSPLUS_OVERLOADS;_UNICODE;UNICODE;WIN32_LEAN_AND_MEAN;APP_NO_APPDATA;APP_NO_MUTEX;APP_HAVE_TRAY;APP_STARTMINIMIZED;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <EnableParallelCodeGeneration>
       </EnableParallelCodeGeneration>
       <BufferSecurityCheck>true</BufferSecurityCheck>
@@ -222,7 +222,7 @@
       <CallingConvention>StdCall</CallingConvention>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <PreprocessorDefinitions>MICROSOFT_WINDOWS_WINBASE_H_DEFINE_INTERLOCKED_CPLUSPLUS_OVERLOADS;_UNICODE;UNICODE;WIN32_LEAN_AND_MEAN;APP_NO_APPDATA;APP_NO_DEPRECATIONS;APP_NO_MUTEX;APP_HAVE_TRAY;APP_STARTMINIMIZED;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MICROSOFT_WINDOWS_WINBASE_H_DEFINE_INTERLOCKED_CPLUSPLUS_OVERLOADS;_UNICODE;UNICODE;WIN32_LEAN_AND_MEAN;APP_NO_APPDATA;APP_NO_MUTEX;APP_HAVE_TRAY;APP_STARTMINIMIZED;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <EnableParallelCodeGeneration>
       </EnableParallelCodeGeneration>
       <BufferSecurityCheck>true</BufferSecurityCheck>
@@ -252,62 +252,62 @@
   <ItemGroup>
     <ClCompile Include="..\routine\src\rapp.c" />
     <ClCompile Include="..\routine\src\routine.c" />
-    <ClCompile Include="src\include\7zAlloc.c" />
-    <ClCompile Include="src\include\7zArcIn.c" />
-    <ClCompile Include="src\include\7zBuf.c" />
-    <ClCompile Include="src\include\7zBuf2.c" />
-    <ClCompile Include="src\include\7zCrc.c" />
-    <ClCompile Include="src\include\7zCrcOpt.c" />
-    <ClCompile Include="src\include\7zDec.c" />
-    <ClCompile Include="src\include\7zFile.c" />
-    <ClCompile Include="src\include\7zStream.c" />
-    <ClCompile Include="src\include\Aes.c" />
-    <ClCompile Include="src\include\AesOpt.c" />
-    <ClCompile Include="src\include\Alloc.c" />
-    <ClCompile Include="src\include\Bcj2.c" />
-    <ClCompile Include="src\include\Bcj2Enc.c" />
-    <ClCompile Include="src\include\Blake2s.c" />
-    <ClCompile Include="src\include\Bra.c" />
-    <ClCompile Include="src\include\Bra86.c" />
-    <ClCompile Include="src\include\BraIA64.c" />
-    <ClCompile Include="src\include\BwtSort.c" />
-    <ClCompile Include="src\include\CpuArch.c" />
-    <ClCompile Include="src\include\Delta.c" />
-    <ClCompile Include="src\include\DllSecur.c" />
-    <ClCompile Include="src\include\HuffEnc.c" />
-    <ClCompile Include="src\include\LzFind.c" />
-    <ClCompile Include="src\include\LzFindMt.c" />
-    <ClCompile Include="src\include\LzFindOpt.c" />
-    <ClCompile Include="src\include\Lzma2Dec.c" />
-    <ClCompile Include="src\include\Lzma2DecMt.c" />
-    <ClCompile Include="src\include\Lzma2Enc.c" />
-    <ClCompile Include="src\include\Lzma86Dec.c" />
-    <ClCompile Include="src\include\Lzma86Enc.c" />
-    <ClCompile Include="src\include\LzmaDec.c" />
-    <ClCompile Include="src\include\LzmaEnc.c" />
-    <ClCompile Include="src\include\LzmaLib.c" />
-    <ClCompile Include="src\include\miniz.c" />
-    <ClCompile Include="src\include\MtCoder.c" />
-    <ClCompile Include="src\include\MtDec.c" />
-    <ClCompile Include="src\include\Ppmd7.c" />
-    <ClCompile Include="src\include\Ppmd7aDec.c" />
-    <ClCompile Include="src\include\Ppmd7Dec.c" />
-    <ClCompile Include="src\include\Ppmd7Enc.c" />
-    <ClCompile Include="src\include\Ppmd8.c" />
-    <ClCompile Include="src\include\Ppmd8Dec.c" />
-    <ClCompile Include="src\include\Ppmd8Enc.c" />
-    <ClCompile Include="src\include\Sha1.c" />
-    <ClCompile Include="src\include\Sha1Opt.c" />
-    <ClCompile Include="src\include\Sha256.c" />
-    <ClCompile Include="src\include\Sha256Opt.c" />
-    <ClCompile Include="src\include\Sort.c" />
-    <ClCompile Include="src\include\Threads.c" />
-    <ClCompile Include="src\include\Xz.c" />
-    <ClCompile Include="src\include\XzCrc64.c" />
-    <ClCompile Include="src\include\XzCrc64Opt.c" />
-    <ClCompile Include="src\include\XzDec.c" />
-    <ClCompile Include="src\include\XzEnc.c" />
-    <ClCompile Include="src\include\XzIn.c" />
+    <ClCompile Include="src\lzma\7zAlloc.c" />
+    <ClCompile Include="src\lzma\7zArcIn.c" />
+    <ClCompile Include="src\lzma\7zBuf.c" />
+    <ClCompile Include="src\lzma\7zBuf2.c" />
+    <ClCompile Include="src\lzma\7zCrc.c" />
+    <ClCompile Include="src\lzma\7zCrcOpt.c" />
+    <ClCompile Include="src\lzma\7zDec.c" />
+    <ClCompile Include="src\lzma\7zFile.c" />
+    <ClCompile Include="src\lzma\7zStream.c" />
+    <ClCompile Include="src\lzma\Aes.c" />
+    <ClCompile Include="src\lzma\AesOpt.c" />
+    <ClCompile Include="src\lzma\Alloc.c" />
+    <ClCompile Include="src\lzma\Bcj2.c" />
+    <ClCompile Include="src\lzma\Bcj2Enc.c" />
+    <ClCompile Include="src\lzma\Blake2s.c" />
+    <ClCompile Include="src\lzma\Bra.c" />
+    <ClCompile Include="src\lzma\Bra86.c" />
+    <ClCompile Include="src\lzma\BraIA64.c" />
+    <ClCompile Include="src\lzma\BwtSort.c" />
+    <ClCompile Include="src\lzma\CpuArch.c" />
+    <ClCompile Include="src\lzma\Delta.c" />
+    <ClCompile Include="src\lzma\DllSecur.c" />
+    <ClCompile Include="src\lzma\HuffEnc.c" />
+    <ClCompile Include="src\lzma\LzFind.c" />
+    <ClCompile Include="src\lzma\LzFindMt.c" />
+    <ClCompile Include="src\lzma\LzFindOpt.c" />
+    <ClCompile Include="src\lzma\Lzma2Dec.c" />
+    <ClCompile Include="src\lzma\Lzma2DecMt.c" />
+    <ClCompile Include="src\lzma\Lzma2Enc.c" />
+    <ClCompile Include="src\lzma\Lzma86Dec.c" />
+    <ClCompile Include="src\lzma\Lzma86Enc.c" />
+    <ClCompile Include="src\lzma\LzmaDec.c" />
+    <ClCompile Include="src\lzma\LzmaEnc.c" />
+    <ClCompile Include="src\lzma\LzmaLib.c" />
+    <ClCompile Include="src\lzma\miniz.c" />
+    <ClCompile Include="src\lzma\MtCoder.c" />
+    <ClCompile Include="src\lzma\MtDec.c" />
+    <ClCompile Include="src\lzma\Ppmd7.c" />
+    <ClCompile Include="src\lzma\Ppmd7aDec.c" />
+    <ClCompile Include="src\lzma\Ppmd7Dec.c" />
+    <ClCompile Include="src\lzma\Ppmd7Enc.c" />
+    <ClCompile Include="src\lzma\Ppmd8.c" />
+    <ClCompile Include="src\lzma\Ppmd8Dec.c" />
+    <ClCompile Include="src\lzma\Ppmd8Enc.c" />
+    <ClCompile Include="src\lzma\Sha1.c" />
+    <ClCompile Include="src\lzma\Sha1Opt.c" />
+    <ClCompile Include="src\lzma\Sha256.c" />
+    <ClCompile Include="src\lzma\Sha256Opt.c" />
+    <ClCompile Include="src\lzma\Sort.c" />
+    <ClCompile Include="src\lzma\Threads.c" />
+    <ClCompile Include="src\lzma\Xz.c" />
+    <ClCompile Include="src\lzma\XzCrc64.c" />
+    <ClCompile Include="src\lzma\XzCrc64Opt.c" />
+    <ClCompile Include="src\lzma\XzDec.c" />
+    <ClCompile Include="src\lzma\XzEnc.c" />
+    <ClCompile Include="src\lzma\XzIn.c" />
     <ClCompile Include="src\main.c" />
   </ItemGroup>
   <ItemGroup>
@@ -318,49 +318,49 @@
     <ClInclude Include="..\routine\src\routine.h" />
     <ClInclude Include="..\routine\src\rtypes.h" />
     <ClInclude Include="src\app.h" />
-    <ClInclude Include="src\include\7z.h" />
-    <ClInclude Include="src\include\7zAlloc.h" />
-    <ClInclude Include="src\include\7zBuf.h" />
-    <ClInclude Include="src\include\7zCrc.h" />
-    <ClInclude Include="src\include\7zFile.h" />
-    <ClInclude Include="src\include\7zTypes.h" />
-    <ClInclude Include="src\include\7zVersion.h" />
-    <ClInclude Include="src\include\Aes.h" />
-    <ClInclude Include="src\include\Alloc.h" />
-    <ClInclude Include="src\include\Bcj2.h" />
-    <ClInclude Include="src\include\Blake2.h" />
-    <ClInclude Include="src\include\Bra.h" />
-    <ClInclude Include="src\include\BwtSort.h" />
-    <ClInclude Include="src\include\Compiler.h" />
-    <ClInclude Include="src\include\CpuArch.h" />
-    <ClInclude Include="src\include\Delta.h" />
-    <ClInclude Include="src\include\DllSecur.h" />
-    <ClInclude Include="src\include\HuffEnc.h" />
-    <ClInclude Include="src\include\LzFind.h" />
-    <ClInclude Include="src\include\LzFindMt.h" />
-    <ClInclude Include="src\include\LzHash.h" />
-    <ClInclude Include="src\include\Lzma2Dec.h" />
-    <ClInclude Include="src\include\Lzma2DecMt.h" />
-    <ClInclude Include="src\include\Lzma2Enc.h" />
-    <ClInclude Include="src\include\Lzma86.h" />
-    <ClInclude Include="src\include\LzmaDec.h" />
-    <ClInclude Include="src\include\LzmaEnc.h" />
-    <ClInclude Include="src\include\LzmaLib.h" />
-    <ClInclude Include="src\include\miniz.h" />
-    <ClInclude Include="src\include\MtCoder.h" />
-    <ClInclude Include="src\include\MtDec.h" />
-    <ClInclude Include="src\include\Ppmd.h" />
-    <ClInclude Include="src\include\Ppmd7.h" />
-    <ClInclude Include="src\include\Ppmd8.h" />
-    <ClInclude Include="src\include\Precomp.h" />
-    <ClInclude Include="src\include\RotateDefs.h" />
-    <ClInclude Include="src\include\Sha1.h" />
-    <ClInclude Include="src\include\Sha256.h" />
-    <ClInclude Include="src\include\Sort.h" />
-    <ClInclude Include="src\include\Threads.h" />
-    <ClInclude Include="src\include\Xz.h" />
-    <ClInclude Include="src\include\XzCrc64.h" />
-    <ClInclude Include="src\include\XzEnc.h" />
+    <ClInclude Include="src\lzma\7z.h" />
+    <ClInclude Include="src\lzma\7zAlloc.h" />
+    <ClInclude Include="src\lzma\7zBuf.h" />
+    <ClInclude Include="src\lzma\7zCrc.h" />
+    <ClInclude Include="src\lzma\7zFile.h" />
+    <ClInclude Include="src\lzma\7zTypes.h" />
+    <ClInclude Include="src\lzma\7zVersion.h" />
+    <ClInclude Include="src\lzma\Aes.h" />
+    <ClInclude Include="src\lzma\Alloc.h" />
+    <ClInclude Include="src\lzma\Bcj2.h" />
+    <ClInclude Include="src\lzma\Blake2.h" />
+    <ClInclude Include="src\lzma\Bra.h" />
+    <ClInclude Include="src\lzma\BwtSort.h" />
+    <ClInclude Include="src\lzma\Compiler.h" />
+    <ClInclude Include="src\lzma\CpuArch.h" />
+    <ClInclude Include="src\lzma\Delta.h" />
+    <ClInclude Include="src\lzma\DllSecur.h" />
+    <ClInclude Include="src\lzma\HuffEnc.h" />
+    <ClInclude Include="src\lzma\LzFind.h" />
+    <ClInclude Include="src\lzma\LzFindMt.h" />
+    <ClInclude Include="src\lzma\LzHash.h" />
+    <ClInclude Include="src\lzma\Lzma2Dec.h" />
+    <ClInclude Include="src\lzma\Lzma2DecMt.h" />
+    <ClInclude Include="src\lzma\Lzma2Enc.h" />
+    <ClInclude Include="src\lzma\Lzma86.h" />
+    <ClInclude Include="src\lzma\LzmaDec.h" />
+    <ClInclude Include="src\lzma\LzmaEnc.h" />
+    <ClInclude Include="src\lzma\LzmaLib.h" />
+    <ClInclude Include="src\lzma\miniz.h" />
+    <ClInclude Include="src\lzma\MtCoder.h" />
+    <ClInclude Include="src\lzma\MtDec.h" />
+    <ClInclude Include="src\lzma\Ppmd.h" />
+    <ClInclude Include="src\lzma\Ppmd7.h" />
+    <ClInclude Include="src\lzma\Ppmd8.h" />
+    <ClInclude Include="src\lzma\Precomp.h" />
+    <ClInclude Include="src\lzma\RotateDefs.h" />
+    <ClInclude Include="src\lzma\Sha1.h" />
+    <ClInclude Include="src\lzma\Sha256.h" />
+    <ClInclude Include="src\lzma\Sort.h" />
+    <ClInclude Include="src\lzma\Threads.h" />
+    <ClInclude Include="src\lzma\Xz.h" />
+    <ClInclude Include="src\lzma\XzCrc64.h" />
+    <ClInclude Include="src\lzma\XzEnc.h" />
     <ClInclude Include="src\main.h" />
     <ClInclude Include="src\resource.h" />
   </ItemGroup>
