@@ -5,6 +5,11 @@
 #define IDC_STATIC (-1)
 #endif
 
+// Controls
+#define IDC_NAV 100
+#define IDC_RESET 101
+#define IDC_CLOSE 102
+
 // Acceleration
 #define IDA_MAIN 1
 
