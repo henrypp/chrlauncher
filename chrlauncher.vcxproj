@@ -252,6 +252,7 @@
   <ItemGroup>
     <ClCompile Include="..\routine\src\rapp.c" />
     <ClCompile Include="..\routine\src\routine.c" />
+    <ClCompile Include="src\miniz.c" />
     <ClCompile Include="src\lzma\7zAlloc.c" />
     <ClCompile Include="src\lzma\7zArcIn.c" />
     <ClCompile Include="src\lzma\7zBuf.c" />
@@ -286,7 +287,6 @@
     <ClCompile Include="src\lzma\LzmaDec.c" />
     <ClCompile Include="src\lzma\LzmaEnc.c" />
     <ClCompile Include="src\lzma\LzmaLib.c" />
-    <ClCompile Include="src\lzma\miniz.c" />
     <ClCompile Include="src\lzma\MtCoder.c" />
     <ClCompile Include="src\lzma\MtDec.c" />
     <ClCompile Include="src\lzma\Ppmd7.c" />
@@ -318,6 +318,7 @@
     <ClInclude Include="..\routine\src\routine.h" />
     <ClInclude Include="..\routine\src\rtypes.h" />
     <ClInclude Include="src\app.h" />
+    <ClInclude Include="src\miniz.h" />
     <ClInclude Include="src\lzma\7z.h" />
     <ClInclude Include="src\lzma\7zAlloc.h" />
     <ClInclude Include="src\lzma\7zBuf.h" />
@@ -346,7 +347,6 @@
     <ClInclude Include="src\lzma\LzmaDec.h" />
     <ClInclude Include="src\lzma\LzmaEnc.h" />
     <ClInclude Include="src\lzma\LzmaLib.h" />
-    <ClInclude Include="src\lzma\miniz.h" />
     <ClInclude Include="src\lzma\MtCoder.h" />
     <ClInclude Include="src\lzma\MtDec.h" />
     <ClInclude Include="src\lzma\Ppmd.h" />
