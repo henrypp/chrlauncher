@@ -13,7 +13,7 @@
 #include "7zBuf.h"
 #include "7zCrc.h"
 #include "7zFile.h"
-#include "7zVersion.h"
+#include "7zWindows.h"
 
 #include "miniz.h"
 
@@ -596,10 +596,11 @@ BOOLEAN _app_browserisrunning (
 		&hfile
 	);
 
+	if (hfile)
+		NtClose (hfile);
+
 	if (status == STATUS_SHARING_VIOLATION)
 		return TRUE;
-
-	NtClose (hfile);
 
 	return FALSE;
 }
@@ -705,6 +706,9 @@ BOOLEAN _app_isupdaterequired (
 {
 	LONG64 timestamp;
 
+	if (!_r_fs_exists (pbi->binary_path->buffer))
+		return TRUE;
+
 	if (pbi->is_forcecheck)
 		return TRUE;
 
@@ -746,20 +750,16 @@ BOOLEAN _app_checkupdate (
 	HINTERNET hsession;
 	PR_STRING string;
 	ULONG status;
-	BOOLEAN is_exists;
-	BOOLEAN is_checkupdate;
-	BOOLEAN is_newversion;
-	BOOLEAN is_success;
+	BOOLEAN is_updaterequired;
+	BOOLEAN is_newversion = FALSE;
+	BOOLEAN is_success = FALSE;
 
 	*is_error_ptr = FALSE;
 
 	if (_app_ishaveupdate (pbi))
 		return TRUE;
 
-	is_success = FALSE;
-
-	is_exists = _r_fs_exists (pbi->binary_path->buffer);
-	is_checkupdate = _app_isupdaterequired (pbi);
+	is_updaterequired = _app_isupdaterequired (pbi);
 
 	_app_setstatus (hwnd, _r_locale_getstring (IDS_STATUS_CHECK), 0, 0);
 
@@ -768,20 +768,14 @@ BOOLEAN _app_checkupdate (
 
 	update_browser_info (hwnd, pbi);
 
-	if (!is_exists || is_checkupdate)
+	if (is_updaterequired)
 	{
 		update_url = _r_config_getstring (L"ChromiumUpdateUrl", CHROMIUM_UPDATE_URL);
 
 		if (!update_url)
-		{
-			RtlRaiseStatus (STATUS_INVALID_PARAMETER);
-
 			return FALSE;
-		}
 
 		url = _r_format_string (update_url->buffer, pbi->architecture, pbi->browser_type->buffer);
-
-		_r_obj_dereference (update_url);
 
 		if (url)
 		{
@@ -824,6 +818,8 @@ BOOLEAN _app_checkupdate (
 
 			_r_obj_dereference (url);
 		}
+
+		_r_obj_dereference (update_url);
 	}
 
 	if (hashtable)
@@ -848,15 +844,9 @@ BOOLEAN _app_checkupdate (
 		update_browser_info (hwnd, &browser_info);
 
 		if (pbi->new_version && pbi->current_version)
-		{
 			is_newversion = (_r_str_versioncompare (&pbi->current_version->sr, &pbi->new_version->sr) == -1);
-		}
-		else
-		{
-			is_newversion = FALSE;
-		}
 
-		if (!is_exists || is_newversion)
+		if (is_newversion)
 		{
 			is_success = TRUE;
 		}
@@ -1051,7 +1041,8 @@ BOOLEAN _app_unpack_7zip (
 
 	look_stream.bufSize = kInputBufSize;
 	look_stream.realStream = &archive_stream.vt;
-	LookToRead2_Init (&look_stream);
+
+	LookToRead2_INIT (&look_stream);
 
 	CrcGenerateTable ();
 
@@ -1460,8 +1451,7 @@ VOID _app_thread_check (
 	BOOLEAN is_haveerror = FALSE;
 	BOOLEAN is_stayopen = FALSE;
 	BOOLEAN is_installed = FALSE;
-	BOOLEAN is_exists;
-	BOOLEAN is_checkupdate;
+	BOOLEAN is_updaterequired;
 
 	pbi = (PBROWSER_INFORMATION)arglist;
 	hwnd = _r_app_gethwnd ();
@@ -1511,33 +1501,35 @@ VOID _app_thread_check (
 	{
 		_r_progress_setmarquee (hwnd, IDC_PROGRESS, TRUE);
 
-		is_exists = _r_fs_exists (pbi->binary_path->buffer);
-		is_checkupdate = _app_isupdaterequired (pbi);
+		is_updaterequired = _app_isupdaterequired (pbi);
 
 		// show launcher gui
-		if (!is_exists || pbi->is_onlyupdate || pbi->is_bringtofront)
+		if (is_updaterequired || pbi->is_onlyupdate || pbi->is_bringtofront)
 		{
 			_r_tray_toggle (hwnd, &GUID_TrayIcon, TRUE); // show tray icon
 
 			_r_wnd_toggle (hwnd, TRUE);
 		}
 
-		if (_r_config_getboolean (L"ChromiumRunAtEnd", TRUE))
+		if (_r_fs_exists (pbi->binary_path->buffer))
 		{
-			if (is_exists && !pbi->is_waitdownloadend && !pbi->is_onlyupdate)
-				_app_openbrowser (pbi);
+			if (_r_config_getboolean (L"ChromiumRunAtEnd", TRUE))
+			{
+				if (!pbi->is_waitdownloadend && !pbi->is_onlyupdate)
+					_app_openbrowser (pbi);
+			}
 		}
 
 		if (_app_checkupdate (hwnd, pbi, &is_haveerror))
 		{
 			_r_tray_toggle (hwnd, &GUID_TrayIcon, TRUE); // show tray icon
 
-			if ((!is_exists || pbi->is_autodownload) && _app_ishaveupdate (pbi))
+			if ((!_r_fs_exists (pbi->binary_path->buffer) || pbi->is_autodownload) && _app_ishaveupdate (pbi))
 			{
 				if (pbi->is_bringtofront)
 					_r_wnd_toggle (hwnd, TRUE); // show window
 
-				if (is_exists && !pbi->is_onlyupdate && !pbi->is_waitdownloadend && !_app_isupdatedownloaded (pbi))
+				if (_r_fs_exists (pbi->binary_path->buffer) && !pbi->is_onlyupdate && !pbi->is_waitdownloadend && !_app_isupdatedownloaded (pbi))
 					_app_openbrowser (pbi);
 
 				_r_progress_setmarquee (hwnd, IDC_PROGRESS, FALSE);
