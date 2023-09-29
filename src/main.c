@@ -1456,6 +1456,7 @@ VOID _app_thread_check (
 {
 	PBROWSER_INFORMATION pbi;
 	HWND hwnd;
+	UINT locale_id;
 	BOOLEAN is_haveerror = FALSE;
 	BOOLEAN is_stayopen = FALSE;
 	BOOLEAN is_installed = FALSE;
@@ -1471,7 +1472,9 @@ VOID _app_thread_check (
 
 	_r_progress_setmarquee (hwnd, IDC_PROGRESS, TRUE);
 
-	_r_ctrl_setstring (hwnd, IDC_START_BTN, _r_locale_getstring (_app_getactionid (pbi)));
+	locale_id = _app_getactionid (pbi);
+
+	_r_ctrl_setstring (hwnd, IDC_START_BTN, _r_locale_getstring (locale_id));
 
 	// unpack downloaded package
 	if (_app_isupdatedownloaded (pbi))
@@ -1552,7 +1555,9 @@ VOID _app_thread_check (
 					{
 						_r_tray_popup (hwnd, &GUID_TrayIcon, NIIF_INFO, _r_app_getname (), _r_locale_getstring (IDS_STATUS_DOWNLOADED)); // inform user
 
-						_r_ctrl_setstring (hwnd, IDC_START_BTN, _r_locale_getstring (_app_getactionid (pbi)));
+						locale_id = _app_getactionid (pbi);
+
+						_r_ctrl_setstring (hwnd, IDC_START_BTN, _r_locale_getstring (locale_id));
 
 						_r_ctrl_enable (hwnd, IDC_START_BTN, TRUE);
 
@@ -1563,7 +1568,9 @@ VOID _app_thread_check (
 				{
 					_r_tray_popupformat (hwnd, &GUID_TrayIcon, NIIF_INFO, _r_app_getname (), _r_locale_getstring (IDS_STATUS_FOUND), pbi->new_version->buffer); // just inform user
 
-					_r_ctrl_setstring (hwnd, IDC_START_BTN, _r_locale_getstring (_app_getactionid (pbi)));
+					locale_id = _app_getactionid (pbi);
+
+					_r_ctrl_setstring (hwnd, IDC_START_BTN, _r_locale_getstring (locale_id));
 
 					_r_ctrl_enable (hwnd, IDC_START_BTN, TRUE);
 
@@ -1575,7 +1582,9 @@ VOID _app_thread_check (
 			{
 				_r_tray_popupformat (hwnd, &GUID_TrayIcon, NIIF_INFO, _r_app_getname (), _r_locale_getstring (IDS_STATUS_FOUND), pbi->new_version->buffer); // just inform user
 
-				_r_ctrl_setstring (hwnd, IDC_START_BTN, _r_locale_getstring (_app_getactionid (pbi)));
+				locale_id = _app_getactionid (pbi);
+
+				_r_ctrl_setstring (hwnd, IDC_START_BTN, _r_locale_getstring (locale_id));
 
 				_r_ctrl_enable (hwnd, IDC_START_BTN, TRUE);
 
@@ -1588,7 +1597,9 @@ VOID _app_thread_check (
 
 	if (is_haveerror || pbi->is_onlyupdate)
 	{
-		_r_ctrl_setstring (hwnd, IDC_START_BTN, _r_locale_getstring (_app_getactionid (pbi)));
+		locale_id = _app_getactionid (pbi);
+
+		_r_ctrl_setstring (hwnd, IDC_START_BTN, _r_locale_getstring (locale_id));
 
 		_r_ctrl_enable (hwnd, IDC_START_BTN, TRUE);
 
@@ -1690,6 +1701,7 @@ INT_PTR CALLBACK DlgProc (
 			// localize menu
 			HMENU hmenu;
 			HMENU hsubmenu;
+			UINT locale_id;
 
 			hmenu = GetMenu (hwnd);
 
@@ -1719,7 +1731,9 @@ INT_PTR CALLBACK DlgProc (
 
 			_r_ctrl_setstring (hwnd, IDC_LINKS, FOOTER_STRING);
 
-			_r_ctrl_setstring (hwnd, IDC_START_BTN, _r_locale_getstring (_app_getactionid (&browser_info)));
+			locale_id = _app_getactionid (&browser_info);
+
+			_r_ctrl_setstring (hwnd, IDC_START_BTN, _r_locale_getstring (locale_id));
 
 			break;
 		}
@@ -2019,7 +2033,7 @@ INT_PTR CALLBACK DlgProc (
 				case IDM_WEBSITE:
 				case IDM_TRAY_WEBSITE:
 				{
-					_r_shell_opendefault (_r_app_getsources_url ());
+					_r_shell_opendefault (_r_app_getwebsite_url ());
 					break;
 				}
 
