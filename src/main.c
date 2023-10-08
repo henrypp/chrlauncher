@@ -322,7 +322,7 @@ VOID init_browser_info (
 
 	_r_obj_movereference (&pbi->binary_path, string);
 
-	if (!pbi->binary_dir || !pbi->binary_path)
+	if (!pbi->binary_path)
 	{
 		RtlRaiseStatus (STATUS_OBJECT_PATH_NOT_FOUND);
 
@@ -443,7 +443,7 @@ VOID init_browser_info (
 
 VOID _app_setstatus (
 	_In_ HWND hwnd,
-	_In_opt_ LPCWSTR text,
+	_In_opt_ LPCWSTR string,
 	_In_opt_ ULONG64 v,
 	_In_opt_ ULONG64 t
 )
@@ -452,11 +452,11 @@ VOID _app_setstatus (
 
 	if (!v && t)
 	{
-		_r_status_settextformat (hwnd, IDC_STATUSBAR, 0, L"%s 0%%", text);
+		_r_status_settextformat (hwnd, IDC_STATUSBAR, 0, L"%s 0%%", string);
 
-		if (!_r_str_isempty (text))
+		if (!_r_str_isempty (string))
 		{
-			_r_tray_setinfoformat (hwnd, &GUID_TrayIcon, NULL, L"%s\r\n%s: 0%%", _r_app_getname (), text);
+			_r_tray_setinfoformat (hwnd, &GUID_TrayIcon, NULL, L"%s\r\n%s: 0%%", _r_app_getname (), string);
 		}
 		else
 		{
@@ -467,11 +467,11 @@ VOID _app_setstatus (
 	{
 		percent = _r_calc_clamp64 (_r_calc_percentof64 (v, t), 0, 100);
 
-		_r_status_settextformat (hwnd, IDC_STATUSBAR, 0, L"%s %" PR_LONG64 L"%%", text, percent);
+		_r_status_settextformat (hwnd, IDC_STATUSBAR, 0, L"%s %" PR_LONG64 L"%%", string, percent);
 
-		if (!_r_str_isempty (text))
+		if (!_r_str_isempty (string))
 		{
-			_r_tray_setinfoformat (hwnd, &GUID_TrayIcon, NULL, L"%s\r\n%s: %" TEXT (PR_LONG64) L"%%", _r_app_getname (), text, percent);
+			_r_tray_setinfoformat (hwnd, &GUID_TrayIcon, NULL, L"%s\r\n%s: %" TEXT (PR_LONG64) L"%%", _r_app_getname (), string, percent);
 		}
 		else
 		{
@@ -480,11 +480,11 @@ VOID _app_setstatus (
 	}
 	else
 	{
-		_r_status_settext (hwnd, IDC_STATUSBAR, 0, text);
+		_r_status_settext (hwnd, IDC_STATUSBAR, 0, string);
 
-		if (!_r_str_isempty (text))
+		if (!_r_str_isempty (string))
 		{
-			_r_tray_setinfoformat (hwnd, &GUID_TrayIcon, NULL, L"%s\r\n%s", _r_app_getname (), text);
+			_r_tray_setinfoformat (hwnd, &GUID_TrayIcon, NULL, L"%s\r\n%s", _r_app_getname (), string);
 		}
 		else
 		{
@@ -599,10 +599,7 @@ BOOLEAN _app_browserisrunning (
 	if (hfile)
 		NtClose (hfile);
 
-	if (status == STATUS_SHARING_VIOLATION)
-		return TRUE;
-
-	return FALSE;
+	return (status == STATUS_SHARING_VIOLATION) ? TRUE : FALSE;
 }
 
 VOID _app_openbrowser (
@@ -753,12 +750,14 @@ BOOLEAN _app_checkupdate (
 	BOOLEAN is_updaterequired;
 	BOOLEAN is_newversion = FALSE;
 	BOOLEAN is_success = FALSE;
+	BOOLEAN is_exists;
 
 	*is_error_ptr = FALSE;
 
 	if (_app_ishaveupdate (pbi))
 		return TRUE;
 
+	is_exists = _r_fs_exists (pbi->binary_path->buffer);
 	is_updaterequired = _app_isupdaterequired (pbi);
 
 	_app_setstatus (hwnd, _r_locale_getstring (IDS_STATUS_CHECK), 0, 0);
@@ -768,7 +767,7 @@ BOOLEAN _app_checkupdate (
 
 	update_browser_info (hwnd, pbi);
 
-	if (is_updaterequired)
+	if (!is_exists || is_updaterequired)
 	{
 		update_url = _r_config_getstring (L"ChromiumUpdateUrl", CHROMIUM_UPDATE_URL);
 
@@ -846,7 +845,7 @@ BOOLEAN _app_checkupdate (
 		if (pbi->new_version && pbi->current_version)
 			is_newversion = (_r_str_versioncompare (&pbi->current_version->sr, &pbi->new_version->sr) == -1);
 
-		if (is_newversion)
+		if (!is_exists || is_newversion)
 		{
 			is_success = TRUE;
 		}
@@ -976,7 +975,7 @@ BOOLEAN _app_downloadupdate (
 	return is_success;
 }
 
-BOOLEAN _app_unpack_7zip (
+SRes _app_unpack_7zip (
 	_In_ HWND hwnd,
 	_In_ PBROWSER_INFORMATION pbi,
 	_In_ PR_STRINGREF bin_name
@@ -984,16 +983,16 @@ BOOLEAN _app_unpack_7zip (
 {
 #define kInputBufSize ((ULONG_PTR)1 << 18)
 
-	static const ISzAlloc g_Alloc = {SzAlloc, SzFree};
 	static R_STRINGREF separator_sr = PR_STRINGREF_INIT (L"\\");
+	static const ISzAlloc g_Alloc = {SzAlloc, SzFree};
 
 	ISzAlloc alloc_imp = g_Alloc;
 	ISzAlloc alloc_temp_imp = g_Alloc;
 	CFileInStream archive_stream = {0};
 	CLookToRead2 look_stream;
 	CSzArEx db;
-	UInt16 *temp_buff = NULL;
 	ULONG_PTR temp_size = 0;
+	PUSHORT temp_buff = NULL;
 
 	// if you need cache, use these 3 variables.
 	// if you use external function, you can make these variable as static.
@@ -1013,8 +1012,8 @@ BOOLEAN _app_unpack_7zip (
 	UInt64 total_read = 0;
 	ULONG_PTR processed_size;
 	ULONG_PTR length;
-	SRes status;
 	BOOLEAN is_success = FALSE;
+	SRes status;
 
 	status = InFile_OpenW (&archive_stream.file, pbi->cache_path->buffer);
 
@@ -1022,7 +1021,7 @@ BOOLEAN _app_unpack_7zip (
 	{
 		_r_log (LOG_LEVEL_ERROR, NULL, L"InFile_OpenW", status, pbi->cache_path->buffer);
 
-		return FALSE;
+		return status;
 	}
 
 	FileInStream_CreateVTable (&archive_stream);
@@ -1219,7 +1218,7 @@ CleanupExit:
 
 	File_Close (&archive_stream.file);
 
-	return is_success;
+	return status;
 }
 
 BOOLEAN _app_unpack_zip (
@@ -1282,7 +1281,7 @@ BOOLEAN _app_unpack_zip (
 		{
 			_r_obj_initializebyteref (&path_sr, file_stat.m_filename);
 
-			if (_r_str_multibyte2unicode (&path_sr, &path) != STATUS_SUCCESS)
+			if (!NT_SUCCESS (_r_str_multibyte2unicode (&path_sr, &path)))
 				continue;
 
 			_r_str_replacechar (&path->sr, L'/', OBJ_NAME_PATH_SEPARATOR);
@@ -1307,7 +1306,7 @@ BOOLEAN _app_unpack_zip (
 
 		_r_obj_initializebyteref (&path_sr, file_stat.m_filename);
 
-		if (_r_str_multibyte2unicode (&path_sr, &path) != STATUS_SUCCESS)
+		if (!NT_SUCCESS (_r_str_multibyte2unicode (&path_sr, &path)))
 			continue;
 
 		_r_str_replacechar (&path->sr, L'/', OBJ_NAME_PATH_SEPARATOR);
@@ -1345,7 +1344,7 @@ BOOLEAN _app_unpack_zip (
 				_r_obj_dereference (sub_dir);
 			}
 
-			if (_r_str_unicode2multibyte (&dest_path->sr, &bytes) != STATUS_SUCCESS)
+			if (!NT_SUCCESS (_r_str_unicode2multibyte (&dest_path->sr, &bytes)))
 				continue;
 
 			if (!mz_zip_reader_extract_to_file (&zip_archive, i, bytes->buffer, MZ_ZIP_FLAG_DO_NOT_SORT_CENTRAL_DIRECTORY))
@@ -1385,7 +1384,6 @@ BOOLEAN _app_installupdate (
 {
 	PR_STRING directory;
 	R_STRINGREF bin_name;
-	BOOLEAN is_success;
 	NTSTATUS status;
 
 	_r_queuedlock_acquireshared (&lock_download);
@@ -1404,29 +1402,33 @@ BOOLEAN _app_installupdate (
 
 	_r_sys_setthreadexecutionstate (ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_AWAYMODE_REQUIRED);
 
-	is_success = _app_unpack_zip (hwnd, pbi, &bin_name);
-
-	if (!is_success)
-		is_success = _app_unpack_7zip (hwnd, pbi, &bin_name);
-
-	if (is_success)
+	if (_app_unpack_zip (hwnd, pbi, &bin_name))
 	{
-		_r_obj_movereference (&pbi->current_version, _r_res_queryversionstring (pbi->binary_path->buffer));
-
-		_app_cleanupoldmanifest (pbi);
+		status = SZ_OK;
 	}
 	else
 	{
-		_r_log (LOG_LEVEL_ERROR, NULL, TEXT (__FUNCTION__), GetLastError (), pbi->cache_path->buffer);
+		status = _app_unpack_7zip (hwnd, pbi, &bin_name);
 
-		// no recurse
-		_r_fs_deletedirectory (pbi->binary_dir->buffer, FALSE);
+		if (status == SZ_OK)
+		{
+			_r_obj_movereference (&pbi->current_version, _r_res_queryversionstring (pbi->binary_path->buffer));
+
+			_app_cleanupoldmanifest (pbi);
+		}
+		else
+		{
+			_r_log (LOG_LEVEL_ERROR, NULL, TEXT (__FUNCTION__), status, pbi->cache_path->buffer);
+
+			// no recurse
+			_r_fs_deletedirectory (pbi->binary_dir->buffer, FALSE);
+		}
 	}
 
 	// remove cache file when zip cannot be opened
 	_r_fs_deletefile (pbi->cache_path->buffer);
 
-	*is_error_ptr = !is_success;
+	*is_error_ptr = status != SZ_OK;
 
 	_r_queuedlock_releaseshared (&lock_download);
 
@@ -1437,7 +1439,7 @@ BOOLEAN _app_installupdate (
 	if (directory)
 		_r_obj_dereference (directory);
 
-	return is_success;
+	return (status == SZ_OK) ? TRUE : FALSE;
 }
 
 VOID _app_thread_check (
@@ -1452,6 +1454,7 @@ VOID _app_thread_check (
 	BOOLEAN is_stayopen = FALSE;
 	BOOLEAN is_installed = FALSE;
 	BOOLEAN is_updaterequired;
+	BOOLEAN is_exists;
 
 	pbi = (PBROWSER_INFORMATION)arglist;
 	hwnd = _r_app_gethwnd ();
@@ -1502,16 +1505,17 @@ VOID _app_thread_check (
 		_r_progress_setmarquee (hwnd, IDC_PROGRESS, TRUE);
 
 		is_updaterequired = _app_isupdaterequired (pbi);
+		is_exists = _r_fs_exists (pbi->binary_path->buffer);
 
 		// show launcher gui
-		if (is_updaterequired || pbi->is_onlyupdate || pbi->is_bringtofront)
+		if (!is_exists || is_updaterequired || pbi->is_onlyupdate || pbi->is_bringtofront)
 		{
 			_r_tray_toggle (hwnd, &GUID_TrayIcon, TRUE); // show tray icon
 
 			_r_wnd_toggle (hwnd, TRUE);
 		}
 
-		if (_r_fs_exists (pbi->binary_path->buffer))
+		if (is_exists)
 		{
 			if (_r_config_getboolean (L"ChromiumRunAtEnd", TRUE))
 			{
@@ -1524,12 +1528,12 @@ VOID _app_thread_check (
 		{
 			_r_tray_toggle (hwnd, &GUID_TrayIcon, TRUE); // show tray icon
 
-			if ((!_r_fs_exists (pbi->binary_path->buffer) || pbi->is_autodownload) && _app_ishaveupdate (pbi))
+			if ((!is_exists || pbi->is_autodownload) && _app_ishaveupdate (pbi))
 			{
 				if (pbi->is_bringtofront)
 					_r_wnd_toggle (hwnd, TRUE); // show window
 
-				if (_r_fs_exists (pbi->binary_path->buffer) && !pbi->is_onlyupdate && !pbi->is_waitdownloadend && !_app_isupdatedownloaded (pbi))
+				if (is_exists && !pbi->is_onlyupdate && !pbi->is_waitdownloadend && !_app_isupdatedownloaded (pbi))
 					_app_openbrowser (pbi);
 
 				_r_progress_setmarquee (hwnd, IDC_PROGRESS, FALSE);
