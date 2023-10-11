@@ -467,7 +467,7 @@ VOID _app_setstatus (
 	{
 		percent = _r_calc_clamp64 (_r_calc_percentof64 (v, t), 0, 100);
 
-		_r_status_settextformat (hwnd, IDC_STATUSBAR, 0, L"%s %" PR_LONG64 L"%%", string, percent);
+		_r_status_settextformat (hwnd, IDC_STATUSBAR, 0, L"%s %" TEXT (PR_LONG64) L"%%", string, percent);
 
 		if (!_r_str_isempty (string))
 		{
@@ -799,8 +799,6 @@ BOOLEAN _app_checkupdate (
 					else
 					{
 						hashtable = _r_str_unserialize (&string->sr, L';', L'=');
-
-						*is_error_ptr = FALSE;
 					}
 				}
 				else
@@ -956,8 +954,6 @@ BOOLEAN _app_downloadupdate (
 				_r_fs_movefile (temp_file->buffer, pbi->cache_path->buffer);
 
 				is_success = TRUE;
-
-				*is_error_ptr = FALSE;
 			}
 
 			_r_fs_deletefile (temp_file->buffer);
@@ -2061,8 +2057,8 @@ INT APIENTRY wWinMain (
 	_In_ INT show_cmd
 )
 {
-	HWND hwnd;
 	PR_STRING path;
+	HWND hwnd;
 
 	if (!_r_app_initialize (NULL))
 		return ERROR_APP_INIT_FAILURE;
