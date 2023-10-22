@@ -17,6 +17,23 @@
 ### Description:
 Small and very fast portable launcher and updater for Chromium.
 
+### System requirements:
+- Windows 8.1 and above operating system.
+- [Visual C++ 2022 Redistributable package](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170)
+
+### Donate:
+- [Bitcoin](https://www.blockchain.com/btc/address/1LrRTXPsvHcQWCNZotA9RcwjsGcRghG96c) (BTC)
+- [Ethereum](https://www.blockchain.com/explorer/addresses/eth/0xe2C84A62eb2a4EF154b19bec0c1c106734B95960) (ETC)
+- [Paypal](https://paypal.me/henrypp) (USD)
+- [Yandex Money](https://yoomoney.ru/to/4100115776040583) (RUB)
+
+### GPG Signature:
+Binaries have GPG signature simplewall.exe.sig in application folder.
+
+- Public key: [pubkey.asc](https://raw.githubusercontent.com/henrypp/builder/master/pubkey.asc) ([pgpkeys.eu](https://pgpkeys.eu/pks/lookup?op=index&fingerprint=on&search=0x5635B5FD))
+- Key ID: 0x5635B5FD
+- Fingerprint: D985 2361 1524 AB29 BE73 30AC 2881 20A7 5635 B5FD
+
 ### Default browser:
 chrlauncher has feature to use portable Chromium as default browser and it will be open links from another programs through chrlauncher.
 - start "SetDefaultBrowser.bat" (as admin).
