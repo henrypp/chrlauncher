@@ -18,13 +18,10 @@ goto end
 
 :start
 
-msbuild simplewall.sln -property:Configuration=Release -property:Platform=x86 -verbosity:normal
+msbuild chrlauncher.sln -property:Configuration=Release -property:Platform=x86 -verbosity:normal
 if %ERRORLEVEL% neq 0 goto end
 
-msbuild simplewall.sln -property:Configuration=Release -property:Platform=x64 -verbosity:normal
-if %ERRORLEVEL% neq 0 goto end
-
-msbuild simplewall.sln -property:Configuration=Release -property:Platform=ARM64 -verbosity:normal
+msbuild chrlauncher.sln -property:Configuration=Release -property:Platform=x64 -verbosity:normal
 if %ERRORLEVEL% neq 0 goto end
 
 :end
