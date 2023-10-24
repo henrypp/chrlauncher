@@ -726,10 +726,13 @@ UINT _app_getactionid (
 )
 {
 	if (_app_isupdatedownloaded (pbi))
+	{
 		return IDS_ACTION_INSTALL;
-
+	}
 	else if (_app_ishaveupdate (pbi))
+	{
 		return IDS_ACTION_DOWNLOAD;
+	}
 
 	return IDS_ACTION_CHECK;
 }
@@ -887,15 +890,13 @@ BOOLEAN _app_downloadupdate (
 	PR_STRING temp_file;
 	HINTERNET hsession;
 	HANDLE hfile;
-	BOOLEAN is_success;
+	BOOLEAN is_success = FALSE;
 	NTSTATUS status;
 
 	*is_error_ptr = FALSE;
 
 	if (_app_isupdatedownloaded (pbi))
 		return TRUE;
-
-	is_success = FALSE;
 
 	temp_file = _r_obj_concatstrings (
 		2,
@@ -1025,7 +1026,7 @@ SRes _app_unpack_7zip (
 
 	SzArEx_Init (&db);
 
-	look_stream.buf = (byte *)ISzAlloc_Alloc (&alloc_imp, kInputBufSize);
+	look_stream.buf = (PUCHAR)ISzAlloc_Alloc (&alloc_imp, kInputBufSize);
 
 	if (!look_stream.buf)
 	{
