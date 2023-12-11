@@ -35,8 +35,8 @@ BOOL CALLBACK activate_browser_window_callback (
 	PR_STRING process_path;
 	HANDLE hprocess;
 	ULONG pid;
-	NTSTATUS status;
 	BOOL is_success = TRUE;
+	NTSTATUS status;
 
 	GetWindowThreadProcessId (hwnd, &pid);
 
@@ -72,13 +72,6 @@ BOOL CALLBACK activate_browser_window_callback (
 	return is_success;
 }
 
-FORCEINLINE VOID _app_activate_browser_window (
-	_In_ PBROWSER_INFORMATION pbi
-)
-{
-	EnumWindows (&activate_browser_window_callback, (LPARAM)pbi);
-}
-
 BOOLEAN _app_path_is_url (
 	_In_ LPCWSTR path
 )
@@ -90,15 +83,15 @@ BOOLEAN _app_path_is_url (
 		L"text/html",
 	};
 
-	if (PathMatchSpec (path, L"*.ini"))
+	if (PathMatchSpecW (path, L"*.ini"))
 		return FALSE;
 
-	if (PathIsURL (path) || PathIsHTMLFile (path))
+	if (PathIsURLW (path) || PathIsContentTypeW (path, SZ_CONTENTTYPE_HTMLW))
 		return TRUE;
 
 	for (ULONG_PTR i = 0; i < RTL_NUMBER_OF (types); i++)
 	{
-		if (PathIsContentType (path, types[i]))
+		if (PathIsContentTypeW (path, types[i]))
 			return TRUE;
 	}
 
@@ -257,7 +250,7 @@ VOID _app_parse_args (
 
 }
 
-VOID init_browser_info (
+VOID _app_init_browser_info (
 	_Inout_ PBROWSER_INFORMATION pbi
 )
 {
@@ -321,13 +314,6 @@ VOID init_browser_info (
 	);
 
 	_r_obj_movereference (&pbi->binary_path, string);
-
-	if (!pbi->binary_path)
-	{
-		RtlRaiseStatus (STATUS_OBJECT_PATH_NOT_FOUND);
-
-		return;
-	}
 
 	if (!_r_fs_exists (pbi->binary_path->buffer))
 	{
@@ -492,89 +478,7 @@ VOID _app_setstatus (
 		}
 	}
 
-	SendDlgItemMessage (hwnd, IDC_PROGRESS, PBM_SETPOS, (WPARAM)(LONG)percent, 0);
-}
-
-VOID _app_cleanupoldbinary (
-	_In_ PBROWSER_INFORMATION pbi
-)
-{
-	WIN32_FIND_DATA wfd;
-	PR_STRING path;
-	HANDLE hfile;
-
-	if (!pbi->binary_dir)
-		return;
-
-	// remove old binary directory
-	// https://github.com/henrypp/chrlauncher/issues/180
-
-	path = _r_obj_concatstrings (
-		2,
-		pbi->binary_dir->buffer,
-		L"\\*"
-	);
-
-	hfile = FindFirstFile (path->buffer, &wfd);
-
-	if (_r_fs_isvalidhandle (hfile))
-	{
-		do
-		{
-			if ((wfd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
-				continue;
-
-			if (wfd.cFileName[0] == L'.')
-				continue;
-
-			_r_obj_movereference (&path, _r_obj_concatstrings (3, pbi->binary_dir->buffer, L"\\", wfd.cFileName));
-
-			_r_fs_deletedirectory (path->buffer, TRUE);
-		}
-		while (FindNextFile (hfile, &wfd));
-
-		FindClose (hfile);
-	}
-
-	_r_obj_dereference (path);
-}
-
-VOID _app_cleanupoldmanifest (
-	_In_ PBROWSER_INFORMATION pbi
-)
-{
-	WIN32_FIND_DATA wfd;
-	PR_STRING path;
-	HANDLE hfile;
-
-	if (!pbi->binary_dir || !pbi->current_version)
-		return;
-
-	path = _r_obj_concatstrings (
-		2,
-		pbi->binary_dir->buffer,
-		L"\\*.manifest"
-	);
-
-	hfile = FindFirstFile (path->buffer, &wfd);
-
-	if (_r_fs_isvalidhandle (hfile))
-	{
-		do
-		{
-			if (_r_str_isstartswith2 (&pbi->current_version->sr, wfd.cFileName, TRUE))
-			{
-				_r_obj_movereference (&path, _r_obj_concatstrings (3, pbi->binary_dir->buffer, L"\\", wfd.cFileName));
-
-				_r_fs_deletefile (path->buffer);
-			}
-		}
-		while (FindNextFile (hfile, &wfd));
-
-		FindClose (hfile);
-	}
-
-	_r_obj_dereference (path);
+	SendDlgItemMessageW (hwnd, IDC_PROGRESS, PBM_SETPOS, (WPARAM)(LONG)percent, 0);
 }
 
 BOOLEAN _app_browserisrunning (
@@ -609,12 +513,12 @@ VOID _app_openbrowser (
 	PR_STRING args_string;
 	LPWSTR ptr;
 	ULONG_PTR args_length = 0;
-	NTSTATUS status;
 	BOOLEAN is_running;
+	NTSTATUS status;
 
 	if (_r_obj_isstringempty (pbi->binary_path) || !_r_fs_exists (pbi->binary_path->buffer))
 	{
-		_r_show_errormessage (_r_app_gethwnd (), NULL, STATUS_UNSUCCESSFUL, _r_obj_getstring (pbi->binary_path), NULL, NULL);
+		_r_show_errormessage (_r_app_gethwnd (), NULL, STATUS_NOT_FOUND, _r_obj_getstring (pbi->binary_path), NULL, NULL);
 
 		return;
 	}
@@ -623,7 +527,7 @@ VOID _app_openbrowser (
 
 	if (is_running && !pbi->is_hasurls && !pbi->is_opennewwindow)
 	{
-		_app_activate_browser_window (pbi);
+		EnumWindows (&activate_browser_window_callback, (LPARAM)pbi);
 
 		return;
 	}
@@ -714,7 +618,7 @@ BOOLEAN _app_isupdaterequired (
 	return FALSE;
 }
 
-UINT _app_getactionid (
+ULONG _app_getactionid (
 	_In_ PBROWSER_INFORMATION pbi
 )
 {
@@ -848,7 +752,7 @@ BOOLEAN _app_checkupdate (
 		}
 		else
 		{
-			SAFE_DELETE_REFERENCE (pbi->download_url); // clear download url if update not found
+			SAFE_DELETE_REFERENCE (pbi->download_url); // clear download url if update was not found
 
 			_r_config_setlong64 (L"ChromiumLastCheck", _r_unixtime_now ());
 		}
@@ -1391,17 +1295,20 @@ BOOLEAN _app_installupdate (
 
 	status = _r_path_getfullpath (pbi->binary_dir->buffer, &directory);
 
-	if (NT_SUCCESS (status))
-	{
-		if (!_r_fs_exists (directory->buffer))
-			_r_fs_createdirectory (directory->buffer, 0);
-	}
+	if (!NT_SUCCESS (status))
+		_r_log (LOG_LEVEL_ERROR, NULL, L"_r_path_getfullpath", status, pbi->binary_dir->buffer);
 
-	_app_cleanupoldbinary (pbi);
+	status = _r_fs_deletedirectory (directory->buffer, TRUE);
+
+	if (!NT_SUCCESS (status))
+		_r_log (LOG_LEVEL_ERROR, NULL, L"_r_fs_deletedirectory", status, directory->buffer);
 
 	_r_path_getpathinfo (&pbi->binary_path->sr, NULL, &bin_name);
 
-	_r_sys_setthreadexecutionstate (ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_AWAYMODE_REQUIRED);
+	_r_sys_setthreadexecutionstate (ES_SYSTEM_REQUIRED | ES_AWAYMODE_REQUIRED);
+
+	if (!_r_fs_exists (directory->buffer))
+		_r_fs_createdirectory (directory->buffer, 0);
 
 	if (_app_unpack_zip (hwnd, pbi, &bin_name))
 	{
@@ -1414,15 +1321,12 @@ BOOLEAN _app_installupdate (
 		if (status == SZ_OK)
 		{
 			_r_obj_movereference (&pbi->current_version, _r_res_queryversionstring (pbi->binary_path->buffer));
-
-			_app_cleanupoldmanifest (pbi);
 		}
 		else
 		{
 			_r_log (LOG_LEVEL_ERROR, NULL, TEXT (__FUNCTION__), status, pbi->cache_path->buffer);
 
-			// no recurse
-			_r_fs_deletedirectory (pbi->binary_dir->buffer, FALSE);
+			_r_fs_deletedirectory (pbi->binary_dir->buffer, FALSE); // no recurse
 		}
 	}
 
@@ -1450,7 +1354,7 @@ VOID _app_thread_check (
 {
 	PBROWSER_INFORMATION pbi;
 	HWND hwnd;
-	UINT locale_id;
+	ULONG locale_id;
 	BOOLEAN is_haveerror = FALSE;
 	BOOLEAN is_stayopen = FALSE;
 	BOOLEAN is_installed = FALSE;
@@ -1484,7 +1388,8 @@ VOID _app_thread_check (
 
 			if (_app_installupdate (hwnd, pbi, &is_haveerror))
 			{
-				init_browser_info (pbi);
+				_app_init_browser_info (pbi);
+
 				_app_update_browser_info (hwnd, pbi);
 
 				_r_config_setlong64 (L"ChromiumLastCheck", _r_unixtime_now ());
@@ -1621,7 +1526,7 @@ VOID _app_thread_check (
 	}
 	else
 	{
-		PostMessage (hwnd, WM_DESTROY, 0, 0);
+		PostMessageW (hwnd, WM_DESTROY, 0, 0);
 	}
 }
 
@@ -1657,6 +1562,7 @@ INT_PTR CALLBACK DlgProc (
 			HICON hicon;
 			LONG dpi_value;
 			LONG icon_small;
+			BOOLEAN is_hidden;
 
 			dpi_value = _r_dc_gettaskbardpi ();
 
@@ -1664,20 +1570,16 @@ INT_PTR CALLBACK DlgProc (
 
 			hicon = _r_sys_loadsharedicon (_r_sys_getimagebase (), MAKEINTRESOURCE (IDI_MAIN), icon_small);
 
-			init_browser_info (&browser_info);
+			_app_init_browser_info (&browser_info);
 
-			_r_tray_create (
-				hwnd,
-				&GUID_TrayIcon,
-				RM_TRAYICON,
-				hicon,
-				_r_app_getname (),
-				(_r_queuedlock_islocked (&lock_download) || _app_isupdatedownloaded (&browser_info)) ? FALSE : TRUE
-			);
+			is_hidden = (_r_queuedlock_islocked (&lock_download) || _app_isupdatedownloaded (&browser_info)) ? FALSE : TRUE;
+
+			_r_tray_create (hwnd, &GUID_TrayIcon, RM_TRAYICON, hicon, _r_app_getname (), is_hidden);
 
 			hmenu = GetMenu (hwnd);
 
-			_r_menu_checkitem (hmenu, IDM_RUNATEND, 0, MF_BYCOMMAND, _r_config_getboolean (L"ChromiumRunAtEnd", TRUE));
+			if (hmenu)
+				_r_menu_checkitem (hmenu, IDM_RUNATEND, 0, MF_BYCOMMAND, _r_config_getboolean (L"ChromiumRunAtEnd", TRUE));
 
 			_r_workqueue_queueitem (&workqueue, &_app_thread_check, &browser_info);
 
@@ -1698,7 +1600,7 @@ INT_PTR CALLBACK DlgProc (
 			// localize menu
 			HMENU hmenu;
 			HMENU hsubmenu;
-			UINT locale_id;
+			ULONG locale_id;
 
 			hmenu = GetMenu (hwnd);
 
@@ -1706,17 +1608,17 @@ INT_PTR CALLBACK DlgProc (
 			{
 				_r_menu_setitemtext (hmenu, 0, TRUE, _r_locale_getstring (IDS_FILE));
 				_r_menu_setitemtext (hmenu, 1, TRUE, _r_locale_getstring (IDS_SETTINGS));
+				_r_menu_setitemtext (hmenu, 2, TRUE, _r_locale_getstring (IDS_HELP));
 
 				hsubmenu = GetSubMenu (hmenu, 1);
 
 				if (hsubmenu)
 					_r_menu_setitemtextformat (hsubmenu, LANG_MENU, TRUE, L"%s (Language)", _r_locale_getstring (IDS_LANGUAGE));
 
-				_r_menu_setitemtext (hmenu, 2, TRUE, _r_locale_getstring (IDS_HELP));
 				_r_menu_setitemtextformat (hmenu, IDM_RUN, FALSE, L"%s...", _r_locale_getstring (IDS_RUN));
 				_r_menu_setitemtextformat (hmenu, IDM_OPEN, FALSE, L"%s...", _r_locale_getstring (IDS_OPEN));
-				_r_menu_setitemtext (hmenu, IDM_RUNATEND, FALSE, _r_locale_getstring (IDS_RUNATEND));
 				_r_menu_setitemtext (hmenu, IDM_EXIT, FALSE, _r_locale_getstring (IDS_EXIT));
+				_r_menu_setitemtext (hmenu, IDM_RUNATEND, FALSE, _r_locale_getstring (IDS_RUNATEND));
 				_r_menu_setitemtext (hmenu, IDM_WEBSITE, FALSE, _r_locale_getstring (IDS_WEBSITE));
 				_r_menu_setitemtextformat (hmenu, IDM_ABOUT, FALSE, L"%s\tF1", _r_locale_getstring (IDS_ABOUT));
 
@@ -1740,6 +1642,7 @@ INT_PTR CALLBACK DlgProc (
 			HICON hicon;
 			LONG dpi_value;
 			LONG icon_small;
+			BOOLEAN is_hidden;
 
 			dpi_value = _r_dc_gettaskbardpi ();
 
@@ -1747,14 +1650,9 @@ INT_PTR CALLBACK DlgProc (
 
 			hicon = _r_sys_loadsharedicon (_r_sys_getimagebase (), MAKEINTRESOURCE (IDI_MAIN), icon_small);
 
-			_r_tray_create (
-				hwnd,
-				&GUID_TrayIcon,
-				RM_TRAYICON,
-				hicon,
-				_r_app_getname (),
-				(_r_queuedlock_islocked (&lock_download) || _app_isupdatedownloaded (&browser_info)) ? FALSE : TRUE
-			);
+			is_hidden = (_r_queuedlock_islocked (&lock_download) || _app_isupdatedownloaded (&browser_info)) ? FALSE : TRUE;
+
+			_r_tray_create (hwnd, &GUID_TrayIcon, RM_TRAYICON, hicon, _r_app_getname (), is_hidden);
 
 			break;
 		}
@@ -1773,7 +1671,7 @@ INT_PTR CALLBACK DlgProc (
 
 			_r_tray_setinfo (hwnd, &GUID_TrayIcon, hicon, _r_app_getname ());
 
-			SendDlgItemMessage (hwnd, IDC_STATUSBAR, WM_SIZE, 0, 0);
+			SendDlgItemMessageW (hwnd, IDC_STATUSBAR, WM_SIZE, 0, 0);
 
 			break;
 		}
@@ -1784,7 +1682,7 @@ INT_PTR CALLBACK DlgProc (
 			{
 				if (_r_show_message (hwnd, MB_YESNO | MB_ICONQUESTION, NULL, _r_locale_getstring (IDS_QUESTION_STOP)) != IDYES)
 				{
-					SetWindowLongPtr (hwnd, DWLP_MSGRESULT, TRUE);
+					SetWindowLongPtrW (hwnd, DWLP_MSGRESULT, TRUE);
 
 					return TRUE;
 				}
@@ -1812,7 +1710,7 @@ INT_PTR CALLBACK DlgProc (
 
 		case WM_LBUTTONDOWN:
 		{
-			PostMessage (hwnd, WM_SYSCOMMAND, SC_MOVE | HTCAPTION, 0);
+			PostMessageW (hwnd, WM_SYSCOMMAND, SC_MOVE | HTCAPTION, 0);
 			break;
 		}
 
@@ -1829,7 +1727,7 @@ INT_PTR CALLBACK DlgProc (
 
 			SetLayeredWindowAttributes (hwnd, 0, (msg == WM_ENTERSIZEMOVE) ? 100 : 255, LWA_ALPHA);
 
-			SetCursor (LoadCursor (NULL, (msg == WM_ENTERSIZEMOVE) ? IDC_SIZEALL : IDC_ARROW));
+			SetCursor (LoadCursorW (NULL, (msg == WM_ENTERSIZEMOVE) ? IDC_SIZEALL : IDC_ARROW));
 
 			break;
 		}
@@ -1844,12 +1742,12 @@ INT_PTR CALLBACK DlgProc (
 			{
 				case TTN_GETDISPINFO:
 				{
-					LPNMTTDISPINFO lpnmdi;
+					LPNMTTDISPINFOW lpnmdi;
 					WCHAR buffer[1024];
 					PR_STRING string;
 					INT ctrl_id;
 
-					lpnmdi = (LPNMTTDISPINFO)lparam;
+					lpnmdi = (LPNMTTDISPINFOW)lparam;
 
 					if ((lpnmdi->uFlags & TTF_IDISHWND) == 0)
 						break;
@@ -1907,7 +1805,7 @@ INT_PTR CALLBACK DlgProc (
 
 				case WM_MBUTTONUP:
 				{
-					PostMessage (hwnd, WM_COMMAND, MAKEWPARAM (IDM_EXPLORE, 0), 0);
+					PostMessageW (hwnd, WM_COMMAND, MAKEWPARAM (IDM_EXPLORE, 0), 0);
 					break;
 				}
 
@@ -1924,7 +1822,7 @@ INT_PTR CALLBACK DlgProc (
 
 					SetForegroundWindow (hwnd); // don't touch
 
-					hmenu = LoadMenu (NULL, MAKEINTRESOURCE (IDM_TRAY));
+					hmenu = LoadMenuW (NULL, MAKEINTRESOURCE (IDM_TRAY));
 
 					if (!hmenu)
 						break;
@@ -1960,13 +1858,13 @@ INT_PTR CALLBACK DlgProc (
 		{
 			if (HIWORD (wparam) == 0 && LOWORD (wparam) >= IDX_LANGUAGE && LOWORD (wparam) <= IDX_LANGUAGE + _r_locale_getcount ())
 			{
-				HMENU hsubmenu;
+				HMENU hmenu;
 
-				hsubmenu = GetMenu (hwnd);
-				hsubmenu = GetSubMenu (hsubmenu, 1);
-				hsubmenu = GetSubMenu (hsubmenu, LANG_MENU);
+				hmenu = GetMenu (hwnd);
+				hmenu = GetSubMenu (hmenu, 1);
+				hmenu = GetSubMenu (hmenu, LANG_MENU);
 
-				_r_locale_apply (hsubmenu, LOWORD (wparam), IDX_LANGUAGE);
+				_r_locale_apply (hmenu, LOWORD (wparam), IDX_LANGUAGE);
 
 				return FALSE;
 			}
@@ -1983,7 +1881,7 @@ INT_PTR CALLBACK DlgProc (
 				case IDM_EXIT:
 				case IDM_TRAY_EXIT:
 				{
-					PostMessage (hwnd, WM_CLOSE, 0, 0);
+					PostMessageW (hwnd, WM_CLOSE, 0, 0);
 					break;
 				}
 
@@ -2078,7 +1976,7 @@ INT APIENTRY wWinMain (
 
 	if (cmdline)
 	{
-		init_browser_info (&browser_info);
+		_app_init_browser_info (&browser_info);
 
 		if (browser_info.is_hasurls && _r_fs_exists (browser_info.binary_path->buffer))
 		{
