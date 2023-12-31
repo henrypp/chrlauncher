@@ -40,13 +40,13 @@ BOOL CALLBACK activate_browser_window_callback (
 
 	GetWindowThreadProcessId (hwnd, &pid);
 
-	if (HandleToUlong (NtCurrentProcessId ()) == pid)
+	if (HandleToULong (NtCurrentProcessId ()) == pid)
 		return TRUE;
 
 	if (!_r_wnd_isvisible (hwnd))
 		return TRUE;
 
-	status = _r_sys_openprocess (UlongToHandle (pid), PROCESS_QUERY_LIMITED_INFORMATION, &hprocess);
+	status = _r_sys_openprocess (ULongToHandle (pid), PROCESS_QUERY_LIMITED_INFORMATION, &hprocess);
 
 	if (!NT_SUCCESS (status))
 		return TRUE;
@@ -518,7 +518,7 @@ VOID _app_openbrowser (
 
 	if (_r_obj_isstringempty (pbi->binary_path) || !_r_fs_exists (pbi->binary_path->buffer))
 	{
-		_r_show_errormessage (_r_app_gethwnd (), NULL, STATUS_NOT_FOUND, _r_obj_getstring (pbi->binary_path), NULL, NULL);
+		_r_show_errormessage (_r_app_gethwnd (), NULL, STATUS_NOT_FOUND, _r_obj_getstring (pbi->binary_path), TRUE);
 
 		return;
 	}
@@ -575,7 +575,7 @@ VOID _app_openbrowser (
 	status = _r_sys_createprocess (pbi->binary_path->buffer, args_string->buffer, NULL);
 
 	if (!NT_SUCCESS (status))
-		_r_show_errormessage (_r_app_gethwnd (), NULL, status, pbi->binary_path->buffer, NULL, NULL);
+		_r_show_errormessage (_r_app_gethwnd (), NULL, status, pbi->binary_path->buffer, TRUE);
 
 	_r_obj_dereference (args_string);
 }
@@ -703,7 +703,7 @@ BOOLEAN _app_checkupdate (
 				}
 				else
 				{
-					_r_show_errormessage (hwnd, NULL, PebLastError (), L"Could not download update.", NULL, NULL);
+					_r_show_errormessage (hwnd, NULL, PebLastError (), L"Could not download update.", FALSE);
 
 					*is_error_ptr = TRUE;
 				}
@@ -805,7 +805,7 @@ BOOLEAN _app_downloadupdate (
 		L".tmp"
 	);
 
-	_r_fs_deletefile (pbi->cache_path->buffer);
+	_r_fs_deletefile (pbi->cache_path->buffer, NULL);
 
 	_app_setstatus (hwnd, _r_locale_getstring (IDS_STATUS_DOWNLOAD), 0, 1);
 
@@ -845,9 +845,9 @@ BOOLEAN _app_downloadupdate (
 
 			if (!status)
 			{
-				_r_show_errormessage (hwnd, NULL, PebLastError (), pbi->download_url->buffer, NULL, NULL);
+				_r_show_errormessage (hwnd, NULL, PebLastError (), pbi->download_url->buffer, FALSE);
 
-				_r_fs_deletefile (pbi->cache_path->buffer);
+				_r_fs_deletefile (pbi->cache_path->buffer, NULL);
 
 				*is_error_ptr = TRUE;
 			}
@@ -863,7 +863,7 @@ BOOLEAN _app_downloadupdate (
 			if (proxy_string)
 				_r_obj_dereference (proxy_string);
 
-			_r_fs_deletefile (temp_file->buffer);
+			_r_fs_deletefile (temp_file->buffer, NULL);
 		}
 
 		_r_inet_close (hsession);
@@ -1331,7 +1331,7 @@ BOOLEAN _app_installupdate (
 	}
 
 	// remove cache file when zip cannot be opened
-	_r_fs_deletefile (pbi->cache_path->buffer);
+	_r_fs_deletefile (pbi->cache_path->buffer, NULL);
 
 	*is_error_ptr = status != SZ_OK;
 
@@ -1482,7 +1482,7 @@ VOID _app_thread_check (
 
 			if (!pbi->is_autodownload && !_app_isupdatedownloaded (pbi))
 			{
-				_r_tray_popupformat (hwnd, &GUID_TrayIcon, NIIF_INFO, _r_app_getname (), _r_locale_getstring (IDS_STATUS_FOUND), pbi->new_version->buffer); // just inform user
+				_r_tray_popupformat (hwnd, &GUID_TrayIcon, NIIF_ERROR, _r_app_getname (), _r_locale_getstring (IDS_STATUS_FOUND), pbi->new_version->buffer); // just inform user
 
 				locale_id = _app_getactionid (pbi);
 
@@ -1507,7 +1507,7 @@ VOID _app_thread_check (
 
 		if (is_haveerror)
 		{
-			_r_tray_popup (hwnd, &GUID_TrayIcon, NIIF_INFO, _r_app_getname (), _r_locale_getstring (IDS_STATUS_ERROR)); // just inform user
+			_r_tray_popup (hwnd, &GUID_TrayIcon, NIIF_ERROR, _r_app_getname (), _r_locale_getstring (IDS_STATUS_ERROR)); // just inform user
 
 			_app_setstatus (hwnd, _r_locale_getstring (IDS_STATUS_ERROR), 0, 0);
 		}
