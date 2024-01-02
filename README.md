@@ -11,7 +11,7 @@
 -------
 
 <p align="center">
-	<img src="https://www.henrypp.org/images/chrlauncher.png" />
+	<img src="/images/chrlauncher.png?cachefix" />
 </p>
 
 ### Description:
@@ -164,7 +164,7 @@ ChromiumLastCheck=0
 - [Is it possible to downgrade Chromium version?](https://github.com/henrypp/chrlauncher/issues/112#issuecomment-440940865)
 - [Fix for duplicated taskbar icons creation](https://github.com/henrypp/chrlauncher/issues/49#issuecomment-289285155)
 
-Website: [www.henrypp.org](https://www.henrypp.org)<br />
-Support: support@henrypp.org<br />
+- Website: [github.com/henrypp](https://github.com/henrypp)
+- Support: sforce5@mail.ru
 <br />
 (c) 2015-2024 Henry++
