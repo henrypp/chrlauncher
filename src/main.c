@@ -678,17 +678,17 @@ BOOLEAN _app_checkupdate (
 
 		if (url)
 		{
-			hsession = _r_inet_createsession (_r_app_getuseragent ());
+			proxy_string = _r_app_getproxyconfiguration ();
+
+			hsession = _r_inet_createsession (_r_app_getuseragent (), proxy_string);
 
 			if (hsession)
 			{
 				_r_inet_initializedownload (&download_info, NULL, NULL, NULL);
 
-				proxy_string = _r_app_getproxyconfiguration ();
-
-				if (_r_inet_begindownload (hsession, url, proxy_string, &download_info))
+				if (_r_inet_begindownload (hsession, url, &download_info))
 				{
-					string = download_info.u.string;
+					string = download_info.string;
 
 					if (_r_obj_isstringempty (string))
 					{
@@ -708,13 +708,13 @@ BOOLEAN _app_checkupdate (
 					*is_error_ptr = TRUE;
 				}
 
-				if (proxy_string)
-					_r_obj_dereference (proxy_string);
-
 				_r_inet_destroydownload (&download_info);
 
 				_r_inet_close (hsession);
 			}
+
+			if (proxy_string)
+				_r_obj_dereference (proxy_string);
 
 			_r_obj_dereference (url);
 		}
@@ -811,7 +811,9 @@ BOOLEAN _app_downloadupdate (
 
 	_r_queuedlock_acquireshared (&lock_download);
 
-	hsession = _r_inet_createsession (_r_app_getuseragent ());
+	proxy_string = _r_app_getproxyconfiguration ();
+
+	hsession = _r_inet_createsession (_r_app_getuseragent (), proxy_string);
 
 	if (hsession)
 	{
@@ -837,9 +839,8 @@ BOOLEAN _app_downloadupdate (
 		{
 			_r_inet_initializedownload (&download_info, hfile, &_app_downloadupdate_callback, hwnd);
 
-			proxy_string = _r_app_getproxyconfiguration ();
 
-			status = _r_inet_begindownload (hsession, pbi->download_url, proxy_string, &download_info);
+			status = _r_inet_begindownload (hsession, pbi->download_url, &download_info);
 
 			_r_inet_destroydownload (&download_info); // required!
 
@@ -860,9 +861,6 @@ BOOLEAN _app_downloadupdate (
 				is_success = TRUE;
 			}
 
-			if (proxy_string)
-				_r_obj_dereference (proxy_string);
-
 			_r_fs_deletefile (temp_file->buffer, NULL);
 		}
 
@@ -870,6 +868,9 @@ BOOLEAN _app_downloadupdate (
 	}
 
 	_r_queuedlock_releaseshared (&lock_download);
+
+	if (proxy_string)
+		_r_obj_dereference (proxy_string);
 
 	_r_obj_dereference (temp_file);
 
