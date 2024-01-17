@@ -651,6 +651,7 @@ BOOLEAN _app_checkupdate (
 	BOOLEAN is_newversion = FALSE;
 	BOOLEAN is_success = FALSE;
 	BOOLEAN is_exists;
+	NTSTATUS status;
 
 	*is_error_ptr = FALSE;
 
@@ -686,7 +687,9 @@ BOOLEAN _app_checkupdate (
 			{
 				_r_inet_initializedownload (&download_info, NULL, NULL, NULL);
 
-				if (_r_inet_begindownload (hsession, url, &download_info))
+				status = _r_inet_begindownload (hsession, url, &download_info);
+
+				if (status == STATUS_SUCCESS)
 				{
 					string = download_info.string;
 
@@ -703,7 +706,7 @@ BOOLEAN _app_checkupdate (
 				}
 				else
 				{
-					_r_show_errormessage (hwnd, NULL, PebLastError (), L"Could not download update.", FALSE);
+					_r_show_errormessage (hwnd, NULL, status, L"Could not download update.", FALSE);
 
 					*is_error_ptr = TRUE;
 				}
@@ -839,14 +842,13 @@ BOOLEAN _app_downloadupdate (
 		{
 			_r_inet_initializedownload (&download_info, hfile, &_app_downloadupdate_callback, hwnd);
 
-
 			status = _r_inet_begindownload (hsession, pbi->download_url, &download_info);
 
 			_r_inet_destroydownload (&download_info); // required!
 
-			if (!status)
+			if (status != STATUS_SUCCESS)
 			{
-				_r_show_errormessage (hwnd, NULL, PebLastError (), pbi->download_url->buffer, FALSE);
+				_r_show_errormessage (hwnd, NULL, status, pbi->download_url->buffer, FALSE);
 
 				_r_fs_deletefile (pbi->cache_path->buffer, NULL);
 
