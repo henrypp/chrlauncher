@@ -1303,7 +1303,7 @@ BOOLEAN _app_installupdate (
 
 	status = _r_fs_deletedirectory (directory->buffer, TRUE);
 
-	if (!NT_SUCCESS (status))
+	if (!NT_SUCCESS (status) && status != STATUS_OBJECT_NAME_NOT_FOUND)
 		_r_log (LOG_LEVEL_ERROR, NULL, L"_r_fs_deletedirectory", status, directory->buffer);
 
 	_r_path_getpathinfo (&pbi->binary_path->sr, NULL, &bin_name);
