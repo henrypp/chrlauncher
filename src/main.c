@@ -298,13 +298,20 @@ VOID _app_init_browser_info (
 		return;
 	}
 
-	_r_obj_movereference (&pbi->binary_dir, binary_dir);
-	_r_str_trimstring2 (pbi->binary_dir, L"\\", 0);
-
-	status = _r_path_search (pbi->binary_dir->buffer, NULL, &string);
+	status = _r_path_getfullpath (binary_dir->buffer, &string);
 
 	if (NT_SUCCESS (status))
+	{
 		_r_obj_movereference (&pbi->binary_dir, string);
+
+		_r_obj_dereference (binary_dir);
+	}
+	else
+	{
+		_r_obj_movereference (&pbi->binary_dir, binary_dir);
+	}
+
+	_r_str_trimstring2 (pbi->binary_dir, L"\\", 0);
 
 	string = _r_obj_concatstringrefs (
 		3,
@@ -1290,28 +1297,22 @@ BOOLEAN _app_installupdate (
 	_Out_ PBOOLEAN is_error_ptr
 )
 {
-	PR_STRING directory;
 	R_STRINGREF bin_name;
 	NTSTATUS status;
 
 	_r_queuedlock_acquireshared (&lock_download);
 
-	status = _r_path_getfullpath (pbi->binary_dir->buffer, &directory);
-
-	if (!NT_SUCCESS (status))
-		_r_log (LOG_LEVEL_ERROR, NULL, L"_r_path_getfullpath", status, pbi->binary_dir->buffer);
-
-	status = _r_fs_deletedirectory (directory->buffer, TRUE);
+	status = _r_fs_deletedirectory (pbi->binary_dir->buffer, TRUE);
 
 	if (!NT_SUCCESS (status) && status != STATUS_OBJECT_NAME_NOT_FOUND)
-		_r_log (LOG_LEVEL_ERROR, NULL, L"_r_fs_deletedirectory", status, directory->buffer);
+		_r_log (LOG_LEVEL_ERROR, NULL, L"_r_fs_deletedirectory", status, pbi->binary_dir->buffer);
 
 	_r_path_getpathinfo (&pbi->binary_path->sr, NULL, &bin_name);
 
 	_r_sys_setthreadexecutionstate (ES_SYSTEM_REQUIRED | ES_AWAYMODE_REQUIRED);
 
-	if (!_r_fs_exists (directory->buffer))
-		_r_fs_createdirectory (directory->buffer, 0);
+	if (!_r_fs_exists (pbi->binary_dir->buffer))
+		_r_fs_createdirectory (pbi->binary_dir->buffer, 0);
 
 	if (_app_unpack_zip (hwnd, pbi, &bin_name))
 	{
@@ -1343,9 +1344,6 @@ BOOLEAN _app_installupdate (
 	_r_sys_setthreadexecutionstate (ES_CONTINUOUS);
 
 	_app_setstatus (hwnd, NULL, 0, 0);
-
-	if (directory)
-		_r_obj_dereference (directory);
 
 	return (status == SZ_OK) ? TRUE : FALSE;
 }
