@@ -485,7 +485,7 @@ VOID _app_setstatus (
 		}
 	}
 
-	SendDlgItemMessageW (hwnd, IDC_PROGRESS, PBM_SETPOS, (WPARAM)(LONG)percent, 0);
+	_r_wnd_sendmessage (hwnd, IDC_PROGRESS, PBM_SETPOS, (WPARAM)(LONG)percent, 0);
 }
 
 BOOLEAN _app_browserisrunning (
@@ -1144,7 +1144,7 @@ BOOLEAN _app_unpack_zip (
 
 	mz_zip_archive zip_archive = {0};
 	mz_bool zip_bool;
-	PR_BYTE bytes;
+	PR_BYTE bytes = NULL;
 	PR_STRING root_dir_name = NULL;
 	R_BYTEREF path_sr;
 	PR_STRING path;
@@ -1263,11 +1263,7 @@ BOOLEAN _app_unpack_zip (
 				continue;
 
 			if (!mz_zip_reader_extract_to_file (&zip_archive, i, bytes->buffer, MZ_ZIP_FLAG_DO_NOT_SORT_CENTRAL_DIRECTORY))
-			{
-				_r_log (LOG_LEVEL_ERROR, NULL, L"mz_zip_reader_extract_to_file", PebLastError (), dest_path->buffer);
-
 				continue;
-			}
 
 			total_read += file_stat.m_uncomp_size;
 		}
@@ -1527,7 +1523,7 @@ VOID _app_thread_check (
 	}
 	else
 	{
-		PostMessageW (hwnd, WM_DESTROY, 0, 0);
+		_r_wnd_sendmessage (hwnd, 0, WM_DESTROY, 0, 0);
 	}
 }
 
@@ -1672,7 +1668,7 @@ INT_PTR CALLBACK DlgProc (
 
 			_r_tray_setinfo (hwnd, &GUID_TrayIcon, hicon, _r_app_getname ());
 
-			SendDlgItemMessageW (hwnd, IDC_STATUSBAR, WM_SIZE, 0, 0);
+			_r_wnd_sendmessage (hwnd, IDC_STATUSBAR, WM_SIZE, 0, 0);
 
 			break;
 		}
@@ -1711,7 +1707,7 @@ INT_PTR CALLBACK DlgProc (
 
 		case WM_LBUTTONDOWN:
 		{
-			PostMessageW (hwnd, WM_SYSCOMMAND, SC_MOVE | HTCAPTION, 0);
+			_r_wnd_sendmessage (hwnd, 0, WM_SYSCOMMAND, SC_MOVE | HTCAPTION, 0);
 			break;
 		}
 
@@ -1806,7 +1802,7 @@ INT_PTR CALLBACK DlgProc (
 
 				case WM_MBUTTONUP:
 				{
-					PostMessageW (hwnd, WM_COMMAND, MAKEWPARAM (IDM_EXPLORE, 0), 0);
+					_r_wnd_sendmessage (hwnd, 0, WM_COMMAND, MAKEWPARAM (IDM_EXPLORE, 0), 0);
 					break;
 				}
 
@@ -1882,7 +1878,7 @@ INT_PTR CALLBACK DlgProc (
 				case IDM_EXIT:
 				case IDM_TRAY_EXIT:
 				{
-					PostMessageW (hwnd, WM_CLOSE, 0, 0);
+					_r_wnd_sendmessage (hwnd, 0, WM_CLOSE, 0, 0);
 					break;
 				}
 
