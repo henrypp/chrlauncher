@@ -194,23 +194,23 @@ VOID _app_parse_args (
 			{
 				key2 = PTR_ADD_OFFSET (key, sizeof (WCHAR));
 
-				if (_r_str_compare (key2, 12, L"autodownload", 12) == 0)
+				if (_r_str_compare (key2, L"autodownload", 12) == 0)
 				{
 					pbi->is_autodownload = TRUE;
 				}
-				else if (_r_str_compare (key2, 12, L"bringtofront", 12) == 0)
+				else if (_r_str_compare (key2, L"bringtofront", 12) == 0)
 				{
 					pbi->is_bringtofront = TRUE;
 				}
-				else if (_r_str_compare (key2, 10, L"forcecheck", 10) == 0)
+				else if (_r_str_compare (key2, L"forcecheck", 10) == 0)
 				{
 					pbi->is_forcecheck = TRUE;
 				}
-				else if (_r_str_compare (key2, 4, L"wait", 4) == 0)
+				else if (_r_str_compare (key2, L"wait", 4) == 0)
 				{
 					pbi->is_waitdownloadend = TRUE;
 				}
-				else if (_r_str_compare (key2, 6, L"update", 6) == 0)
+				else if (_r_str_compare (key2, L"update", 6) == 0)
 				{
 					pbi->is_onlyupdate = TRUE;
 				}
@@ -218,10 +218,10 @@ VOID _app_parse_args (
 				{
 					if (!pbi->is_opennewwindow)
 					{
-						if (_r_str_compare (key, 8, L"-new-tab", 8) == 0 ||
-							_r_str_compare (key, 11, L"-new-window", 11) == 0 ||
-							_r_str_compare (key, 12, L"--new-window", 12) == 0 ||
-							_r_str_compare (key, 13, L"-new-instance", 13) == 0)
+						if (_r_str_compare (key, L"-new-tab", 8) == 0 ||
+							_r_str_compare (key, L"-new-window", 11) == 0 ||
+							_r_str_compare (key, L"--new-window", 12) == 0 ||
+							_r_str_compare (key, L"-new-instance", 13) == 0)
 						{
 							pbi->is_opennewwindow = TRUE;
 						}
@@ -575,7 +575,7 @@ VOID _app_openbrowser (
 		pbi->is_hasurls = FALSE; // reset
 	}
 
-	_r_obj_trimstringtonullterminator (args_string);
+	_r_obj_trimstringtonullterminator (&args_string->sr);
 
 	pbi->is_opennewwindow = FALSE;
 
