@@ -270,7 +270,7 @@ VOID _app_init_browser_info (
 		PR_STRINGREF_INIT (L"chrome.exe"), // default
 	};
 
-	static R_STRINGREF separator_sr = PR_STRINGREF_INIT (L"\\");
+	R_STRINGREF separator_sr = PR_STRINGREF_INIT (L"\\");
 
 	PR_STRING binary_dir;
 	PR_STRING binary_name;
@@ -281,13 +281,13 @@ VOID _app_init_browser_info (
 	USHORT architecture;
 	NTSTATUS status;
 
-	// Reset
+	// reset
 	pbi->is_hasurls = FALSE;
 
 	_r_obj_clearreference (&pbi->urls_str);
 	_r_obj_clearreference (&pbi->args_str);
 
-	// Configure paths
+	// configure paths
 	binary_dir = _r_config_getstringexpand (L"ChromiumDirectory", L".\\bin");
 	binary_name = _r_config_getstring (L"ChromiumBinary", L"chrome.exe");
 
@@ -841,7 +841,7 @@ BOOLEAN _app_downloadupdate (
 
 		if (!NT_SUCCESS (status))
 		{
-			_r_log (LOG_LEVEL_ERROR, &GUID_TrayIcon, L"_r_fs_createfile", status, temp_file->buffer);
+			_r_show_errormessage (hwnd, NULL, status, temp_file->buffer, TRUE);
 
 			*is_error_ptr = TRUE;
 		}
@@ -865,7 +865,7 @@ BOOLEAN _app_downloadupdate (
 			{
 				SAFE_DELETE_REFERENCE (pbi->download_url); // clear download url
 
-				_r_fs_movefile (temp_file->buffer, pbi->cache_path->buffer);
+				_r_fs_movefile (temp_file->buffer, pbi->cache_path->buffer, FALSE);
 
 				is_success = TRUE;
 			}
@@ -1142,6 +1142,7 @@ BOOLEAN _app_unpack_zip (
 {
 	static R_STRINGREF separator_sr = PR_STRINGREF_INIT (L"\\");
 
+	mz_zip_archive_file_stat file_stat;
 	mz_zip_archive zip_archive = {0};
 	mz_bool zip_bool;
 	PR_BYTE bytes = NULL;
@@ -1150,7 +1151,6 @@ BOOLEAN _app_unpack_zip (
 	PR_STRING path;
 	PR_STRING dest_path;
 	PR_STRING sub_dir;
-	mz_zip_archive_file_stat file_stat;
 	ULONG64 total_size = 0;
 	ULONG64 total_read = 0; // this is our progress so far
 	ULONG_PTR length;
@@ -1317,18 +1317,11 @@ BOOLEAN _app_installupdate (
 	else
 	{
 		status = _app_unpack_7zip (hwnd, pbi, &bin_name);
-
-		if (status == SZ_OK)
-		{
-			_r_obj_movereference (&pbi->current_version, _r_res_queryversionstring (pbi->binary_path->buffer));
-		}
-		else
-		{
-			_r_log (LOG_LEVEL_ERROR, NULL, TEXT (__FUNCTION__), status, pbi->cache_path->buffer);
-
-			_r_fs_deletedirectory (pbi->binary_dir->buffer, FALSE); // no recurse
-		}
 	}
+
+	// get new version
+	if (status == SZ_OK)
+		_r_obj_movereference (&pbi->current_version, _r_res_queryversionstring (pbi->binary_path->buffer));
 
 	// remove cache file when zip cannot be opened
 	_r_fs_deletefile (pbi->cache_path->buffer, NULL);
