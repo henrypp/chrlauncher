@@ -33,7 +33,7 @@ BEGIN
 	END
 	POPUP " "
 	BEGIN
-		MENUITEM " ", IDM_RUNATEND
+		MENUITEM " ", IDM_RUNATEND_CHK
 		MENUITEM SEPARATOR
 		POPUP " "
 		BEGIN
@@ -133,7 +133,8 @@ BEGIN
 
 	IDS_CLOSE "Close"
 
-	IDS_RUNATEND "Start browser at end"
+	IDS_RUNATEND_CHK "Start browser at end"
+	IDS_DARKMODE_CHK "Use dark theme"
 END
 
 //
