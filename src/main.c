@@ -1569,7 +1569,10 @@ INT_PTR CALLBACK DlgProc (
 			hmenu = GetMenu (hwnd);
 
 			if (hmenu)
-				_r_menu_checkitem (hmenu, IDM_RUNATEND, 0, MF_BYCOMMAND, _r_config_getboolean (L"ChromiumRunAtEnd", TRUE));
+			{
+				_r_menu_checkitem (hmenu, IDM_RUNATEND_CHK, 0, MF_BYCOMMAND, _r_config_getboolean (L"ChromiumRunAtEnd", TRUE));
+				_r_menu_checkitem (hmenu, IDM_DARKMODE_CHK, 0, MF_BYCOMMAND, _r_theme_isenabled ());
+			}
 
 			_r_workqueue_queueitem (&workqueue, &_app_thread_check, &browser_info);
 
@@ -1608,7 +1611,8 @@ INT_PTR CALLBACK DlgProc (
 				_r_menu_setitemtextformat (hmenu, IDM_RUN, FALSE, L"%s...", _r_locale_getstring (IDS_RUN));
 				_r_menu_setitemtextformat (hmenu, IDM_OPEN, FALSE, L"%s...", _r_locale_getstring (IDS_OPEN));
 				_r_menu_setitemtext (hmenu, IDM_EXIT, FALSE, _r_locale_getstring (IDS_EXIT));
-				_r_menu_setitemtext (hmenu, IDM_RUNATEND, FALSE, _r_locale_getstring (IDS_RUNATEND));
+				_r_menu_setitemtext (hmenu, IDM_RUNATEND_CHK, FALSE, _r_locale_getstring (IDS_RUNATEND_CHK));
+				_r_menu_setitemtext (hmenu, IDM_DARKMODE_CHK, FALSE, _r_locale_getstring (IDS_DARKMODE_CHK));
 				_r_menu_setitemtext (hmenu, IDM_WEBSITE, FALSE, _r_locale_getstring (IDS_WEBSITE));
 				_r_menu_setitemtextformat (hmenu, IDM_ABOUT, FALSE, L"%s\tF1", _r_locale_getstring (IDS_ABOUT));
 
@@ -1846,6 +1850,9 @@ INT_PTR CALLBACK DlgProc (
 
 		case WM_COMMAND:
 		{
+			INT ctrl_id = LOWORD (wparam);
+			INT notify_code = HIWORD (wparam);
+
 			if (HIWORD (wparam) == 0 && LOWORD (wparam) >= IDX_LANGUAGE && LOWORD (wparam) <= IDX_LANGUAGE + _r_locale_getcount ())
 			{
 				HMENU hmenu;
@@ -1906,13 +1913,28 @@ INT_PTR CALLBACK DlgProc (
 					break;
 				}
 
-				case IDM_RUNATEND:
+				case IDM_RUNATEND_CHK:
 				{
 					BOOLEAN new_val;
 
 					new_val = !_r_config_getboolean (L"ChromiumRunAtEnd", TRUE);
 
+					_r_menu_checkitem (GetMenu (hwnd), ctrl_id, 0, MF_BYCOMMAND, new_val);
+
 					_r_config_setboolean (L"ChromiumRunAtEnd", new_val);
+
+					break;
+				}
+
+				case IDM_DARKMODE_CHK:
+				{
+					BOOLEAN new_val;
+
+					new_val = !_r_theme_isenabled ();
+
+					_r_menu_checkitem (GetMenu (hwnd), ctrl_id, 0, MF_BYCOMMAND, new_val);
+
+					_r_theme_enable (hwnd, new_val);
 
 					break;
 				}
