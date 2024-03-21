@@ -45,6 +45,7 @@ typedef struct _BROWSER_INFORMATION
 	BOOLEAN is_bringtofront;
 	BOOLEAN is_forcecheck;
 	BOOLEAN is_hasurls;
+	BOOLEAN is_onlystart;
 	BOOLEAN is_onlyupdate;
 	BOOLEAN is_opennewwindow;
 	BOOLEAN is_waitdownloadend;

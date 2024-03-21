@@ -210,6 +210,10 @@ VOID _app_parse_args (
 				{
 					pbi->is_waitdownloadend = TRUE;
 				}
+				else if (_r_str_compare(key2, L"start", 5) == 0)
+				{
+					pbi->is_onlystart = TRUE;
+				}
 				else if (_r_str_compare (key2, L"update", 6) == 0)
 				{
 					pbi->is_onlyupdate = TRUE;
@@ -421,6 +425,9 @@ VOID _app_init_browser_info (
 
 	if (!pbi->is_waitdownloadend)
 		pbi->is_waitdownloadend = _r_config_getboolean (L"ChromiumWaitForDownloadEnd", TRUE);
+
+	if (!pbi->is_onlystart)
+		pbi->is_onlystart = _r_config_getboolean(L"ChromiumStartOnly", FALSE);
 
 	if (!pbi->is_onlyupdate)
 		pbi->is_onlyupdate = _r_config_getboolean (L"ChromiumUpdateOnly", FALSE);
@@ -1986,16 +1993,18 @@ INT APIENTRY wWinMain (
 
 	_r_fs_setcurrentdirectory (path);
 
-	if (cmdline)
+	_app_init_browser_info(&browser_info);
+
+	if (browser_info.is_onlystart || browser_info.is_hasurls)
 	{
-		_app_init_browser_info (&browser_info);
-
-		if (browser_info.is_hasurls && _r_fs_exists (browser_info.binary_path->buffer))
+		if (_r_fs_exists(browser_info.binary_path->buffer))
 		{
-			_app_openbrowser (&browser_info);
-
+			_app_openbrowser(&browser_info);
 			return ERROR_SUCCESS;
 		}
+
+		if (browser_info.is_onlystart)
+			return ERROR_APP_INIT_FAILURE;
 	}
 
 	hwnd = _r_app_createwindow (hinst, MAKEINTRESOURCE (IDD_MAIN), MAKEINTRESOURCE (IDI_MAIN), &DlgProc);
