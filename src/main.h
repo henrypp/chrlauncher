@@ -11,7 +11,7 @@
 DEFINE_GUID (GUID_TrayIcon, 0xead41630, 0x90bb, 0x4836, 0x82, 0x41, 0xae, 0xae, 0x12, 0xe8, 0x69, 0x12);
 
 // config
-#define LANG_MENU 2
+#define LANG_MENU 3
 
 #define FOOTER_STRING L"<a href=\"https://github.com/henrypp\">github.com/henrypp</a>\r\n" \
 	L"<a href=\"https://chromium.woolyss.com\">chromium.woolyss.com</a>"
