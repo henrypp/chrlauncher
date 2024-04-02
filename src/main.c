@@ -43,7 +43,7 @@ BOOL CALLBACK activate_browser_window_callback (
 	if (HandleToULong (NtCurrentProcessId ()) == pid)
 		return TRUE;
 
-	if (!_r_wnd_isvisible (hwnd))
+	if (!_r_wnd_isvisible (hwnd, FALSE))
 		return TRUE;
 
 	status = _r_sys_openprocess (ULongToHandle (pid), PROCESS_QUERY_LIMITED_INFORMATION, &hprocess);
@@ -1984,7 +1984,7 @@ INT APIENTRY wWinMain (
 
 	path = _r_app_getdirectory ();
 
-	_r_fs_setcurrentdirectory (path);
+	_r_fs_setcurrentdirectory (&path->sr);
 
 	if (cmdline)
 	{
