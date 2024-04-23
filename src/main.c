@@ -243,7 +243,7 @@ VOID _app_parse_args (
 	{
 		pbi->urls_str = _r_obj_createstring (_r_sys_getimagecommandline () + first_arg_length + 2);
 
-		_r_str_trimstring2 (pbi->urls_str, L" ", 0);
+		_r_str_trimstring2 (&pbi->urls_str->sr, L" ", 0);
 	}
 
 	LocalFree (arga);
@@ -311,7 +311,7 @@ VOID _app_init_browser_info (
 		_r_obj_movereference (&pbi->binary_dir, binary_dir);
 	}
 
-	_r_str_trimstring2 (pbi->binary_dir, L"\\", 0);
+	_r_str_trimstring2 (&pbi->binary_dir->sr, L"\\", 0);
 
 	string = _r_obj_concatstringrefs (
 		3,
@@ -1007,7 +1007,7 @@ SRes _app_unpack_7zip (
 			{
 				_r_obj_movereference (&root_dir_name, _r_obj_createstring_ex (path.buffer, path.length - bin_name->length));
 
-				_r_str_trimstring (root_dir_name, &separator_sr, 0);
+				_r_str_trimstring (&root_dir_name->sr, &separator_sr, 0);
 			}
 		}
 	}
@@ -1022,7 +1022,7 @@ SRes _app_unpack_7zip (
 		_r_obj_initializestringref_ex (&path, (LPWSTR)temp_buff, (length - 1) * sizeof (WCHAR));
 
 		_r_str_replacechar (&path, L'/', OBJ_NAME_PATH_SEPARATOR);
-		_r_str_trimstringref (&path, &separator_sr, 0);
+		_r_str_trimstring (&path, &separator_sr, 0);
 
 		// skip non-root dirs
 		if (!_r_obj_isstringempty (root_dir_name) && (path.length <= root_dir_name->length || !_r_str_isstartswith (&path, &root_dir_name->sr, TRUE)))
@@ -1205,7 +1205,7 @@ BOOLEAN _app_unpack_zip (
 			{
 				_r_obj_movereference (&root_dir_name, _r_obj_createstring_ex (path->buffer, path->length - bin_name->length));
 
-				_r_str_trimstring (root_dir_name, &separator_sr, 0);
+				_r_str_trimstring (&root_dir_name->sr, &separator_sr, 0);
 			}
 
 			_r_obj_dereference (path);
@@ -1225,7 +1225,7 @@ BOOLEAN _app_unpack_zip (
 			continue;
 
 		_r_str_replacechar (&path->sr, L'/', OBJ_NAME_PATH_SEPARATOR);
-		_r_str_trimstring (path, &separator_sr, 0);
+		_r_str_trimstring (&path->sr, &separator_sr, 0);
 
 		// skip non-root dirs
 		if (!_r_obj_isstringempty (root_dir_name) && (path->length <= root_dir_name->length || !_r_str_isstartswith (&path->sr, &root_dir_name->sr, TRUE)))
