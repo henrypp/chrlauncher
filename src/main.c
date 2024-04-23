@@ -103,12 +103,15 @@ VOID _app_update_browser_info (
 	_In_ PBROWSER_INFORMATION pbi
 )
 {
-	PR_STRING date_dormat;
 	PR_STRING localized_string;
+	PR_STRING date_dormat;
+	PR_STRING string;
 	R_STRINGREF empty_string;
 	HDWP hdefer;
 
-	_r_obj_initializestringref2 (&empty_string, _r_locale_getstring_ex (IDS_STATUS_NOTFOUND));
+	string = _r_locale_getstring_ex (IDS_STATUS_NOTFOUND);
+
+	_r_obj_initializestringref2 (&empty_string, &string->sr);
 
 	date_dormat = _r_format_unixtime (pbi->timestamp, FDTF_SHORTDATE | FDTF_SHORTTIME);
 
@@ -355,7 +358,7 @@ VOID _app_init_browser_info (
 
 	_r_obj_dereference (binary_name);
 
-	string = _r_format_string (L"%s\\%s_%" TEXT (PR_ULONG) L".bin", _r_sys_gettempdirectory ()->buffer, _r_app_getnameshort (), _r_str_gethash2 (pbi->binary_path, TRUE));
+	string = _r_format_string (L"%s\\%s_%" TEXT (PR_ULONG) L".bin", _r_sys_gettempdirectory ()->buffer, _r_app_getnameshort (), _r_str_gethash2 (&pbi->binary_path->sr, TRUE));
 
 	_r_obj_movereference (&pbi->cache_path, string);
 
@@ -694,7 +697,7 @@ BOOLEAN _app_checkupdate (
 			{
 				_r_inet_initializedownload (&download_info, NULL, NULL, NULL);
 
-				status = _r_inet_begindownload (hsession, url, &download_info);
+				status = _r_inet_begindownload (hsession, &url->sr, &download_info);
 
 				if (status == STATUS_SUCCESS)
 				{
@@ -849,7 +852,7 @@ BOOLEAN _app_downloadupdate (
 		{
 			_r_inet_initializedownload (&download_info, hfile, &_app_downloadupdate_callback, hwnd);
 
-			status = _r_inet_begindownload (hsession, pbi->download_url, &download_info);
+			status = _r_inet_begindownload (hsession, &pbi->download_url->sr, &download_info);
 
 			_r_inet_destroydownload (&download_info); // required!
 
