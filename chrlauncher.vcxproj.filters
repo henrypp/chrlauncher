@@ -66,9 +66,6 @@
     <ClCompile Include="src\lzma\Bcj2Enc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\lzma\Blake2s.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\lzma\Bra.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -78,9 +75,6 @@
     <ClCompile Include="src\lzma\BraIA64.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\lzma\BwtSort.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\lzma\CpuArch.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -88,9 +82,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\lzma\DllSecur.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\lzma\HuffEnc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\lzma\LzFind.c">
@@ -135,28 +126,10 @@
     <ClCompile Include="src\lzma\Ppmd7.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\lzma\Ppmd7aDec.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\lzma\Ppmd7Dec.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\lzma\Ppmd7Enc.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\lzma\Ppmd8.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\lzma\Ppmd8Dec.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\lzma\Ppmd8Enc.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\lzma\Sha1.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\lzma\Sha1Opt.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\lzma\Sha256.c">
@@ -239,9 +212,6 @@
     <ClInclude Include="src\lzma\7zTypes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\lzma\7zVersion.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\lzma\Aes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -249,9 +219,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\lzma\Bcj2.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\lzma\Blake2.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\lzma\Bra.h">
@@ -317,16 +284,10 @@
     <ClInclude Include="src\lzma\Ppmd7.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\lzma\Ppmd8.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\lzma\Precomp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\lzma\RotateDefs.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\lzma\Sha1.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\lzma\Sha256.h">
