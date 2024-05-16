@@ -521,6 +521,7 @@ VOID _app_openbrowser (
 )
 {
 	PR_STRING args_string;
+	PR_STRING cmdline;
 	LPWSTR ptr;
 	ULONG_PTR args_length = 0;
 	BOOLEAN is_running;
@@ -528,7 +529,7 @@ VOID _app_openbrowser (
 
 	if (_r_obj_isstringempty (pbi->binary_path) || !_r_fs_exists (pbi->binary_path->buffer))
 	{
-		_r_show_errormessage (_r_app_gethwnd (), NULL, STATUS_NOT_FOUND, _r_obj_getstring (pbi->binary_path), TRUE);
+		_r_show_errormessage (_r_app_gethwnd (), NULL, STATUS_OBJECT_PATH_NOT_FOUND, _r_obj_getstring (pbi->binary_path), TRUE);
 
 		return;
 	}
@@ -582,12 +583,15 @@ VOID _app_openbrowser (
 
 	pbi->is_opennewwindow = FALSE;
 
-	status = _r_sys_createprocess (pbi->binary_path->buffer, args_string->buffer, NULL);
+	cmdline = _r_format_string (L"\"%s\" %s", pbi->binary_path->buffer, args_string->buffer);
+
+	status = _r_sys_createprocess (pbi->binary_path->buffer, cmdline->buffer, pbi->binary_dir->buffer);
 
 	if (!NT_SUCCESS (status))
 		_r_show_errormessage (_r_app_gethwnd (), NULL, status, pbi->binary_path->buffer, TRUE);
 
 	_r_obj_dereference (args_string);
+	_r_obj_dereference (cmdline);
 }
 
 BOOLEAN _app_ishaveupdate (
@@ -1432,8 +1436,11 @@ VOID _app_thread_check (
 				if (pbi->is_bringtofront)
 					_r_wnd_toggle (hwnd, TRUE); // show window
 
-				if (is_exists && !pbi->is_onlyupdate && !pbi->is_waitdownloadend && !_app_isupdatedownloaded (pbi))
-					_app_openbrowser (pbi);
+				if (_r_config_getboolean (L"ChromiumRunAtEnd", TRUE))
+				{
+					if (is_exists && !pbi->is_onlyupdate && !pbi->is_waitdownloadend && !_app_isupdatedownloaded (pbi))
+						_app_openbrowser (pbi);
+				}
 
 				_r_progress_setmarquee (hwnd, IDC_PROGRESS, FALSE);
 
@@ -1508,7 +1515,7 @@ VOID _app_thread_check (
 		is_stayopen = TRUE;
 	}
 
-	if (!pbi->is_onlyupdate)
+	if (_r_config_getboolean (L"ChromiumRunAtEnd", TRUE) && !pbi->is_onlyupdate)
 		_app_openbrowser (pbi);
 
 	_r_queuedlock_releaseshared (&lock_thread);
@@ -1578,9 +1585,6 @@ INT_PTR CALLBACK DlgProc (
 			}
 
 			_r_workqueue_queueitem (&workqueue, &_app_thread_check, &browser_info);
-
-			if (!browser_info.is_waitdownloadend && !browser_info.is_onlyupdate && _r_fs_exists (browser_info.binary_path->buffer) && !_app_isupdatedownloaded (&browser_info))
-				_app_openbrowser (&browser_info);
 
 			break;
 		}
@@ -1694,8 +1698,11 @@ INT_PTR CALLBACK DlgProc (
 		{
 			_r_tray_destroy (hwnd, &GUID_TrayIcon);
 
-			if (browser_info.is_waitdownloadend && !browser_info.is_onlyupdate)
-				_app_openbrowser (&browser_info);
+			if (_r_config_getboolean (L"ChromiumRunAtEnd", TRUE))
+			{
+				if (browser_info.is_waitdownloadend && !browser_info.is_onlyupdate)
+					_app_openbrowser (&browser_info);
+			}
 
 			//_r_workqueue_waitforfinish (&workqueue);
 			//_r_workqueue_destroy (&workqueue);
