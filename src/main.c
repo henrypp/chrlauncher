@@ -105,13 +105,13 @@ VOID _app_update_browser_info (
 {
 	PR_STRING localized_string;
 	PR_STRING date_dormat;
-	PR_STRING string;
+	LPWSTR string;
 	R_STRINGREF empty_string;
 	HDWP hdefer;
 
-	string = _r_locale_getstring_ex (IDS_STATUS_NOTFOUND);
+	string = _r_locale_getstring (IDS_STATUS_NOTFOUND);
 
-	_r_obj_initializestringref2 (&empty_string, &string->sr);
+	_r_obj_initializestringref (&empty_string, string);
 
 	date_dormat = _r_format_unixtime (pbi->timestamp, FDTF_SHORTDATE | FDTF_SHORTTIME);
 
@@ -180,7 +180,7 @@ VOID _app_parse_args (
 	ULONG_PTR first_arg_length = 0;
 	INT numargs;
 
-	arga = CommandLineToArgvW (_r_sys_getimagecommandline (), &numargs);
+	arga = CommandLineToArgvW (_r_sys_getcommandline (), &numargs);
 
 	if (!arga)
 		return;
@@ -244,7 +244,7 @@ VOID _app_parse_args (
 
 	if (pbi->is_hasurls)
 	{
-		pbi->urls_str = _r_obj_createstring (_r_sys_getimagecommandline () + first_arg_length + 2);
+		pbi->urls_str = _r_obj_createstring (_r_sys_getcommandline () + first_arg_length + 2);
 
 		_r_str_trimstring2 (&pbi->urls_str->sr, L" ", 0);
 	}
@@ -912,7 +912,7 @@ SRes _app_unpack_7zip (
 	CLookToRead2 look_stream;
 	CSzArEx db;
 	ULONG_PTR temp_size = 0;
-	PUSHORT temp_buff = NULL;
+	LPWSTR temp_buff = NULL;
 
 	// if you need cache, use these 3 variables.
 	// if you use external function, you can make these variable as static.
@@ -933,13 +933,13 @@ SRes _app_unpack_7zip (
 	ULONG_PTR processed_size;
 	ULONG_PTR length;
 	BOOLEAN is_success = FALSE;
-	SRes status;
+	LONG status;
 
 	status = InFile_OpenW (&archive_stream.file, pbi->cache_path->buffer);
 
 	if (status != ERROR_SUCCESS)
 	{
-		_r_log (LOG_LEVEL_ERROR, NULL, L"InFile_OpenW", status, pbi->cache_path->buffer);
+		_r_show_errormessage (hwnd, NULL, status, pbi->cache_path->buffer, ET_WINDOWS);
 
 		return status;
 	}
@@ -953,7 +953,7 @@ SRes _app_unpack_7zip (
 
 	if (!look_stream.buf)
 	{
-		_r_log (LOG_LEVEL_ERROR, NULL, L"ISzAlloc_Alloc", SZ_ERROR_MEM, NULL);
+		_r_show_errormessage (hwnd, NULL, STATUS_NO_MEMORY, L"ISzAlloc_Alloc", ET_NATIVE);
 
 		goto CleanupExit;
 	}
@@ -969,13 +969,13 @@ SRes _app_unpack_7zip (
 
 	if (status != SZ_OK)
 	{
-		_r_log (LOG_LEVEL_ERROR, NULL, L"SzArEx_Open", status, pbi->cache_path->buffer);
+		_r_show_errormessage (hwnd, NULL, status, L"SzArEx_Open", ET_NONE);
 
 		goto CleanupExit;
 	}
 
 	// find root directory which contains main executable
-	for (UInt32 i = 0; i < db.NumFiles; i++)
+	for (ULONG_PTR i = 0; i < db.NumFiles; i++)
 	{
 		if (SzArEx_IsDir (&db, i))
 			continue;
@@ -1004,9 +1004,9 @@ SRes _app_unpack_7zip (
 			if (!length)
 				continue;
 
-			_r_obj_initializestringref_ex (&path, (LPWSTR)temp_buff, (length - 1) * sizeof (WCHAR));
+			_r_obj_initializestringref_ex (&path, temp_buff, (length - 1) * sizeof (WCHAR));
 
-			_r_str_replacechar (&path, L'/', OBJ_NAME_PATH_SEPARATOR);
+			_r_str_replacechar (&path, OBJ_NAME_ALTPATH_SEPARATOR, OBJ_NAME_PATH_SEPARATOR);
 
 			length = path.length - bin_name->length - separator_sr.length;
 
@@ -1019,16 +1019,17 @@ SRes _app_unpack_7zip (
 		}
 	}
 
-	for (UInt32 i = 0; i < db.NumFiles; i++)
+	for (ULONG_PTR i = 0; i < db.NumFiles; i++)
 	{
 		length = SzArEx_GetFileNameUtf16 (&db, i, temp_buff);
 
 		if (!length)
 			continue;
 
-		_r_obj_initializestringref_ex (&path, (LPWSTR)temp_buff, (length - 1) * sizeof (WCHAR));
+		_r_obj_initializestringref_ex (&path, temp_buff, (length - 1) * sizeof (WCHAR));
 
-		_r_str_replacechar (&path, L'/', OBJ_NAME_PATH_SEPARATOR);
+		_r_str_replacechar (&path, OBJ_NAME_ALTPATH_SEPARATOR, OBJ_NAME_PATH_SEPARATOR);
+
 		_r_str_trimstring (&path, &separator_sr, 0);
 
 		// skip non-root dirs
@@ -1069,11 +1070,11 @@ SRes _app_unpack_7zip (
 			offset = 0;
 			out_size_processed = 0;
 
-			status = SzArEx_Extract (&db, &look_stream.vt, i, &block_index, &out_buffer, &out_buffer_size, &offset, &out_size_processed, &alloc_imp, &alloc_temp_imp);
+			status = SzArEx_Extract (&db, &look_stream.vt, (UINT)i, &block_index, &out_buffer, &out_buffer_size, &offset, &out_size_processed, &alloc_imp, &alloc_temp_imp);
 
 			if (status != SZ_OK)
 			{
-				_r_log (LOG_LEVEL_ERROR, NULL, L"SzArEx_Extract", status, dest_path->buffer);
+				_r_show_errormessage (hwnd, NULL, status, L"SzArEx_Extract", ET_NONE);
 			}
 			else
 			{
@@ -1082,7 +1083,7 @@ SRes _app_unpack_7zip (
 				if (status != SZ_OK)
 				{
 					if (status != SZ_ERROR_CRC)
-						_r_log (LOG_LEVEL_ERROR, NULL, L"OutFile_OpenW", status, dest_path->buffer);
+						_r_show_errormessage (hwnd, NULL, status, L"OutFile_OpenW", ET_NONE);
 				}
 				else
 				{
@@ -1092,7 +1093,7 @@ SRes _app_unpack_7zip (
 
 					if (status != SZ_OK || processed_size != out_size_processed)
 					{
-						_r_log (LOG_LEVEL_ERROR, NULL, L"File_Write", status, dest_path->buffer);
+						_r_show_errormessage (hwnd, NULL, status, L"File_Write", ET_NONE);
 					}
 					else
 					{
@@ -1151,8 +1152,6 @@ BOOLEAN _app_unpack_zip (
 
 	mz_zip_archive_file_stat file_stat;
 	mz_zip_archive zip_archive = {0};
-	mz_bool zip_bool;
-	PR_BYTE bytes = NULL;
 	PR_STRING root_dir_name = NULL;
 	R_BYTEREF path_sr;
 	PR_STRING path;
@@ -1161,32 +1160,21 @@ BOOLEAN _app_unpack_zip (
 	ULONG64 total_size = 0;
 	ULONG64 total_read = 0; // this is our progress so far
 	ULONG_PTR length;
-	INT total_files;
+	UINT total_files;
 	BOOLEAN is_success = FALSE;
 	NTSTATUS status;
 
-	status = _r_str_unicode2multibyte (&pbi->cache_path->sr, &bytes);
-
-	if (!NT_SUCCESS (status))
+	if (!mz_zip_reader_init_file_v2 (&zip_archive, pbi->cache_path->buffer, 0, 0, 0))
 	{
-		_r_log (LOG_LEVEL_ERROR, NULL, L"_r_str_unicode2multibyte", status, NULL);
+		_r_show_errormessage (hwnd, NULL, zip_archive.m_last_error, mz_zip_get_error_string (zip_archive.m_last_error), ET_NONE);
 
-		goto CleanupExit;
-	}
-
-	zip_bool = mz_zip_reader_init_file (&zip_archive, bytes->buffer, 0);
-
-	if (!zip_bool)
-	{
-		//_r_log (LOG_LEVEL_ERROR, NULL, L"mz_zip_reader_init_file", PebLastError (), NULL);
-
-		goto CleanupExit;
+		return FALSE;
 	}
 
 	total_files = mz_zip_reader_get_num_files (&zip_archive);
 
 	// find root directory which contains main executable
-	for (INT i = 0; i < total_files; i++)
+	for (UINT i = 0; i < total_files; i++)
 	{
 		if (mz_zip_reader_is_file_a_directory (&zip_archive, i) || !mz_zip_reader_file_stat (&zip_archive, i, &file_stat))
 			continue;
@@ -1201,10 +1189,12 @@ BOOLEAN _app_unpack_zip (
 		{
 			_r_obj_initializebyteref (&path_sr, file_stat.m_filename);
 
-			if (!NT_SUCCESS (_r_str_multibyte2unicode (&path_sr, &path)))
+			status = _r_str_multibyte2unicode (&path_sr, &path);
+
+			if (!NT_SUCCESS (status))
 				continue;
 
-			_r_str_replacechar (&path->sr, L'/', OBJ_NAME_PATH_SEPARATOR);
+			_r_str_replacechar (&path->sr, OBJ_NAME_ALTPATH_SEPARATOR, OBJ_NAME_PATH_SEPARATOR);
 
 			length = path->length - bin_name->length - separator_sr.length;
 
@@ -1219,7 +1209,7 @@ BOOLEAN _app_unpack_zip (
 		}
 	}
 
-	for (INT i = 0; i < total_files; i++)
+	for (UINT i = 0; i < total_files; i++)
 	{
 		if (!mz_zip_reader_file_stat (&zip_archive, i, &file_stat))
 			continue;
@@ -1231,7 +1221,8 @@ BOOLEAN _app_unpack_zip (
 		if (!NT_SUCCESS (status))
 			continue;
 
-		_r_str_replacechar (&path->sr, L'/', OBJ_NAME_PATH_SEPARATOR);
+		_r_str_replacechar (&path->sr, OBJ_NAME_ALTPATH_SEPARATOR, OBJ_NAME_PATH_SEPARATOR);
+
 		_r_str_trimstring (&path->sr, &separator_sr, 0);
 
 		// skip non-root dirs
@@ -1266,13 +1257,8 @@ BOOLEAN _app_unpack_zip (
 				_r_obj_dereference (sub_dir);
 			}
 
-			if (!NT_SUCCESS (_r_str_unicode2multibyte (&dest_path->sr, &bytes)))
-				continue;
-
-			if (!mz_zip_reader_extract_to_file (&zip_archive, i, bytes->buffer, MZ_ZIP_FLAG_DO_NOT_SORT_CENTRAL_DIRECTORY))
-				continue;
-
-			total_read += file_stat.m_uncomp_size;
+			if (mz_zip_reader_extract_to_file (&zip_archive, i, dest_path->buffer, MZ_ZIP_FLAG_DO_NOT_SORT_CENTRAL_DIRECTORY))
+				total_read += file_stat.m_uncomp_size;
 		}
 
 		_r_obj_dereference (dest_path);
@@ -1280,11 +1266,6 @@ BOOLEAN _app_unpack_zip (
 		if (!is_success)
 			is_success = TRUE;
 	}
-
-CleanupExit:
-
-	if (bytes)
-		_r_obj_dereference (bytes);
 
 	if (root_dir_name)
 		_r_obj_dereference (root_dir_name);
