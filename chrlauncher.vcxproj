@@ -115,7 +115,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <PreprocessorDefinitions>MICROSOFT_WINDOWS_WINBASE_H_DEFINE_INTERLOCKED_CPLUSPLUS_OVERLOADS;_UNICODE;UNICODE;WIN32_LEAN_AND_MEAN;APP_NO_APPDATA;APP_NO_MUTEX;APP_HAVE_TRAY;APP_STARTMINIMIZED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MINIZ_NO_TIME;MINIZ_NO_DEFLATE_APIS;MICROSOFT_WINDOWS_WINBASE_H_DEFINE_INTERLOCKED_CPLUSPLUS_OVERLOADS;_UNICODE;UNICODE;WIN32_LEAN_AND_MEAN;APP_NO_APPDATA;APP_NO_MUTEX;APP_HAVE_TRAY;APP_STARTMINIMIZED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <TreatWarningAsError>true</TreatWarningAsError>
@@ -147,7 +147,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <PreprocessorDefinitions>MICROSOFT_WINDOWS_WINBASE_H_DEFINE_INTERLOCKED_CPLUSPLUS_OVERLOADS;_UNICODE;UNICODE;WIN32_LEAN_AND_MEAN;APP_NO_APPDATA;APP_NO_MUTEX;APP_HAVE_TRAY;APP_STARTMINIMIZED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MINIZ_NO_TIME;MINIZ_NO_DEFLATE_APIS;MICROSOFT_WINDOWS_WINBASE_H_DEFINE_INTERLOCKED_CPLUSPLUS_OVERLOADS;_UNICODE;UNICODE;WIN32_LEAN_AND_MEAN;APP_NO_APPDATA;APP_NO_MUTEX;APP_HAVE_TRAY;APP_STARTMINIMIZED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <TreatWarningAsError>true</TreatWarningAsError>
@@ -184,7 +184,7 @@
       <CallingConvention>StdCall</CallingConvention>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <PreprocessorDefinitions>MICROSOFT_WINDOWS_WINBASE_H_DEFINE_INTERLOCKED_CPLUSPLUS_OVERLOADS;_UNICODE;UNICODE;WIN32_LEAN_AND_MEAN;APP_NO_APPDATA;APP_NO_MUTEX;APP_HAVE_TRAY;APP_STARTMINIMIZED;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MINIZ_NO_TIME;MINIZ_NO_DEFLATE_APIS;MICROSOFT_WINDOWS_WINBASE_H_DEFINE_INTERLOCKED_CPLUSPLUS_OVERLOADS;_UNICODE;UNICODE;WIN32_LEAN_AND_MEAN;APP_NO_APPDATA;APP_NO_MUTEX;APP_HAVE_TRAY;APP_STARTMINIMIZED;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <EnableParallelCodeGeneration>
       </EnableParallelCodeGeneration>
       <BufferSecurityCheck>true</BufferSecurityCheck>
@@ -220,7 +220,7 @@
       <CallingConvention>StdCall</CallingConvention>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <PreprocessorDefinitions>MICROSOFT_WINDOWS_WINBASE_H_DEFINE_INTERLOCKED_CPLUSPLUS_OVERLOADS;_UNICODE;UNICODE;WIN32_LEAN_AND_MEAN;APP_NO_APPDATA;APP_NO_MUTEX;APP_HAVE_TRAY;APP_STARTMINIMIZED;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MINIZ_NO_TIME;MINIZ_NO_DEFLATE_APIS;MICROSOFT_WINDOWS_WINBASE_H_DEFINE_INTERLOCKED_CPLUSPLUS_OVERLOADS;_UNICODE;UNICODE;WIN32_LEAN_AND_MEAN;APP_NO_APPDATA;APP_NO_MUTEX;APP_HAVE_TRAY;APP_STARTMINIMIZED;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <EnableParallelCodeGeneration>
       </EnableParallelCodeGeneration>
       <BufferSecurityCheck>true</BufferSecurityCheck>
