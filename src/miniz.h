@@ -1177,23 +1177,12 @@ typedef struct
 
 /* -------- ZIP reading */
 
-/* Inits a ZIP archive reader. */
-/* These functions read and validate the archive's central directory. */
-MINIZ_EXPORT mz_bool mz_zip_reader_init(mz_zip_archive *pZip, mz_uint64 size, mz_uint flags);
-
-MINIZ_EXPORT mz_bool mz_zip_reader_init_mem(mz_zip_archive *pZip, const void *pMem, size_t size, mz_uint flags);
-
 #ifndef MINIZ_NO_STDIO
 /* Read a archive from a disk file. */
 /* file_start_ofs is the file offset where the archive actually begins, or 0. */
 /* actual_archive_size is the true total size of the archive, which may be smaller than the file's actual size on disk. If zero the entire file is treated as the archive. */
 MINIZ_EXPORT mz_bool mz_zip_reader_init_file(mz_zip_archive *pZip, const wchar_t *pFilename, mz_uint32 flags);
 MINIZ_EXPORT mz_bool mz_zip_reader_init_file_v2(mz_zip_archive *pZip, const wchar_t *pFilename, mz_uint flags, mz_uint64 file_start_ofs, mz_uint64 archive_size);
-
-/* Read an archive from an already opened FILE, beginning at the current file position. */
-/* The archive is assumed to be archive_size bytes long. If archive_size is 0, then the entire rest of the file is assumed to contain the archive. */
-/* The FILE will NOT be closed when mz_zip_reader_end() is called. */
-MINIZ_EXPORT mz_bool mz_zip_reader_init_cfile(mz_zip_archive *pZip, MZ_FILE *pFile, mz_uint64 archive_size, mz_uint flags);
 #endif
 
 /* Ends archive reading, freeing all allocations, and closing the input archive file if mz_zip_reader_init_file() was used. */
@@ -1213,7 +1202,6 @@ MINIZ_EXPORT mz_uint mz_zip_reader_get_num_files(mz_zip_archive *pZip);
 
 MINIZ_EXPORT mz_uint64 mz_zip_get_archive_size(mz_zip_archive *pZip);
 MINIZ_EXPORT mz_uint64 mz_zip_get_archive_file_start_offset(mz_zip_archive *pZip);
-MINIZ_EXPORT MZ_FILE *mz_zip_get_cfile(mz_zip_archive *pZip);
 
 /* Reads n bytes of raw archive data, starting at file offset file_ofs, to pBuf. */
 MINIZ_EXPORT size_t mz_zip_read_archive_data(mz_zip_archive *pZip, mz_uint64 file_ofs, void *pBuf, size_t n);
@@ -1250,18 +1238,6 @@ MINIZ_EXPORT mz_bool mz_zip_is_zip64(mz_zip_archive *pZip);
 /* The current max supported size is <= MZ_UINT32_MAX. */
 MINIZ_EXPORT size_t mz_zip_get_central_dir_size(mz_zip_archive *pZip);
 
-/* Extracts a archive file to a memory buffer using no memory allocation. */
-/* There must be at least enough room on the stack to store the inflator's state (~34KB or so). */
-MINIZ_EXPORT mz_bool mz_zip_reader_extract_to_mem_no_alloc(mz_zip_archive *pZip, mz_uint file_index, void *pBuf, size_t buf_size, mz_uint flags, void *pUser_read_buf, size_t user_read_buf_size);
-
-/* Extracts a archive file to a memory buffer. */
-MINIZ_EXPORT mz_bool mz_zip_reader_extract_to_mem(mz_zip_archive *pZip, mz_uint file_index, void *pBuf, size_t buf_size, mz_uint flags);
-
-/* Extracts a archive file to a dynamically allocated heap buffer. */
-/* The memory will be allocated via the mz_zip_archive's alloc/realloc functions. */
-/* Returns NULL and sets the last error on failure. */
-MINIZ_EXPORT void *mz_zip_reader_extract_to_heap(mz_zip_archive *pZip, mz_uint file_index, size_t *pSize, mz_uint flags);
-
 /* Extracts a archive file using a callback function to output the file's data. */
 MINIZ_EXPORT mz_bool mz_zip_reader_extract_to_callback(mz_zip_archive *pZip, mz_uint file_index, mz_file_write_func pCallback, void *pOpaque, mz_uint flags);
 
@@ -1274,20 +1250,6 @@ MINIZ_EXPORT mz_bool mz_zip_reader_extract_iter_free(mz_zip_reader_extract_iter_
 /* Extracts a archive file to a disk file and sets its last accessed and modified times. */
 /* This function only extracts files, not archive directory records. */
 MINIZ_EXPORT mz_bool mz_zip_reader_extract_to_file(mz_zip_archive *pZip, mz_uint file_index, const wchar_t *pDst_filename, mz_uint flags);
-
-/* Extracts a archive file starting at the current position in the destination FILE stream. */
-MINIZ_EXPORT mz_bool mz_zip_reader_extract_to_cfile(mz_zip_archive *pZip, mz_uint file_index, MZ_FILE *File, mz_uint flags);
-#endif
-
-#if 0
-/* TODO */
-	typedef void *mz_zip_streaming_extract_state_ptr;
-	mz_zip_streaming_extract_state_ptr mz_zip_streaming_extract_begin(mz_zip_archive *pZip, mz_uint file_index, mz_uint flags);
-	mz_uint64 mz_zip_streaming_extract_get_size(mz_zip_archive *pZip, mz_zip_streaming_extract_state_ptr pState);
-	mz_uint64 mz_zip_streaming_extract_get_cur_ofs(mz_zip_archive *pZip, mz_zip_streaming_extract_state_ptr pState);
-	mz_bool mz_zip_streaming_extract_seek(mz_zip_archive *pZip, mz_zip_streaming_extract_state_ptr pState, mz_uint64 new_ofs);
-	size_t mz_zip_streaming_extract_read(mz_zip_archive *pZip, mz_zip_streaming_extract_state_ptr pState, void *pBuf, size_t buf_size);
-	mz_bool mz_zip_streaming_extract_end(mz_zip_archive *pZip, mz_zip_streaming_extract_state_ptr pState);
 #endif
 
 /* This function compares the archive's local headers, the optional local zip64 extended information block, and the optional descriptor following the compressed data vs. the data in the central directory. */
@@ -1298,7 +1260,6 @@ MINIZ_EXPORT mz_bool mz_zip_validate_file(mz_zip_archive *pZip, mz_uint file_ind
 MINIZ_EXPORT mz_bool mz_zip_validate_archive(mz_zip_archive *pZip, mz_uint flags);
 
 /* Misc utils/helpers, valid for ZIP reading or writing */
-MINIZ_EXPORT mz_bool mz_zip_validate_mem_archive(const void *pMem, size_t size, mz_uint flags, mz_zip_error *pErr);
 #ifndef MINIZ_NO_STDIO
 MINIZ_EXPORT mz_bool mz_zip_validate_file_archive(const wchar_t *pFilename, mz_uint flags, mz_zip_error *pErr);
 #endif
