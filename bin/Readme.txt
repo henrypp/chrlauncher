@@ -118,7 +118,7 @@ ChromiumLastCheck=0
 # Set custom useragent (string):
 #UserAgent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.0.0 Safari/537.36
 
-Website: www.henrypp.org
-Support: support@henrypp.org
+Website: https://github.com/henrypp
+Support: sforce5@mail.ru
 
 (c) 2015-2024 Henry++
