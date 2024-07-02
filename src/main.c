@@ -1,5 +1,5 @@
 // chrlauncher
-// Copyright (c) 2015-2023 Henry++
+// Copyright (c) 2015-2024 Henry++
 
 #include "routine.h"
 
@@ -275,10 +275,10 @@ VOID _app_init_browser_info (
 
 	R_STRINGREF separator_sr = PR_STRINGREF_INIT (L"\\");
 
+	PR_STRING browser_arguments;
+	PR_STRING browser_type;
 	PR_STRING binary_dir;
 	PR_STRING binary_name;
-	PR_STRING browser_type;
-	PR_STRING browser_arguments;
 	PR_STRING string;
 	ULONG binary_type;
 	USHORT architecture;
@@ -357,6 +357,21 @@ VOID _app_init_browser_info (
 	}
 
 	_r_obj_dereference (binary_name);
+
+	binary_dir = _r_config_getstringexpand (L"ChromePlusDirectory", L".\\bin");
+
+	status = _r_path_getfullpath (binary_dir->buffer, &string);
+
+	if (NT_SUCCESS (status))
+	{
+		_r_obj_movereference (&pbi->chrome_plus_dir, string);
+
+		_r_obj_dereference (binary_dir);
+	}
+	else
+	{
+		_r_obj_movereference (&pbi->chrome_plus_dir, binary_dir);
+	}
 
 	string = _r_format_string (L"%s\\%s_%" TEXT (PR_ULONG) L".bin", _r_sys_gettempdirectory ()->buffer, _r_app_getnameshort (), _r_str_gethash2 (&pbi->binary_path->sr, TRUE));
 
@@ -1282,6 +1297,8 @@ BOOLEAN _app_installupdate (
 )
 {
 	R_STRINGREF bin_name;
+	WCHAR buffer1[512];
+	WCHAR buffer2[512];
 	NTSTATUS status;
 
 	_r_queuedlock_acquireshared (&lock_download);
@@ -1313,6 +1330,21 @@ BOOLEAN _app_installupdate (
 
 	// remove cache file when zip cannot be opened
 	_r_fs_deletefile (pbi->cache_path->buffer, NULL);
+
+	if (_r_fs_exists (pbi->chrome_plus_dir->buffer))
+	{
+		_r_str_printf (buffer1, RTL_NUMBER_OF (buffer1), L"%s\\version.dll", pbi->chrome_plus_dir->buffer);
+		_r_str_printf (buffer2, RTL_NUMBER_OF (buffer1), L"%s\\version.dll", pbi->binary_dir->buffer);
+
+		if (_r_fs_exists (buffer1))
+			_r_fs_copyfile (buffer1, buffer2, FALSE);
+
+		_r_str_printf (buffer1, RTL_NUMBER_OF (buffer1), L"%s\\chrome++.ini", pbi->binary_dir->buffer);
+		_r_str_printf (buffer2, RTL_NUMBER_OF (buffer2), L"%s\\chrome++.ini", pbi->chrome_plus_dir->buffer);
+
+		if (_r_fs_exists (buffer1))
+			_r_fs_copyfile (buffer1, buffer2, FALSE);
+	}
 
 	*is_error_ptr = status != SZ_OK;
 
@@ -1857,7 +1889,7 @@ INT_PTR CALLBACK DlgProc (
 				return FALSE;
 			}
 
-			switch (LOWORD (wparam))
+			switch (ctrl_id)
 			{
 				case IDCANCEL: // process Esc key
 				case IDM_TRAY_SHOW:

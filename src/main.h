@@ -1,5 +1,5 @@
 // chrlauncher
-// Copyright (c) 2015-2023 Henry++
+// Copyright (c) 2015-2024 Henry++
 
 #pragma once
 
@@ -8,7 +8,7 @@
 #include "resource.h"
 #include "app.h"
 
-DEFINE_GUID (GUID_TrayIcon, 0xead41630, 0x90bb, 0x4836, 0x82, 0x41, 0xae, 0xae, 0x12, 0xe8, 0x69, 0x12);
+DEFINE_GUID (GUID_TrayIcon, 0xEAD41630, 0x90BB, 0x4836, 0x82, 0x41, 0xAE, 0xAE, 0x12, 0xE8, 0x69, 0x12);
 
 // config
 #define LANG_MENU 3
@@ -19,13 +19,14 @@ DEFINE_GUID (GUID_TrayIcon, 0xead41630, 0x90bb, 0x4836, 0x82, 0x41, 0xae, 0xae, 
 #define CHROMIUM_UPDATE_URL L"https://chromium.woolyss.com/api/v3/?os=windows&bit=%d&type=%s&out=string"
 
 #define CHROMIUM_TYPE L"dev-official"
-#define CHROMIUM_COMMAND_LINE L"--flag-switches-begin --user-data-dir=..\\profile --no-default-browser-check --flag-switches-end"
+#define CHROMIUM_COMMAND_LINE L"--flag-switches-begin --user-data-dir=..\\profile --no-default-browser-check --disable-logging --no-report-upload --flag-switches-end"
 
 typedef struct _BROWSER_INFORMATION
 {
 	PR_STRING args_str;
 	PR_STRING urls_str;
 
+	PR_STRING chrome_plus_dir;
 	PR_STRING browser_name;
 	PR_STRING browser_type;
 	PR_STRING cache_path;
