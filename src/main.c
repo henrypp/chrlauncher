@@ -1339,8 +1339,8 @@ BOOLEAN _app_installupdate (
 		if (_r_fs_exists (buffer1))
 			_r_fs_copyfile (buffer1, buffer2, FALSE);
 
-		_r_str_printf (buffer1, RTL_NUMBER_OF (buffer1), L"%s\\chrome++.ini", pbi->binary_dir->buffer);
-		_r_str_printf (buffer2, RTL_NUMBER_OF (buffer2), L"%s\\chrome++.ini", pbi->chrome_plus_dir->buffer);
+		_r_str_printf (buffer1, RTL_NUMBER_OF (buffer1), L"%s\\chrome++.ini", pbi->chrome_plus_dir->buffer);
+		_r_str_printf (buffer2, RTL_NUMBER_OF (buffer2), L"%s\\chrome++.ini", pbi->binary_dir->buffer);
 
 		if (_r_fs_exists (buffer1))
 			_r_fs_copyfile (buffer1, buffer2, FALSE);
