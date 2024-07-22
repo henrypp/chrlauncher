@@ -66,7 +66,7 @@ There is list of arguments overrides .ini options
 
 # Command line for Chromium (string):
 # See here: https://peter.sh/experiments/chromium-command-line-switches/
-ChromiumCommandLine=--flag-switches-begin --user-data-dir=..\profile --no-default-browser-check --flag-switches-end
+ChromiumCommandLine=--flag-switches-begin --user-data-dir=..\profile --no-default-browser-check --disable-logging --no-report-upload --flag-switches-end
 
 # Chromium executable file name (string):
 ChromiumBinary=chrome.exe
@@ -77,7 +77,7 @@ ChromiumDirectory=.\bin
 
 # Set Chromium binaries architecture (integer):
 #
-# 0		-> 	autodetect (default)
+# 0	-> autodetect (default)
 # 64	-> 64-bit
 # 32	-> 32-bit
 ChromiumArchitecture=0
@@ -133,10 +133,6 @@ ChromiumUpdateOnly=false
 #	Unofficial builds without Google integration and enhanced privacy (based on Eloston project)
 #	"github.com/macchrome/winchrome/releases/" (32/64 bit)
 #	"github.com/Eloston/ungoogled-chromium"
-#
-# stable-codecs-nosync
-#	Unofficial stable builds with codecs and without google services
-#	!!! DISCONTINUED since June 2018 !!!
 ChromiumType=dev-official
 
 # Check for new Chromium version once in X days (integer):
@@ -149,12 +145,23 @@ ChromiumCheckPeriod=2
 # Last cached update checking timestamp (integer):
 ChromiumLastCheck=0
 
+# Start browser when downloading and installing is over (boolean)
+#
+ChromiumRunAtEnd=true
+
+# A DLL hijack implements Chrome full portability as well as tab enhancements.
+# https://github.com/Bush2021/chrome_plus
+#ChromePlusDirectory=.\chrome_plus
+
 #
 # Internal settings (SDK)
 #
 
 # Set custom useragent (string):
-#UserAgent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.0.0 Safari/537.36
+#UserAgent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36
+
+# Set proxy configuration (string):
+#Proxy=127.0.0.1:80
 ~~~
 ### FAQ:
 - [If you lost all setting and extensions when copy Chromium to another PC (answer)](https://github.com/henrypp/chrlauncher/issues/116#issuecomment-444426692)
@@ -166,7 +173,7 @@ ChromiumLastCheck=0
 - [Disable annoying chrlauncher window popup](https://github.com/henrypp/chrlauncher/issues/96#issuecomment-439294915)
 - [Is it possible to downgrade Chromium version?](https://github.com/henrypp/chrlauncher/issues/112#issuecomment-440940865)
 - [Fix for duplicated taskbar icons creation](https://github.com/henrypp/chrlauncher/issues/49#issuecomment-289285155)
-
+---
 - Website: [github.com/henrypp](https://github.com/henrypp)
 - Support: sforce5@mail.ru
 <br />
