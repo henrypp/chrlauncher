@@ -11,7 +11,7 @@
 -------
 
 <p align="center">
-	<img src="/images/chrlauncher.png?cachefix" />
+	<img src="/images/chrlauncher.png?hgcv" />
 </p>
 
 ### Description:
@@ -53,6 +53,9 @@ There is list of arguments overrides .ini options
 ### Supported browser:
 - as launcher - Chromium based (like Google Chrome, Opera, Yandex Browser, Vivaldi, etc.) and Firefox based (Mozilla Firefox, Basilisk, Pale Moon, Waterfox, etc.)
 - as updater - Chromium only
+
+### Chrome++:
+- By default Chromium encrypt profile with user SID, which is disabled by [Chrome++](https://github.com/Bush2021/chrome_plus), so it is recomended. Starting with version 2.7 of chrlauncher it added support of Chrome++.
 
 ### Settings:
 ~~~ini
