@@ -1737,10 +1737,10 @@ INT_PTR CALLBACK DlgProc (
 		{
 			LONG_PTR ex_style;
 
-			ex_style = _r_wnd_getstyle_ex (hwnd);
+			ex_style = _r_wnd_getstyle (hwnd, GWL_EXSTYLE);
 
 			if ((ex_style & WS_EX_LAYERED) == 0)
-				_r_wnd_setstyle_ex (hwnd, WS_EX_LAYERED, WS_EX_LAYERED);
+				_r_wnd_setstyle (hwnd, WS_EX_LAYERED, WS_EX_LAYERED, GWL_EXSTYLE);
 
 			SetLayeredWindowAttributes (hwnd, 0, (msg == WM_ENTERSIZEMOVE) ? 100 : 255, LWA_ALPHA);
 
