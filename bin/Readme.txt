@@ -14,7 +14,6 @@ There is list of arguments overrides .ini options.
 -forcecheck - force update checking
 -wait - start browser only when check/download/install update complete
 -update - use chrlauncher as updater, but does not start Chromium
--ini .\chrlauncher.ini - start chrlauncher with custom configuration
 
 Supported browser:
 - as launcher - Chromium based (like Google Chrome, Opera, Yandex Browser, Vivaldi, etc.) and Firefox based (Mozilla Firefox, Basilisk, Pale Moon, Waterfox, etc.)
