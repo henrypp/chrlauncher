@@ -23,6 +23,9 @@ DEFINE_GUID (GUID_TrayIcon, 0xEAD41630, 0x90BB, 0x4836, 0x82, 0x41, 0xAE, 0xAE, 
 
 typedef struct _BROWSER_INFORMATION
 {
+	HANDLE htaskbar;
+	HANDLE hwnd;
+
 	PR_STRING args_str;
 	PR_STRING urls_str;
 

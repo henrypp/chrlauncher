@@ -454,14 +454,22 @@ VOID _app_init_browser_info (
 
 VOID _app_setstatus (
 	_In_ HWND hwnd,
+	_In_opt_ HWND htaskbar,
 	_In_opt_ LPCWSTR string,
-	_In_opt_ ULONG64 v,
-	_In_opt_ ULONG64 t
+	_In_opt_ ULONG64 total_read,
+	_In_opt_ ULONG64 total_length
 )
 {
 	LONG64 percent = 0;
 
-	if (!v && t)
+	if (htaskbar)
+	{
+		_r_taskbar_setprogressstate (htaskbar, hwnd, TBPF_NORMAL);
+
+		_r_taskbar_setprogressvalue (htaskbar, hwnd, total_read, total_length);
+	}
+
+	if (!total_read && total_length)
 	{
 		_r_status_settextformat (hwnd, IDC_STATUSBAR, 0, L"%s 0%%", string);
 
@@ -474,9 +482,9 @@ VOID _app_setstatus (
 			_r_tray_setinfo (hwnd, &GUID_TrayIcon, NULL, _r_app_getname ());
 		}
 	}
-	else if (v && t)
+	else if (total_read && total_length)
 	{
-		percent = _r_calc_clamp64 (_r_calc_percentof64 (v, t), 0, 100);
+		percent = _r_calc_clamp64 (_r_calc_percentof64 (total_read, total_length), 0, 100);
 
 		_r_status_settextformat (hwnd, IDC_STATUSBAR, 0, L"%s %" TEXT (PR_LONG64) L"%%", string, percent);
 
@@ -544,7 +552,7 @@ VOID _app_openbrowser (
 
 	if (_r_obj_isstringempty (pbi->binary_path) || !_r_fs_exists (pbi->binary_path->buffer))
 	{
-		_r_show_errormessage (_r_app_gethwnd (), NULL, STATUS_OBJECT_PATH_NOT_FOUND, _r_obj_getstring (pbi->binary_path), TRUE);
+		_r_show_errormessage (_r_app_gethwnd (), NULL, STATUS_OBJECT_PATH_NOT_FOUND, _r_obj_getstring (pbi->binary_path), ET_NATIVE);
 
 		return;
 	}
@@ -603,7 +611,7 @@ VOID _app_openbrowser (
 	status = _r_sys_createprocess (pbi->binary_path->buffer, cmdline->buffer, pbi->binary_dir->buffer);
 
 	if (!NT_SUCCESS (status))
-		_r_show_errormessage (_r_app_gethwnd (), NULL, status, pbi->binary_path->buffer, TRUE);
+		_r_show_errormessage (_r_app_gethwnd (), NULL, status, pbi->binary_path->buffer, ET_NATIVE);
 
 	_r_obj_dereference (args_string);
 	_r_obj_dereference (cmdline);
@@ -690,7 +698,7 @@ BOOLEAN _app_checkupdate (
 	is_exists = _r_fs_exists (pbi->binary_path->buffer);
 	is_updaterequired = _app_isupdaterequired (pbi);
 
-	_app_setstatus (hwnd, _r_locale_getstring (IDS_STATUS_CHECK), 0, 0);
+	_app_setstatus (hwnd, pbi->htaskbar, _r_locale_getstring (IDS_STATUS_CHECK), 0, 0);
 
 	SAFE_DELETE_REFERENCE (pbi->new_version);
 	pbi->timestamp = 0;
@@ -735,7 +743,7 @@ BOOLEAN _app_checkupdate (
 				}
 				else
 				{
-					_r_show_errormessage (hwnd, NULL, status, L"Could not download update.", FALSE);
+					_r_show_errormessage (hwnd, NULL, status, L"Could not download update.", ET_WINDOWS);
 
 					*is_error_ptr = TRUE;
 				}
@@ -792,7 +800,7 @@ BOOLEAN _app_checkupdate (
 		_r_obj_dereference (hashtable);
 	}
 
-	_app_setstatus (hwnd, NULL, 0, 0);
+	_app_setstatus (hwnd, pbi->htaskbar, NULL, 0, 0);
 
 	return is_success;
 }
@@ -803,11 +811,11 @@ BOOLEAN WINAPI _app_downloadupdate_callback (
 	_In_ PVOID lparam
 )
 {
-	HWND hwnd;
+	PBROWSER_INFORMATION pbi;
 
-	hwnd = lparam;
+	pbi = lparam;
 
-	_app_setstatus (hwnd, _r_locale_getstring (IDS_STATUS_DOWNLOAD), total_written, total_length);
+	_app_setstatus (pbi->hwnd, pbi->htaskbar, _r_locale_getstring (IDS_STATUS_DOWNLOAD), total_written, total_length);
 
 	return TRUE;
 }
@@ -839,7 +847,7 @@ BOOLEAN _app_downloadupdate (
 
 	_r_fs_deletefile (pbi->cache_path->buffer, NULL);
 
-	_app_setstatus (hwnd, _r_locale_getstring (IDS_STATUS_DOWNLOAD), 0, 1);
+	_app_setstatus (hwnd, pbi->htaskbar, _r_locale_getstring (IDS_STATUS_DOWNLOAD), 0, 1);
 
 	_r_queuedlock_acquireshared (&lock_download);
 
@@ -863,13 +871,13 @@ BOOLEAN _app_downloadupdate (
 
 		if (!NT_SUCCESS (status))
 		{
-			_r_show_errormessage (hwnd, NULL, status, temp_file->buffer, TRUE);
+			_r_show_errormessage (hwnd, NULL, status, temp_file->buffer, ET_NATIVE);
 
 			*is_error_ptr = TRUE;
 		}
 		else
 		{
-			_r_inet_initializedownload (&download_info, hfile, &_app_downloadupdate_callback, hwnd);
+			_r_inet_initializedownload (&download_info, hfile, &_app_downloadupdate_callback, pbi);
 
 			status = _r_inet_begindownload (hsession, &pbi->download_url->sr, &download_info);
 
@@ -877,7 +885,7 @@ BOOLEAN _app_downloadupdate (
 
 			if (status != STATUS_SUCCESS)
 			{
-				_r_show_errormessage (hwnd, NULL, status, pbi->download_url->buffer, FALSE);
+				_r_show_errormessage (hwnd, NULL, status, pbi->download_url->buffer, ET_WINDOWS);
 
 				_r_fs_deletefile (pbi->cache_path->buffer, NULL);
 
@@ -905,7 +913,7 @@ BOOLEAN _app_downloadupdate (
 
 	_r_obj_dereference (temp_file);
 
-	_app_setstatus (hwnd, NULL, 0, 0);
+	_app_setstatus (hwnd, pbi->htaskbar, NULL, 0, 0);
 
 	return is_success;
 }
@@ -1069,7 +1077,7 @@ SRes _app_unpack_7zip (
 		{
 			total_read += SzArEx_GetFileSize (&db, i);
 
-			_app_setstatus (hwnd, _r_locale_getstring (IDS_STATUS_INSTALL), total_read, total_size);
+			_app_setstatus (hwnd, pbi->htaskbar, _r_locale_getstring (IDS_STATUS_INSTALL), total_read, total_size);
 
 			// create directory if not-exist
 			sub_dir = _r_path_getbasedirectory (&dest_path->sr);
@@ -1254,7 +1262,7 @@ BOOLEAN _app_unpack_zip (
 			&path->sr
 		);
 
-		_app_setstatus (hwnd, _r_locale_getstring (IDS_STATUS_INSTALL), total_read, total_size);
+		_app_setstatus (hwnd, pbi->htaskbar, _r_locale_getstring (IDS_STATUS_INSTALL), total_read, total_size);
 
 		if (mz_zip_reader_is_file_a_directory (&zip_archive, i))
 		{
@@ -1352,7 +1360,7 @@ BOOLEAN _app_installupdate (
 
 	_r_sys_setthreadexecutionstate (ES_CONTINUOUS);
 
-	_app_setstatus (hwnd, NULL, 0, 0);
+	_app_setstatus (hwnd, pbi->htaskbar, NULL, 0, 0);
 
 	return (status == SZ_OK) ? TRUE : FALSE;
 }
@@ -1522,7 +1530,7 @@ VOID _app_thread_check (
 		{
 			_r_tray_popup (hwnd, &GUID_TrayIcon, NIIF_ERROR, _r_app_getname (), _r_locale_getstring (IDS_STATUS_ERROR)); // just inform user
 
-			_app_setstatus (hwnd, _r_locale_getstring (IDS_STATUS_ERROR), 0, 0);
+			_app_setstatus (hwnd, pbi->htaskbar, _r_locale_getstring (IDS_STATUS_ERROR), 0, 0);
 		}
 
 		is_stayopen = TRUE;
@@ -1573,8 +1581,8 @@ INT_PTR CALLBACK DlgProc (
 		{
 			HMENU hmenu;
 			HICON hicon;
-			LONG dpi_value;
 			LONG icon_small;
+			LONG dpi_value;
 			BOOLEAN is_hidden;
 
 			dpi_value = _r_dc_gettaskbardpi ();
@@ -1582,6 +1590,8 @@ INT_PTR CALLBACK DlgProc (
 			icon_small = _r_dc_getsystemmetrics (SM_CXSMICON, dpi_value);
 
 			hicon = _r_sys_loadsharedicon (_r_sys_getimagebase (), MAKEINTRESOURCE (IDI_MAIN), icon_small);
+
+			browser_info.hwnd = hwnd;
 
 			_app_init_browser_info (&browser_info);
 
@@ -1597,6 +1607,8 @@ INT_PTR CALLBACK DlgProc (
 				_r_menu_checkitem (hmenu, IDM_DARKMODE_CHK, 0, MF_BYCOMMAND, _r_theme_isenabled ());
 			}
 
+			_r_taskbar_initialize (&browser_info.htaskbar);
+
 			_r_workqueue_queueitem (&workqueue, &_app_thread_check, &browser_info);
 
 			break;
@@ -1605,6 +1617,10 @@ INT_PTR CALLBACK DlgProc (
 		case RM_UNINITIALIZE:
 		{
 			_r_tray_destroy (hwnd, &GUID_TrayIcon);
+
+			if (browser_info.htaskbar)
+				_r_taskbar_destroy (&browser_info.htaskbar);
+
 			break;
 		}
 
