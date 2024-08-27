@@ -18,7 +18,8 @@
 Small and very fast portable launcher and updater for Chromium.
 
 ### System requirements:
-- Windows 7 SP1 and above operating system.
+- Windows 7, 8, 8.1, 10, 11 32-bit/64-bit
+- An SSE2-capable CPU
 - <s>KB2533623</s> KB3063858 update for Windows 7 was required [[x64](https://www.microsoft.com/en-us/download/details.aspx?id=47442) / [x32](https://www.microsoft.com/en-us/download/details.aspx?id=47409)]
 
 ### Donate:

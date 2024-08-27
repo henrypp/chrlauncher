@@ -2,6 +2,10 @@ chrlauncher
 
 Small and very fast portable launcher and updater for Chromium.
 
+System requirements:
+- Windows 7, 8, 8.1, 10, 11 32-bit/64-bit/ARM64
+- An SSE2-capable CPU
+
 Default browser:
 chrlauncher has feature to use portable Chromium as default browser and it will be open links from another programs through chrlauncher.
 - start "SetDefaultBrowser.bat" (as admin).
