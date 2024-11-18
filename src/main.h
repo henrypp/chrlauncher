@@ -47,6 +47,7 @@ typedef struct _BROWSER_INFORMATION
 
 	BOOLEAN is_autodownload;
 	BOOLEAN is_bringtofront;
+	BOOLEAN is_deletetorecycle;
 	BOOLEAN is_forcecheck;
 	BOOLEAN is_hasurls;
 	BOOLEAN is_onlyupdate;
