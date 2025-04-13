@@ -131,4 +131,4 @@ ChromiumRunAtEnd=true
 Website: https://github.com/henrypp
 Support: sforce5@mail.ru
 
-(c) 2015-2024 Henry++
+(c) 2015-2025 Henry++

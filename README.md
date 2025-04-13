@@ -20,7 +20,7 @@ Small and very fast portable launcher and updater for Chromium.
 ### System requirements:
 - Windows 7, 8, 8.1, 10, 11 32-bit/64-bit
 - An SSE2-capable CPU
-- <s>KB2533623</s> KB3063858 update for Windows 7 was required [[x64](https://www.microsoft.com/en-us/download/details.aspx?id=47442) / [x32](https://www.microsoft.com/en-us/download/details.aspx?id=47409)]
+- <s>KB2533623</s> KB3063858 update for Windows 7 was required [[x64](https://www.microsoft.com/en-us/download/details.aspx?id=47442) / [x32](https://www.microsoft.com/en-us/download/details.aspx?id=47409)]
 
 ### Donate:
 - [Bitcoin](https://www.blockchain.com/btc/address/1LrRTXPsvHcQWCNZotA9RcwjsGcRghG96c) (BTC)
@@ -176,5 +176,5 @@ ChromiumRunAtEnd=true
 ---
 - Website: [github.com/henrypp](https://github.com/henrypp)
 - Support: sforce5@mail.ru
-<br />
-(c) 2015-2024 Henry++
+---
+(c) 2015-2025 Henry++
