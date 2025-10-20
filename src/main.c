@@ -301,7 +301,7 @@ VOID _app_init_browser_info (
 		return;
 	}
 
-	status = _r_path_getfullpath (binary_dir->buffer, &string);
+	status = _r_path_getfullpath (&binary_dir->sr, &string);
 
 	if (NT_SUCCESS (status))
 	{
@@ -360,7 +360,7 @@ VOID _app_init_browser_info (
 
 	binary_dir = _r_config_getstringexpand (L"ChromePlusDirectory", L".\\bin", NULL);
 
-	status = _r_path_getfullpath (binary_dir->buffer, &string);
+	status = _r_path_getfullpath (&binary_dir->sr, &string);
 
 	if (NT_SUCCESS (status))
 	{
