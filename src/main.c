@@ -747,7 +747,7 @@ BOOLEAN _app_checkupdate (
 				}
 				else
 				{
-					_r_show_errormessage (hwnd, NULL, status, L"Could not download update.", ET_WINDOWS);
+					_r_show_errormessage (hwnd, NULL, status, L"Could not download update.", ET_WINHTTP);
 
 					*is_error_ptr = TRUE;
 				}
@@ -889,7 +889,7 @@ BOOLEAN _app_downloadupdate (
 
 			if (status != STATUS_SUCCESS)
 			{
-				_r_show_errormessage (hwnd, NULL, status, pbi->download_url->buffer, ET_WINDOWS);
+				_r_show_errormessage (hwnd, NULL, status, pbi->download_url->buffer, ET_WINHTTP);
 
 				_r_fs_deletefile (&pbi->cache_path->sr, NULL);
 
