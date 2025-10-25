@@ -76,7 +76,7 @@ BOOLEAN _app_path_is_url (
 	_In_ LPCWSTR path
 )
 {
-	static LPCWSTR types[] = {
+	LPCWSTR types[] = {
 		L"application/pdf",
 		L"image/svg+xml",
 		L"image/webp",
@@ -257,7 +257,7 @@ VOID _app_init_browser_info (
 	_Inout_ PBROWSER_INFORMATION pbi
 )
 {
-	static R_STRINGREF bin_names[] = {
+	R_STRINGREF bin_names[] = {
 		PR_STRINGREF_INIT (L"brave.exe"),
 		PR_STRINGREF_INIT (L"firefox.exe"),
 		PR_STRINGREF_INIT (L"basilisk.exe"),
@@ -431,7 +431,7 @@ VOID _app_init_browser_info (
 
 	pbi->check_period = _r_config_getlong (L"ChromiumCheckPeriod", 2, NULL);
 
-	if (pbi->check_period == -1)
+	if (pbi->check_period == INT_ERROR)
 		pbi->is_forcecheck = TRUE;
 
 	// set default config
@@ -518,31 +518,6 @@ VOID _app_setstatus (
 	_r_wnd_sendmessage (hwnd, IDC_PROGRESS, PBM_SETPOS, (WPARAM)(LONG)percent, 0);
 }
 
-BOOLEAN _app_browserisrunning (
-	_In_ PBROWSER_INFORMATION pbi
-)
-{
-	HANDLE hfile;
-	NTSTATUS status;
-
-	status = _r_fs_createfile (
-		&pbi->binary_path->sr,
-		FILE_OPEN,
-		GENERIC_WRITE | GENERIC_READ,
-		0,
-		FILE_ATTRIBUTE_NORMAL,
-		FILE_SEQUENTIAL_ONLY,
-		FALSE,
-		NULL,
-		&hfile
-	);
-
-	if (hfile)
-		NtClose (hfile);
-
-	return (status == STATUS_SHARING_VIOLATION) ? TRUE : FALSE;
-}
-
 VOID _app_openbrowser (
 	_In_ PBROWSER_INFORMATION pbi
 )
@@ -551,7 +526,6 @@ VOID _app_openbrowser (
 	PR_STRING cmdline;
 	LPWSTR ptr;
 	ULONG_PTR args_length = 0;
-	BOOLEAN is_running;
 	NTSTATUS status;
 
 	if (_r_obj_isstringempty (pbi->binary_path) || !_r_fs_exists (&pbi->binary_path->sr))
@@ -561,9 +535,7 @@ VOID _app_openbrowser (
 		return;
 	}
 
-	is_running = _app_browserisrunning (pbi);
-
-	if (is_running && !pbi->is_hasurls && !pbi->is_opennewwindow)
+	if (_r_fs_isfileused (&pbi->binary_path->sr) && !pbi->is_hasurls && !pbi->is_opennewwindow)
 	{
 		EnumWindows (&activate_browser_window_callback, (LPARAM)pbi);
 
@@ -1405,7 +1377,7 @@ VOID _app_thread_check (
 
 		_r_tray_toggle (hwnd, &GUID_TrayIcon, TRUE); // show tray icon
 
-		if (!_app_browserisrunning (pbi))
+		if (!_r_fs_isfileused (&pbi->binary_path->sr))
 		{
 			if (pbi->is_bringtofront)
 				_r_wnd_toggle (hwnd, TRUE); // show window
@@ -1473,7 +1445,7 @@ VOID _app_thread_check (
 
 				if (_app_downloadupdate (hwnd, pbi, &is_haveerror))
 				{
-					if (!_app_browserisrunning (pbi))
+					if (!_r_fs_isfileused (&pbi->binary_path->sr))
 					{
 						_r_ctrl_enable (hwnd, IDC_START_BTN, FALSE);
 
