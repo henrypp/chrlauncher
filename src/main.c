@@ -180,7 +180,7 @@ VOID _app_parse_args (
 	ULONG_PTR first_arg_length = 0;
 	INT numargs;
 
-	arga = CommandLineToArgvW (_r_sys_getcommandline (), &numargs);
+	arga = CommandLineToArgvW (_r_sys_getcommandline ()->buffer, &numargs);
 
 	if (!arga)
 		return;
@@ -244,7 +244,7 @@ VOID _app_parse_args (
 
 	if (pbi->is_hasurls)
 	{
-		pbi->urls_str = _r_obj_createstring (_r_sys_getcommandline () + first_arg_length + 2);
+		pbi->urls_str = _r_obj_createstring (_r_sys_getcommandline ()->buffer + first_arg_length + 2);
 
 		_r_str_trimstring2 (&pbi->urls_str->sr, L" ", 0);
 	}
@@ -582,7 +582,7 @@ VOID _app_openbrowser (
 
 	pbi->is_opennewwindow = FALSE;
 
-	cmdline = _r_format_string (L"\"%s\" %s", pbi->binary_path->buffer, args_string->buffer);
+	cmdline = _r_format_string (L"\"%s\" -url %s", pbi->binary_path->buffer, args_string->buffer);
 
 	status = _r_sys_createprocess (pbi->binary_path->buffer, cmdline->buffer, pbi->binary_dir->buffer, FALSE);
 
@@ -1323,8 +1323,8 @@ BOOLEAN _app_installupdate (
 		if (_r_fs_exists (&buffer1->sr))
 			_r_fs_copyfile (&buffer1->sr, &buffer2->sr, FALSE);
 
-		_r_obj_movereference ((PVOID_PTR)&buffer1, _r_format_string (L"%s\\chrome++.dll", pbi->chrome_plus_dir->buffer));
-		_r_obj_movereference ((PVOID_PTR)&buffer2, _r_format_string (L"%s\\chrome++.dll", pbi->binary_dir->buffer));
+		_r_obj_movereference ((PVOID_PTR)&buffer1, _r_format_string (L"%s\\chrome++.ini", pbi->chrome_plus_dir->buffer));
+		_r_obj_movereference ((PVOID_PTR)&buffer2, _r_format_string (L"%s\\chrome++.ini", pbi->binary_dir->buffer));
 
 		if (_r_fs_exists (&buffer1->sr))
 			_r_fs_copyfile (&buffer1->sr, &buffer2->sr, FALSE);
@@ -1333,7 +1333,7 @@ BOOLEAN _app_installupdate (
 		_r_obj_dereference (buffer2);
 	}
 
-	*is_error_ptr = status != SZ_OK;
+	*is_error_ptr = (status != SZ_OK);
 
 	_r_queuedlock_releaseshared (&lock_download);
 
