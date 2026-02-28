@@ -584,7 +584,7 @@ VOID _app_openbrowser (
 
 	cmdline = _r_format_string (L"\"%s\" -url %s", pbi->binary_path->buffer, args_string->buffer);
 
-	status = _r_sys_createprocess (pbi->binary_path->buffer, cmdline->buffer, pbi->binary_dir->buffer, FALSE);
+	status = _r_sys_createprocess (&pbi->binary_path->sr, &cmdline->sr, &pbi->binary_dir->sr, FALSE);
 
 	if (!NT_SUCCESS (status))
 		_r_show_errormessage (_r_app_gethwnd (), NULL, status, pbi->binary_path->buffer, ET_NATIVE);
