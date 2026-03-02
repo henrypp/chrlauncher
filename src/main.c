@@ -325,7 +325,7 @@ VOID _app_init_browser_info (
 
 	_r_obj_movereference ((PVOID_PTR)&pbi->binary_path, string);
 
-	if (!_r_fs_exists (&pbi->binary_path->sr))
+	if (!_r_fs_isexists (&pbi->binary_path->sr))
 	{
 		for (ULONG_PTR i = 0; i < RTL_NUMBER_OF (bin_names); i++)
 		{
@@ -338,11 +338,11 @@ VOID _app_init_browser_info (
 
 			_r_obj_movereference ((PVOID_PTR)&pbi->binary_path, string);
 
-			if (_r_fs_exists (&pbi->binary_path->sr))
+			if (_r_fs_isexists (&pbi->binary_path->sr))
 				break;
 		}
 
-		if (_r_obj_isstringempty (pbi->binary_path) || !_r_fs_exists (&pbi->binary_path->sr))
+		if (_r_obj_isstringempty (pbi->binary_path) || !_r_fs_isexists (&pbi->binary_path->sr))
 		{
 			string = _r_obj_concatstringrefs (
 				3,
@@ -389,7 +389,7 @@ VOID _app_init_browser_info (
 		pbi->architecture = 0;
 
 		// ...by executable
-		if (_r_fs_exists (&pbi->binary_path->sr))
+		if (_r_fs_isexists (&pbi->binary_path->sr))
 		{
 			status = _r_sys_getbinarytype (&pbi->binary_path->sr, &binary_type);
 
@@ -528,7 +528,7 @@ VOID _app_openbrowser (
 	ULONG_PTR args_length = 0;
 	NTSTATUS status;
 
-	if (_r_obj_isstringempty (pbi->binary_path) || !_r_fs_exists (&pbi->binary_path->sr))
+	if (_r_obj_isstringempty (pbi->binary_path) || !_r_fs_isexists (&pbi->binary_path->sr))
 	{
 		_r_show_errormessage (_r_app_gethwnd (), NULL, STATUS_OBJECT_PATH_NOT_FOUND, _r_obj_getstring (pbi->binary_path), ET_NATIVE);
 
@@ -604,7 +604,7 @@ BOOLEAN _app_isupdatedownloaded (
 	_In_ PBROWSER_INFORMATION pbi
 )
 {
-	return !_r_obj_isstringempty (pbi->cache_path) && _r_fs_exists (&pbi->cache_path->sr);
+	return !_r_obj_isstringempty (pbi->cache_path) && _r_fs_isexists (&pbi->cache_path->sr);
 }
 
 BOOLEAN _app_isupdaterequired (
@@ -613,7 +613,7 @@ BOOLEAN _app_isupdaterequired (
 {
 	LONG64 timestamp;
 
-	if (!_r_fs_exists (&pbi->binary_path->sr))
+	if (!_r_fs_isexists (&pbi->binary_path->sr))
 		return TRUE;
 
 	if (pbi->is_forcecheck)
@@ -671,7 +671,7 @@ BOOLEAN _app_checkupdate (
 	if (_app_ishaveupdate (pbi))
 		return TRUE;
 
-	is_exists = _r_fs_exists (&pbi->binary_path->sr);
+	is_exists = _r_fs_isexists (&pbi->binary_path->sr);
 	is_updaterequired = _app_isupdaterequired (pbi);
 
 	_app_setstatus (hwnd, pbi->htaskbar, _r_locale_getstring (IDS_STATUS_CHECK), 0, 0);
@@ -1060,7 +1060,7 @@ SRes _app_unpack_7zip (
 
 			if (sub_dir)
 			{
-				if (!_r_fs_exists (&sub_dir->sr))
+				if (!_r_fs_isexists (&sub_dir->sr))
 					_r_fs_createdirectory (&sub_dir->sr);
 
 				_r_obj_dereference (sub_dir);
@@ -1250,7 +1250,7 @@ BOOLEAN _app_unpack_zip (
 
 			if (sub_dir)
 			{
-				if (!_r_fs_exists (&sub_dir->sr))
+				if (!_r_fs_isexists (&sub_dir->sr))
 					_r_fs_createdirectory (&sub_dir->sr);
 
 				_r_obj_dereference (sub_dir);
@@ -1296,7 +1296,7 @@ BOOLEAN _app_installupdate (
 
 	_r_sys_setthreadexecutionstate (ES_SYSTEM_REQUIRED | ES_AWAYMODE_REQUIRED);
 
-	if (!_r_fs_exists (&pbi->binary_dir->sr))
+	if (!_r_fs_isexists (&pbi->binary_dir->sr))
 		_r_fs_createdirectory (&pbi->binary_dir->sr);
 
 	if (_app_unpack_zip (hwnd, pbi, &bin_name))
@@ -1315,18 +1315,18 @@ BOOLEAN _app_installupdate (
 	// remove cache file when zip cannot be opened
 	_r_fs_deletefile (&pbi->cache_path->sr, NULL);
 
-	if (_r_fs_exists (&pbi->chrome_plus_dir->sr))
+	if (_r_fs_isexists (&pbi->chrome_plus_dir->sr))
 	{
 		buffer1 = _r_format_string (L"%s\\version.dll", pbi->chrome_plus_dir->buffer);
 		buffer2 = _r_format_string (L"%s\\version.dll", pbi->binary_dir->buffer);
 
-		if (_r_fs_exists (&buffer1->sr))
+		if (_r_fs_isexists (&buffer1->sr))
 			_r_fs_copyfile (&buffer1->sr, &buffer2->sr, FALSE);
 
 		_r_obj_movereference ((PVOID_PTR)&buffer1, _r_format_string (L"%s\\chrome++.ini", pbi->chrome_plus_dir->buffer));
 		_r_obj_movereference ((PVOID_PTR)&buffer2, _r_format_string (L"%s\\chrome++.ini", pbi->binary_dir->buffer));
 
-		if (_r_fs_exists (&buffer1->sr))
+		if (_r_fs_isexists (&buffer1->sr))
 			_r_fs_copyfile (&buffer1->sr, &buffer2->sr, FALSE);
 
 		_r_obj_dereference (buffer1);
@@ -1407,7 +1407,7 @@ VOID _app_thread_check (
 		_r_progress_setmarquee (hwnd, IDC_PROGRESS, TRUE);
 
 		is_updaterequired = _app_isupdaterequired (pbi);
-		is_exists = _r_fs_exists (&pbi->binary_path->sr);
+		is_exists = _r_fs_isexists (&pbi->binary_path->sr);
 
 		// show launcher gui
 		if (!is_exists || is_updaterequired || pbi->is_onlyupdate || pbi->is_bringtofront)
@@ -1850,7 +1850,7 @@ INT_PTR CALLBACK DlgProc (
 						_r_menu_setitemtext (hsubmenu, IDM_TRAY_ABOUT, FALSE, _r_locale_getstring (IDS_ABOUT));
 						_r_menu_setitemtext (hsubmenu, IDM_TRAY_EXIT, FALSE, _r_locale_getstring (IDS_EXIT));
 
-						if (_r_obj_isstringempty (browser_info.binary_path) || !_r_fs_exists (&browser_info.binary_path->sr))
+						if (_r_obj_isstringempty (browser_info.binary_path) || !_r_fs_isexists (&browser_info.binary_path->sr))
 							_r_menu_enableitem (hsubmenu, IDM_TRAY_RUN, MF_BYCOMMAND, FALSE);
 
 						_r_menu_popup (hsubmenu, hwnd, NULL, TRUE);
@@ -1913,7 +1913,7 @@ INT_PTR CALLBACK DlgProc (
 
 					path = _r_app_getconfigpath ();
 
-					if (_r_fs_exists (&path->sr))
+					if (_r_fs_isexists (&path->sr))
 						_r_shell_opendefault (path->buffer);
 
 					break;
@@ -1924,7 +1924,7 @@ INT_PTR CALLBACK DlgProc (
 					if (!browser_info.binary_dir)
 						break;
 
-					if (_r_fs_exists (&browser_info.binary_dir->sr))
+					if (_r_fs_isexists (&browser_info.binary_dir->sr))
 						_r_shell_opendefault (browser_info.binary_dir->buffer);
 
 					break;
@@ -2007,7 +2007,7 @@ INT APIENTRY wWinMain (
 	{
 		_app_init_browser_info (&browser_info);
 
-		if (browser_info.is_hasurls && _r_fs_exists (&browser_info.binary_path->sr))
+		if (browser_info.is_hasurls && _r_fs_isexists (&browser_info.binary_path->sr))
 		{
 			_app_openbrowser (&browser_info);
 
