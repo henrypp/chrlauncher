@@ -1,5 +1,5 @@
 // chrlauncher
-// Copyright (c) 2015-2025 Henry++
+// Copyright (c) 2015-2026 Henry++
 
 #include "routine.h"
 
@@ -1105,7 +1105,7 @@ SRes _app_unpack_7zip (
 							if ((attrib & 0xF0000000) != 0)
 								attrib &= 0x7FFF;
 
-							_r_fs_setattributes (dest_path->buffer, NULL, attrib);
+							_r_fs_setattributes (&dest_path->sr, NULL, attrib);
 						}
 					}
 
