@@ -775,8 +775,11 @@ BOOLEAN _app_checkupdate (
 
 		string = _r_obj_findhashtablepointer (hashtable, _r_str_gethash2 (L"version", TRUE));
 
+		// @woolyss got drunk?
+		//
+		// version=;revision=1610313;commit=9a52cb78e9cdc1200626c64c6aaa080b9360d5f1
 		if (_r_obj_isstringempty (string))
-			_r_obj_movereference ((PVOID_PTR)&string, _r_obj_findhashtablepointer (hashtable, _r_str_gethash2 (L"revision", TRUE)));
+			_r_obj_movereference ((PVOID_PTR)&string, _r_obj_createstring (L"13.37"));
 
 		_r_obj_movereference ((PVOID_PTR)&pbi->new_version, string);
 
@@ -1771,7 +1774,7 @@ INT_PTR CALLBACK DlgProc (
 
 					if (string)
 					{
-						// fuck, who knows what size of area of lpszText? stupid cunts
+						// fuck, who knows what size of area of lpszText? stupid cunts!
 						_r_str_copy (lpnmdi->lpszText, 0x80, string->buffer);
 
 						_r_obj_dereference (string);
