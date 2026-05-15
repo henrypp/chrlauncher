@@ -1209,7 +1209,7 @@ BOOLEAN _app_unpack_zip (
 		{
 			_r_obj_initializebyteref (&path_sr, file_stat.m_filename);
 
-			status = _r_str_multibyte2unicode (&path, &path_sr);
+			status = _r_str_multibyte2unicode (&path_sr, &path);
 
 			if (!NT_SUCCESS (status))
 				continue;
@@ -1236,7 +1236,7 @@ BOOLEAN _app_unpack_zip (
 
 		_r_obj_initializebyteref (&path_sr, file_stat.m_filename);
 
-		status = _r_str_multibyte2unicode (&path, &path_sr);
+		status = _r_str_multibyte2unicode (&path_sr, &path);
 
 		if (!NT_SUCCESS (status))
 			continue;
