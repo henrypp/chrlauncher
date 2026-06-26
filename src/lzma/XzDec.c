@@ -25,8 +25,8 @@
 #define PRF(x)
 #endif
 
-#define PRF_STR(s) PRF(printf("\n" s "\n"))
-#define PRF_STR_INT(s, d) PRF(printf("\n" s " %d\n", (unsigned)d))
+#define PRF_STR(s) PRF(printf("\n" s "\n");)
+#define PRF_STR_INT(s, d) PRF(printf("\n" s " %d\n", (unsigned)d);)
 
 #include <stdlib.h>
 #include <string.h>
@@ -279,7 +279,7 @@ SRes Xz_StateCoder_Bc_SetFromMethod_Func(IStateCoder *p, UInt64 id,
     decoder = (CXzBcFilterState *)ISzAlloc_Alloc(alloc, sizeof(CXzBcFilterState));
     if (!decoder)
       return SZ_ERROR_MEM;
-    decoder->buf = ISzAlloc_Alloc(alloc, BRA_BUF_SIZE);
+    decoder->buf = (Byte *)ISzAlloc_Alloc(alloc, BRA_BUF_SIZE);
     if (!decoder->buf)
     {
       ISzAlloc_Free(alloc, decoder);
@@ -574,7 +574,7 @@ static SRes MixCoder_ResetFromMethod(CMixCoder *p, unsigned coderIndex, UInt64 m
 output (status) can be :
   CODER_STATUS_NOT_FINISHED
   CODER_STATUS_FINISHED_WITH_MARK
-  CODER_STATUS_NEEDS_MORE_INPUT - not implemented still
+  CODER_STATUS_NEEDS_MORE_INPUT
 */
 
 static SRes MixCoder_Code(CMixCoder *p,
@@ -582,8 +582,8 @@ static SRes MixCoder_Code(CMixCoder *p,
     const Byte *src, SizeT *srcLen, int srcWasFinished,
     ECoderFinishMode finishMode)
 {
-  SizeT destLenOrig = *destLen;
-  SizeT srcLenOrig = *srcLen;
+  const SizeT destLenOrig = *destLen;
+  const SizeT srcLenOrig = *srcLen;
 
   *destLen = 0;
   *srcLen = 0;
@@ -597,39 +597,26 @@ static SRes MixCoder_Code(CMixCoder *p,
   if (p->outBuf)
   {
     SRes res;
-    SizeT destLen2, srcLen2;
+    SizeT destLen2;
     int wasFinished;
     
     PRF_STR("------- MixCoder Single ----------")
       
-    srcLen2 = srcLenOrig;
     destLen2 = destLenOrig;
-    
+    if (p->numCoders != 1)
+    {
+      if (destLen2 < p->outWritten)
+        return SZ_ERROR_FAIL;
+      destLen2 -= p->outWritten;
+    }
+    *srcLen = srcLenOrig;
     {
       IStateCoder *coder = &p->coders[0];
-      res = coder->Code2(coder->p, NULL, &destLen2, src, &srcLen2, srcWasFinished, finishMode,
-          // &wasFinished,
-          &p->status);
-      wasFinished = (p->status == CODER_STATUS_FINISHED_WITH_MARK);
+      res = coder->Code2(coder->p, NULL, &destLen2, src, srcLen, srcWasFinished, finishMode, &p->status);
     }
-    
     p->res = res;
-    
-    /*
-    if (wasFinished)
-      p->status = CODER_STATUS_FINISHED_WITH_MARK;
-    else
-    {
-      if (res == SZ_OK)
-        if (destLen2 != destLenOrig)
-          p->status = CODER_STATUS_NEEDS_MORE_INPUT;
-    }
-    */
-
-    
-    *srcLen = srcLen2;
-    src += srcLen2;
     p->outWritten += destLen2;
+    wasFinished = (p->status == CODER_STATUS_FINISHED_WITH_MARK);
     
     if (res != SZ_OK || srcWasFinished || wasFinished)
       p->wasFinished = True;
@@ -1016,8 +1003,8 @@ SRes XzUnpacker_Code(CXzUnpacker *p, Byte *dest, SizeT *destLen,
     const Byte *src, SizeT *srcLen, int srcFinished,
     ECoderFinishMode finishMode, ECoderStatus *status)
 {
-  SizeT destLenOrig = *destLen;
-  SizeT srcLenOrig = *srcLen;
+  const SizeT destLenOrig = *destLen;
+  const SizeT srcLenOrig = *srcLen;
   *destLen = 0;
   *srcLen = 0;
   *status = CODER_STATUS_NOT_SPECIFIED;
@@ -1243,7 +1230,7 @@ SRes XzUnpacker_Code(CXzUnpacker *p, Byte *dest, SizeT *destLen,
             UInt32 digest32[XZ_CHECK_SIZE_MAX / 4];
             p->state = XZ_STATE_BLOCK_HEADER;
             p->pos = 0;
-            if (XzCheck_Final(&p->check, (void *)digest32) && memcmp(digest32, p->buf, checkSize) != 0)
+            if (XzCheck_Final(&p->check, (Byte *)(void *)digest32) && memcmp(digest32, p->buf, checkSize) != 0)
               return SZ_ERROR_CRC;
             if (p->decodeOnlyOneBlock)
             {
@@ -1292,7 +1279,7 @@ SRes XzUnpacker_Code(CXzUnpacker *p, Byte *dest, SizeT *destLen,
             p->state = XZ_STATE_STREAM_INDEX_CRC;
             p->indexSize += 4;
             p->pos = 0;
-            Sha256_Final(&p->sha, (void *)digest32);
+            Sha256_Final(&p->sha, (Byte *)(void *)digest32);
             if (memcmp(digest32, p->shaDigest32, SHA256_DIGEST_SIZE) != 0)
               return SZ_ERROR_CRC;
           }
