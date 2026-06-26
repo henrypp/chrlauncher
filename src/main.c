@@ -105,7 +105,7 @@ VOID _app_update_browser_info (
 {
 	PR_STRING localized_string;
 	PR_STRING date_dormat;
-	LPWSTR string;
+	LPCWSTR string;
 	R_STRINGREF empty_string;
 	HDWP hdefer;
 
@@ -1913,11 +1913,11 @@ INT_PTR CALLBACK DlgProc (
 				case IDM_OPEN:
 				case IDM_TRAY_OPEN:
 				{
-					PR_STRING path;
+					PR_STRINGREF path;
 
 					path = _r_app_getconfigpath ();
 
-					if (_r_fs_isexists (&path->sr))
+					if (_r_fs_isexists (path))
 						_r_shell_opendefault (path->buffer);
 
 					break;
@@ -1995,7 +1995,6 @@ INT APIENTRY wWinMain (
 	_In_ INT show_cmd
 )
 {
-	PR_STRING path;
 	HWND hwnd;
 
 	if (!_r_app_initialize (NULL))
@@ -2003,9 +2002,7 @@ INT APIENTRY wWinMain (
 
 	_r_workqueue_initialize (&workqueue, 1, NULL, NULL);
 
-	path = _r_app_getdirectory ();
-
-	_r_fs_setcurrentdirectory (&path->sr);
+	_r_fs_setcurrentdirectory (_r_app_getdirectory ());
 
 	if (cmdline)
 	{
