@@ -46,12 +46,12 @@ BOOL CALLBACK activate_browser_window_callback (
 	if (!_r_wnd_isvisible (hwnd, FALSE))
 		return TRUE;
 
-	status = _r_sys_openprocess (&hprocess, pid, PROCESS_QUERY_LIMITED_INFORMATION);
+	status = _r_sys_openprocess (ULongToHandle (pid), PROCESS_QUERY_LIMITED_INFORMATION, &hprocess);
 
 	if (!NT_SUCCESS (status))
 		return TRUE;
 
-	status = _r_sys_queryprocessstring (&process_path, hprocess, ProcessImageFileNameWin32);
+	status = _r_sys_queryprocessstring (hprocess, ProcessImageFileNameWin32, &process_path);
 
 	if (NT_SUCCESS (status))
 	{
@@ -111,7 +111,7 @@ VOID _app_update_browser_info (
 
 	string = _r_locale_getstring (IDS_STATUS_NOTFOUND);
 
-	_r_obj_initializestringref (&empty_string, string);
+	_r_obj_initializestringref (&empty_string, (LPWSTR)string);
 
 	date_dormat = _r_format_unixtime (pbi->timestamp, FDTF_SHORTDATE | FDTF_SHORTTIME);
 
@@ -180,7 +180,7 @@ VOID _app_parse_args (
 	ULONG_PTR first_arg_length = 0;
 	INT numargs;
 
-	arga = CommandLineToArgvW (_r_sys_getcommandline ()->buffer, &numargs);
+	arga = CommandLineToArgvW (_r_sys_getcommandline (), &numargs);
 
 	if (!arga)
 		return;
@@ -244,7 +244,7 @@ VOID _app_parse_args (
 
 	if (pbi->is_hasurls)
 	{
-		pbi->urls_str = _r_obj_createstring (_r_sys_getcommandline ()->buffer + first_arg_length + 2);
+		pbi->urls_str = _r_obj_createstring (_r_sys_getcommandline () + first_arg_length + 2);
 
 		_r_str_trimstring2 (&pbi->urls_str->sr, L" ", 0);
 	}
@@ -254,13 +254,13 @@ VOID _app_parse_args (
 }
 
 VOID _app_delete (
-	_In_ PCR_STRINGREF path,
+	_In_ PR_STRINGREF path,
 	_In_ BOOLEAN is_directory
 )
 {
 	NTSTATUS status;
 
-	if (_r_config_getboolean (L"ChromiumDeleteToRecycle", TRUE, NULL))
+	if (_r_config_getboolean (L"ChromiumDeleteToRecycle", TRUE))
 	{
 		status = _r_fs_deleterecycle (path);
 	}
@@ -272,7 +272,7 @@ VOID _app_delete (
 		}
 		else
 		{
-			status = _r_fs_deletefile (path, NULL);
+			status = _r_fs_deletefile (path);
 		}
 	}
 
@@ -340,7 +340,7 @@ VOID _app_update_browser_launch_options (
 		user_data_dir = NULL;
 	}
 
-	status = _r_path_getfullpath (&user_data_dir, &string->sr);
+	status = _r_path_getfullpath (string->buffer, &user_data_dir);
 
 	if (NT_SUCCESS (status))
 	{
@@ -392,8 +392,8 @@ VOID _app_init_browser_info (
 	_r_obj_clearreference ((PVOID_PTR)&pbi->args_str);
 
 	// configure paths
-	binary_dir = _r_config_getstringexpand (L"ChromiumDirectory", L".\\bin", NULL);
-	binary_name = _r_config_getstring (L"ChromiumBinary", L"chrome.exe", NULL);
+	binary_dir = _r_config_getstringexpand (L"ChromiumDirectory", L".\\bin");
+	binary_name = _r_config_getstring (L"ChromiumBinary", L"chrome.exe");
 
 	if (!binary_dir || !binary_name)
 	{
@@ -402,7 +402,7 @@ VOID _app_init_browser_info (
 		return;
 	}
 
-	status = _r_path_getfullpath (&string, &binary_dir->sr);
+	status = _r_path_getfullpath (binary_dir->buffer, &string);
 
 	if (NT_SUCCESS (status))
 	{
@@ -426,7 +426,7 @@ VOID _app_init_browser_info (
 
 	_r_obj_movereference ((PVOID_PTR)&pbi->binary_path, string);
 
-	if (!_r_fs_isexists (&pbi->binary_path->sr))
+	if (!_r_fs_exists (&pbi->binary_path->sr))
 	{
 		for (ULONG_PTR i = 0; i < RTL_NUMBER_OF (bin_names); i++)
 		{
@@ -439,11 +439,11 @@ VOID _app_init_browser_info (
 
 			_r_obj_movereference ((PVOID_PTR)&pbi->binary_path, string);
 
-			if (_r_fs_isexists (&pbi->binary_path->sr))
+			if (_r_fs_exists (&pbi->binary_path->sr))
 				break;
 		}
 
-		if (_r_obj_isstringempty (pbi->binary_path) || !_r_fs_isexists (&pbi->binary_path->sr))
+		if (_r_obj_isstringempty (pbi->binary_path) || !_r_fs_exists (&pbi->binary_path->sr))
 		{
 			string = _r_obj_concatstringrefs (
 				3,
@@ -459,9 +459,9 @@ VOID _app_init_browser_info (
 
 	_r_obj_dereference (binary_name);
 
-	binary_dir = _r_config_getstringexpand (L"ChromePlusDirectory", L".\\chrome_plus", NULL);
+	binary_dir = _r_config_getstringexpand (L"ChromePlusDirectory", L".\\chrome_plus");
 
-	status = _r_path_getfullpath (&string, &binary_dir->sr);
+	status = _r_path_getfullpath (binary_dir->buffer, &string);
 
 	if (NT_SUCCESS (status))
 	{
@@ -482,14 +482,14 @@ VOID _app_init_browser_info (
 		_r_obj_dereference (string);
 
 	// Get browser architecture
-	pbi->architecture = _r_config_getlong (L"ChromiumArchitecture", 0, NULL);
+	pbi->architecture = _r_config_getlong (L"ChromiumArchitecture", 0);
 
 	if (pbi->architecture != 64 && pbi->architecture != 32)
 	{
 		pbi->architecture = 0;
 
 		// ...by executable
-		if (_r_fs_isexists (&pbi->binary_path->sr))
+		if (_r_fs_exists (&pbi->binary_path->sr))
 		{
 			status = _r_sys_getbinarytype (&pbi->binary_path->sr, &binary_type);
 
@@ -500,7 +500,7 @@ VOID _app_init_browser_info (
 		// ...by processor architecture
 		if (!pbi->architecture)
 		{
-			status = _r_sys_getprocessorinformation (&architecture, NULL, NULL);
+			status = _r_sys_getprocessorinformation (&architecture, NULL);
 
 			if (NT_SUCCESS (status))
 				pbi->architecture = (architecture == PROCESSOR_ARCHITECTURE_AMD64) ? 64 : 32;
@@ -511,12 +511,12 @@ VOID _app_init_browser_info (
 		pbi->architecture = 64; // default architecture
 
 	// Set common data
-	browser_type = _r_config_getstring (L"ChromiumType", CHROMIUM_TYPE, NULL);
-	browser_arguments = _r_config_getstringexpand (L"ChromiumCommandLine", CHROMIUM_COMMAND_LINE, NULL);
+	browser_type = _r_config_getstring (L"ChromiumType", CHROMIUM_TYPE);
+	browser_arguments = _r_config_getstringexpand (L"ChromiumCommandLine", CHROMIUM_COMMAND_LINE);
 
-	if (_r_config_getboolean (L"ChromiumEnableCast", FALSE, NULL))
+	if (_r_config_getboolean (L"ChromiumEnableCast", FALSE))
 	{
-		cast_arguments = _r_config_getstringexpand (L"ChromiumCastCommandLine", CHROMIUM_CAST_COMMAND_LINE, NULL);
+		cast_arguments = _r_config_getstringexpand (L"ChromiumCastCommandLine", CHROMIUM_CAST_COMMAND_LINE);
 
 		if (cast_arguments)
 		{
@@ -555,23 +555,23 @@ VOID _app_init_browser_info (
 	// parse arguments
 	_app_parse_args (pbi);
 
-	pbi->check_period = _r_config_getlong (L"ChromiumCheckPeriod", 2, NULL);
+	pbi->check_period = _r_config_getlong (L"ChromiumCheckPeriod", 2);
 
 	if (pbi->check_period == INT_ERROR)
 		pbi->is_forcecheck = TRUE;
 
 	// set default config
 	if (!pbi->is_autodownload)
-		pbi->is_autodownload = _r_config_getboolean (L"ChromiumAutoDownload", FALSE, NULL);
+		pbi->is_autodownload = _r_config_getboolean (L"ChromiumAutoDownload", FALSE);
 
 	if (!pbi->is_bringtofront)
-		pbi->is_bringtofront = _r_config_getboolean (L"ChromiumBringToFront", TRUE, NULL);
+		pbi->is_bringtofront = _r_config_getboolean (L"ChromiumBringToFront", TRUE);
 
 	if (!pbi->is_waitdownloadend)
-		pbi->is_waitdownloadend = _r_config_getboolean (L"ChromiumWaitForDownloadEnd", TRUE, NULL);
+		pbi->is_waitdownloadend = _r_config_getboolean (L"ChromiumWaitForDownloadEnd", TRUE);
 
 	if (!pbi->is_onlyupdate)
-		pbi->is_onlyupdate = _r_config_getboolean (L"ChromiumUpdateOnly", FALSE, NULL);
+		pbi->is_onlyupdate = _r_config_getboolean (L"ChromiumUpdateOnly", FALSE);
 
 	// rewrite options when update-only mode is enabled
 	if (pbi->is_onlyupdate)
@@ -811,7 +811,7 @@ PR_STRING _app_get_last_used_profile (
 
 	local_state_path = _r_format_string (L"%s\\Local State", pbi->user_data_dir->buffer);
 
-	hfile = CreateFileW (local_state_path->buffer, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	hfile = CreateFileW (local_state_path->buffer, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
 
 	_r_obj_dereference (local_state_path);
 
@@ -830,7 +830,7 @@ PR_STRING _app_get_last_used_profile (
 
 	if (buffer)
 	{
-		if (ReadFile (hfile, buffer, bytes_to_read, &bytes_read, NULL) && bytes_read)
+		if (ReadFile (hfile, buffer, bytes_to_read, &bytes_read) && bytes_read)
 		{
 			buffer[bytes_read] = '\0';
 			profile_name = _app_get_json_string_value (buffer, "\"last_used\"");
@@ -877,7 +877,7 @@ BOOLEAN _app_openbrowser (
 	ULONG_PTR args_length = 0;
 	NTSTATUS status;
 
-	if (_r_obj_isstringempty (pbi->binary_path) || !_r_fs_isexists (&pbi->binary_path->sr))
+	if (_r_obj_isstringempty (pbi->binary_path) || !_r_fs_exists (&pbi->binary_path->sr))
 	{
 		if (hwnd)
 			_r_show_errormessage (hwnd, NULL, STATUS_OBJECT_PATH_NOT_FOUND, _r_obj_getstring (pbi->binary_path), ET_NATIVE);
@@ -955,7 +955,7 @@ BOOLEAN _app_openbrowser (
 
 	cmdline = _r_format_string (L"\"%s\" -url %s", pbi->binary_path->buffer, args_string->buffer);
 
-	status = _r_sys_createprocess (&pbi->binary_path->sr, &cmdline->sr, &pbi->binary_dir->sr, FALSE);
+	status = _r_sys_createprocess (pbi->binary_path->buffer, cmdline->buffer, pbi->binary_dir->buffer, FALSE);
 
 	if (!NT_SUCCESS (status))
 		_r_show_errormessage (_r_app_gethwnd (), NULL, status, pbi->binary_path->buffer, ET_NATIVE);
@@ -980,7 +980,7 @@ BOOLEAN _app_isupdatedownloaded (
 	_In_ PBROWSER_INFORMATION pbi
 )
 {
-	return !_r_obj_isstringempty (pbi->cache_path) && _r_fs_isexists (&pbi->cache_path->sr);
+	return !_r_obj_isstringempty (pbi->cache_path) && _r_fs_exists (&pbi->cache_path->sr);
 }
 
 BOOLEAN _app_isupdaterequired (
@@ -989,7 +989,7 @@ BOOLEAN _app_isupdaterequired (
 {
 	LONG64 timestamp;
 
-	if (!_r_fs_isexists (&pbi->binary_path->sr))
+	if (!_r_fs_exists (&pbi->binary_path->sr))
 		return TRUE;
 
 	if (pbi->is_forcecheck)
@@ -998,7 +998,7 @@ BOOLEAN _app_isupdaterequired (
 	if (pbi->check_period)
 	{
 		timestamp = _r_unixtime_now ();
-		timestamp -= _r_config_getlong64 (L"ChromiumLastCheck", 0, NULL);
+		timestamp -= _r_config_getlong64 (L"ChromiumLastCheck", 0);
 
 		if (timestamp >= _r_calc_days2seconds (pbi->check_period))
 			return TRUE;
@@ -1047,7 +1047,7 @@ BOOLEAN _app_checkupdate (
 	if (_app_ishaveupdate (pbi))
 		return TRUE;
 
-	is_exists = _r_fs_isexists (&pbi->binary_path->sr);
+	is_exists = _r_fs_exists (&pbi->binary_path->sr);
 	is_updaterequired = _app_isupdaterequired (pbi);
 
 	_app_setstatus (hwnd, pbi->htaskbar, _r_locale_getstring (IDS_STATUS_CHECK), 0, 0);
@@ -1059,7 +1059,7 @@ BOOLEAN _app_checkupdate (
 
 	if (!is_exists || is_updaterequired)
 	{
-		update_url = _r_config_getstring (L"ChromiumUpdateUrl", CHROMIUM_UPDATE_URL, NULL);
+		update_url = _r_config_getstring (L"ChromiumUpdateUrl", CHROMIUM_UPDATE_URL);
 
 		if (!update_url)
 			return FALSE;
@@ -1076,7 +1076,7 @@ BOOLEAN _app_checkupdate (
 			{
 				_r_inet_initializedownload (&download_info, NULL, NULL, NULL);
 
-				status = _r_inet_begindownload (&download_info, hsession, &url->sr);
+				status = _r_inet_begindownload (hsession, &url->sr, &download_info);
 
 				if (status == STATUS_SUCCESS)
 				{
@@ -1116,11 +1116,15 @@ BOOLEAN _app_checkupdate (
 
 	if (hashtable)
 	{
-		string = _r_obj_findhashtablepointer (hashtable, _r_str_gethash2 (L"download", TRUE));
+		R_STRINGREF download_key = PR_STRINGREF_INIT (L"download");
+		R_STRINGREF version_key = PR_STRINGREF_INIT (L"version");
+		R_STRINGREF timestamp_key = PR_STRINGREF_INIT (L"timestamp");
+
+		string = _r_obj_findhashtablepointer (hashtable, _r_str_gethash2 (&download_key, TRUE));
 
 		_r_obj_movereference ((PVOID_PTR)&pbi->download_url, string);
 
-		string = _r_obj_findhashtablepointer (hashtable, _r_str_gethash2 (L"version", TRUE));
+		string = _r_obj_findhashtablepointer (hashtable, _r_str_gethash2 (&version_key, TRUE));
 
 		// @woolyss got drunk?
 		//
@@ -1130,7 +1134,7 @@ BOOLEAN _app_checkupdate (
 
 		_r_obj_movereference ((PVOID_PTR)&pbi->new_version, string);
 
-		string = _r_obj_findhashtablepointer (hashtable, _r_str_gethash2 (L"timestamp", TRUE));
+		string = _r_obj_findhashtablepointer (hashtable, _r_str_gethash2 (&timestamp_key, TRUE));
 
 		if (string)
 		{
@@ -1152,7 +1156,7 @@ BOOLEAN _app_checkupdate (
 		{
 			SAFE_DELETE_REFERENCE (pbi->download_url); // clear download url if update was not found
 
-			_r_config_setlong64 (L"ChromiumLastCheck", _r_unixtime_now (), NULL);
+			_r_config_setlong64 (L"ChromiumLastCheck", _r_unixtime_now ());
 		}
 
 		_r_obj_dereference (hashtable);
@@ -1209,7 +1213,6 @@ BOOLEAN _app_downloadupdate (
 	if (hsession)
 	{
 		status = _r_fs_createfile (
-			&hfile,
 			&pbi->cache_path->sr,
 			FILE_OVERWRITE_IF,
 			FILE_GENERIC_WRITE,
@@ -1217,7 +1220,8 @@ BOOLEAN _app_downloadupdate (
 			FILE_ATTRIBUTE_TEMPORARY,
 			FILE_SEQUENTIAL_ONLY,
 			FALSE,
-			NULL
+			NULL,
+			&hfile
 		);
 
 		if (!NT_SUCCESS (status))
@@ -1230,7 +1234,7 @@ BOOLEAN _app_downloadupdate (
 		{
 			_r_inet_initializedownload (&download_info, hfile, &_app_downloadupdate_callback, pbi);
 
-			status = _r_inet_begindownload (&download_info, hsession, &pbi->download_url->sr);
+			status = _r_inet_begindownload (hsession, &pbi->download_url->sr, &download_info);
 
 			_r_inet_destroydownload (&download_info); // required!
 
@@ -1347,7 +1351,7 @@ SRes _app_unpack_7zip (
 		if (SzArEx_IsDir (&db, i))
 			continue;
 
-		length = SzArEx_GetFileNameUtf16 (&db, i, NULL);
+		length = SzArEx_GetFileNameUtf16 (&db, i);
 		total_size += SzArEx_GetFileSize (&db, i);
 
 		if (length > temp_size)
@@ -1618,7 +1622,7 @@ BOOLEAN _app_unpack_zip (
 
 			if (sub_dir)
 			{
-				if (!_r_fs_isexists (&sub_dir->sr))
+				if (!_r_fs_exists (&sub_dir->sr))
 					_r_fs_createdirectory (&sub_dir->sr);
 
 				_r_obj_dereference (sub_dir);
@@ -1661,7 +1665,7 @@ BOOLEAN _app_installupdate (
 
 	_r_sys_setthreadexecutionstate (ES_SYSTEM_REQUIRED | ES_AWAYMODE_REQUIRED);
 
-	if (!_r_fs_isexists (&pbi->binary_dir->sr))
+	if (!_r_fs_exists (&pbi->binary_dir->sr))
 		_r_fs_createdirectory (&pbi->binary_dir->sr);
 
 	if (_app_unpack_zip (hwnd, pbi, &bin_name))
@@ -1680,18 +1684,18 @@ BOOLEAN _app_installupdate (
 	// remove cache file when zip cannot be opened
 	_app_delete (&pbi->cache_path->sr, FALSE);
 
-	if (_r_fs_isexists (&pbi->chrome_plus_dir->sr) && _r_fs_isdirectory (&pbi->chrome_plus_dir->sr))
+	if (_r_fs_exists (&pbi->chrome_plus_dir->sr) && _r_fs_isdirectory (&pbi->chrome_plus_dir->sr))
 	{
 		buffer1 = _r_format_string (L"%s\\version.dll", pbi->chrome_plus_dir->buffer);
 		buffer2 = _r_format_string (L"%s\\version.dll", pbi->binary_dir->buffer);
 
-		if (_r_fs_isexists (&buffer1->sr))
+		if (_r_fs_exists (&buffer1->sr))
 			_r_fs_copyfile (&buffer1->sr, &buffer2->sr, FALSE);
 
 		_r_obj_movereference ((PVOID_PTR)&buffer1, _r_format_string (L"%s\\chrome++.ini", pbi->chrome_plus_dir->buffer));
 		_r_obj_movereference ((PVOID_PTR)&buffer2, _r_format_string (L"%s\\chrome++.ini", pbi->binary_dir->buffer));
 
-		if (_r_fs_isexists (&buffer1->sr))
+		if (_r_fs_exists (&buffer1->sr))
 			_r_fs_copyfile (&buffer1->sr, &buffer2->sr, FALSE);
 
 		_r_obj_dereference (buffer1);
@@ -1750,7 +1754,7 @@ VOID _app_thread_check (
 
 				_app_update_browser_info (hwnd, pbi);
 
-				_r_config_setlong64 (L"ChromiumLastCheck", _r_unixtime_now (), NULL);
+				_r_config_setlong64 (L"ChromiumLastCheck", _r_unixtime_now ());
 
 				is_installed = TRUE;
 			}
@@ -1769,7 +1773,7 @@ VOID _app_thread_check (
 		_r_progress_setmarquee (hwnd, IDC_PROGRESS, TRUE);
 
 		is_updaterequired = _app_isupdaterequired (pbi);
-		is_exists = _r_fs_isexists (&pbi->binary_path->sr);
+		is_exists = _r_fs_exists (&pbi->binary_path->sr);
 
 		// show launcher gui
 		if (!is_exists || is_updaterequired || pbi->is_onlyupdate || pbi->is_bringtofront)
@@ -1781,7 +1785,7 @@ VOID _app_thread_check (
 
 		if (is_exists)
 		{
-			if (_r_config_getboolean (L"ChromiumRunAtEnd", TRUE, NULL))
+			if (_r_config_getboolean (L"ChromiumRunAtEnd", TRUE))
 			{
 				if (!pbi->is_waitdownloadend && !pbi->is_onlyupdate)
 					_app_openbrowser (hwnd, pbi);
@@ -1797,7 +1801,7 @@ VOID _app_thread_check (
 				if (pbi->is_bringtofront)
 					_r_wnd_toggle (hwnd, TRUE); // show window
 
-				if (_r_config_getboolean (L"ChromiumRunAtEnd", TRUE, NULL))
+				if (_r_config_getboolean (L"ChromiumRunAtEnd", TRUE))
 				{
 					if (is_exists && !pbi->is_onlyupdate && !pbi->is_waitdownloadend && !_app_isupdatedownloaded (pbi))
 						_app_openbrowser (hwnd, pbi);
@@ -1812,7 +1816,7 @@ VOID _app_thread_check (
 						_r_ctrl_enable (hwnd, IDC_START_BTN, FALSE);
 
 						if (_app_installupdate (hwnd, pbi, &is_haveerror))
-							_r_config_setlong64 (L"ChromiumLastCheck", _r_unixtime_now (), NULL);
+							_r_config_setlong64 (L"ChromiumLastCheck", _r_unixtime_now ());
 					}
 					else
 					{
@@ -1868,7 +1872,7 @@ VOID _app_thread_check (
 		is_stayopen = TRUE;
 	}
 
-	if (_r_config_getboolean (L"ChromiumRunAtEnd", TRUE, NULL) && !pbi->is_onlyupdate)
+	if (_r_config_getboolean (L"ChromiumRunAtEnd", TRUE) && !pbi->is_onlyupdate)
 		_app_openbrowser (hwnd, pbi);
 
 	_r_queuedlock_releaseshared (&lock_thread);
@@ -1935,7 +1939,7 @@ INT_PTR CALLBACK DlgProc (
 
 			if (hmenu)
 			{
-				_r_menu_checkitem (hmenu, IDM_RUNATEND_CHK, 0, MF_BYCOMMAND, _r_config_getboolean (L"ChromiumRunAtEnd", TRUE, NULL));
+				_r_menu_checkitem (hmenu, IDM_RUNATEND_CHK, 0, MF_BYCOMMAND, _r_config_getboolean (L"ChromiumRunAtEnd", TRUE));
 				_r_menu_checkitem (hmenu, IDM_DARKMODE_CHK, 0, MF_BYCOMMAND, _r_theme_isenabled ());
 			}
 
@@ -2060,7 +2064,7 @@ INT_PTR CALLBACK DlgProc (
 		{
 			_r_tray_destroy (hwnd, &GUID_TrayIcon);
 
-			if (_r_config_getboolean (L"ChromiumRunAtEnd", TRUE, NULL))
+			if (_r_config_getboolean (L"ChromiumRunAtEnd", TRUE))
 			{
 				if (browser_info.is_waitdownloadend && !browser_info.is_onlyupdate)
 					_app_openbrowser (NULL, &browser_info);
@@ -2202,7 +2206,7 @@ INT_PTR CALLBACK DlgProc (
 						_r_menu_setitemtext (hsubmenu, IDM_TRAY_ABOUT, FALSE, _r_locale_getstring (IDS_ABOUT));
 						_r_menu_setitemtext (hsubmenu, IDM_TRAY_EXIT, FALSE, _r_locale_getstring (IDS_EXIT));
 
-						if (_r_obj_isstringempty (browser_info.binary_path) || !_r_fs_isexists (&browser_info.binary_path->sr))
+						if (_r_obj_isstringempty (browser_info.binary_path) || !_r_fs_exists (&browser_info.binary_path->sr))
 							_r_menu_enableitem (hsubmenu, IDM_TRAY_RUN, MF_BYCOMMAND, FALSE);
 
 						_r_menu_popup (hsubmenu, hwnd, NULL, TRUE);
@@ -2262,12 +2266,15 @@ INT_PTR CALLBACK DlgProc (
 				case IDM_OPEN:
 				case IDM_TRAY_OPEN:
 				{
-					PR_STRINGREF path;
+					PR_STRING path;
 
 					path = _r_app_getconfigpath ();
 
-					if (_r_fs_isexists (path))
+					if (path && _r_fs_exists (&path->sr))
 						_r_shell_opendefault (path->buffer);
+
+					if (path)
+						_r_obj_dereference (path);
 
 					break;
 				}
@@ -2277,7 +2284,7 @@ INT_PTR CALLBACK DlgProc (
 					if (!browser_info.binary_dir)
 						break;
 
-					if (_r_fs_isexists (&browser_info.binary_dir->sr))
+					if (_r_fs_exists (&browser_info.binary_dir->sr))
 						_r_shell_opendefault (browser_info.binary_dir->buffer);
 
 					break;
@@ -2287,11 +2294,11 @@ INT_PTR CALLBACK DlgProc (
 				{
 					BOOLEAN new_val;
 
-					new_val = !_r_config_getboolean (L"ChromiumRunAtEnd", TRUE, NULL);
+					new_val = !_r_config_getboolean (L"ChromiumRunAtEnd", TRUE);
 
 					_r_menu_checkitem (GetMenu (hwnd), ctrl_id, 0, MF_BYCOMMAND, new_val);
 
-					_r_config_setboolean (L"ChromiumRunAtEnd", new_val, NULL);
+					_r_config_setboolean (L"ChromiumRunAtEnd", new_val);
 
 					break;
 				}
@@ -2349,7 +2356,7 @@ INT APIENTRY wWinMain (
 	if (!_r_app_initialize (NULL))
 		return ERROR_APP_INIT_FAILURE;
 
-	_r_workqueue_initialize (&workqueue, 1, NULL, NULL);
+	_r_workqueue_initialize (&workqueue, 1, NULL);
 
 	_r_fs_setcurrentdirectory (_r_app_getdirectory ());
 
@@ -2357,7 +2364,7 @@ INT APIENTRY wWinMain (
 	{
 		_app_init_browser_info (&browser_info);
 
-		if (browser_info.is_hasurls && _r_fs_isexists (&browser_info.binary_path->sr))
+		if (browser_info.is_hasurls && _r_fs_exists (&browser_info.binary_path->sr))
 		{
 			_app_openbrowser (NULL, &browser_info);
 

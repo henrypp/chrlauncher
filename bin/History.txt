@@ -1,4 +1,5 @@
 v2.7
+- fixed Windows CI build with current routine SDK and Node 24 GitHub Actions
 - optimized external URL launch path by caching parsed browser profile options
 - open external application URLs in Chromium's last used profile instead of falling back to an empty/default profile
 - added optional Chromecast / Google Cast launch support through ChromiumEnableCast and ChromiumCastCommandLine

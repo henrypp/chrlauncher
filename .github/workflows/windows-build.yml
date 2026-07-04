@@ -25,19 +25,19 @@ jobs:
 
     steps:
       - name: Checkout chrlauncher
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: x
           submodules: false
 
       - name: Checkout routine dependency
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: henrypp/routine
           path: routine
 
       - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v2
+        uses: microsoft/setup-msbuild@v3
 
       - name: Build
         working-directory: x
@@ -62,7 +62,7 @@ jobs:
           "Artifact: $($exe.FullName)"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: chrlauncher-${{ matrix.platform }}
           path: x/bin/**
