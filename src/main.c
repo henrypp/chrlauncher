@@ -272,7 +272,7 @@ VOID _app_delete (
 		}
 		else
 		{
-			status = _r_fs_deletefile (path);
+			status = _r_fs_deletefile (path, NULL);
 		}
 	}
 
@@ -476,7 +476,7 @@ VOID _app_init_browser_info (
 
 	string = _r_sys_gettempdirectory ();
 
-	_r_obj_movereference ((PVOID_PTR)&pbi->cache_path, _r_format_string (L"%s\\%s_%" TEXT (PR_ULONG) L".tmp", _r_obj_getstring (string), _r_app_getnameshort (), _r_str_gethash (&pbi->binary_path->sr, TRUE)));
+	_r_obj_movereference ((PVOID_PTR)&pbi->cache_path, _r_format_string (L"%s\\%s_%" TEXT (PR_ULONG) L".tmp", _r_obj_getstring (string), _r_app_getnameshort (), _r_str_gethash2 (&pbi->binary_path->sr, TRUE)));
 
 	if (string)
 		_r_obj_dereference (string);
@@ -500,7 +500,7 @@ VOID _app_init_browser_info (
 		// ...by processor architecture
 		if (!pbi->architecture)
 		{
-			status = _r_sys_getprocessorinformation (&architecture, NULL);
+			status = _r_sys_getprocessorinformation (&architecture, NULL, NULL);
 
 			if (NT_SUCCESS (status))
 				pbi->architecture = (architecture == PROCESSOR_ARCHITECTURE_AMD64) ? 64 : 32;
@@ -811,7 +811,7 @@ PR_STRING _app_get_last_used_profile (
 
 	local_state_path = _r_format_string (L"%s\\Local State", pbi->user_data_dir->buffer);
 
-	hfile = CreateFileW (local_state_path->buffer, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
+	hfile = CreateFileW (local_state_path->buffer, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 
 	_r_obj_dereference (local_state_path);
 
@@ -830,7 +830,7 @@ PR_STRING _app_get_last_used_profile (
 
 	if (buffer)
 	{
-		if (ReadFile (hfile, buffer, bytes_to_read, &bytes_read) && bytes_read)
+		if (ReadFile (hfile, buffer, bytes_to_read, &bytes_read, NULL) && bytes_read)
 		{
 			buffer[bytes_read] = '\0';
 			profile_name = _app_get_json_string_value (buffer, "\"last_used\"");
@@ -1167,9 +1167,9 @@ BOOLEAN _app_checkupdate (
 	return is_success;
 }
 
-BOOLEAN WINAPI _app_downloadupdate_callback (
-	_In_ ULONG64 total_written,
-	_In_ ULONG64 total_length,
+BOOLEAN NTAPI _app_downloadupdate_callback (
+	_In_ ULONG total_written,
+	_In_ ULONG total_length,
 	_In_ PVOID lparam
 )
 {
@@ -1351,7 +1351,7 @@ SRes _app_unpack_7zip (
 		if (SzArEx_IsDir (&db, i))
 			continue;
 
-		length = SzArEx_GetFileNameUtf16 (&db, i);
+		length = SzArEx_GetFileNameUtf16 (&db, i, NULL);
 		total_size += SzArEx_GetFileSize (&db, i);
 
 		if (length > temp_size)
@@ -2352,13 +2352,17 @@ INT APIENTRY wWinMain (
 )
 {
 	HWND hwnd;
+	PR_STRING app_directory;
 
 	if (!_r_app_initialize (NULL))
 		return ERROR_APP_INIT_FAILURE;
 
-	_r_workqueue_initialize (&workqueue, 1, NULL);
+	_r_workqueue_initialize (&workqueue, 1, NULL, APP_NAME);
 
-	_r_fs_setcurrentdirectory (_r_app_getdirectory ());
+	app_directory = _r_app_getdirectory ();
+
+	if (app_directory)
+		_r_fs_setcurrentdirectory (&app_directory->sr);
 
 	if (cmdline)
 	{
