@@ -20,6 +20,7 @@ DEFINE_GUID (GUID_TrayIcon, 0xEAD41630, 0x90BB, 0x4836, 0x82, 0x41, 0xAE, 0xAE, 
 
 #define CHROMIUM_TYPE L"dev-official"
 #define CHROMIUM_COMMAND_LINE L"--flag-switches-begin --user-data-dir=..\\profile --no-default-browser-check --disable-logging --no-report-upload --flag-switches-end"
+#define CHROMIUM_CAST_COMMAND_LINE L"--load-media-router-component-extension --enable-features=CastAllowAllIPs,AllowAllSitesToInitiateMirroring,DialMediaRouteProvider"
 
 typedef struct _BROWSER_INFORMATION
 {
@@ -28,6 +29,7 @@ typedef struct _BROWSER_INFORMATION
 
 	PR_STRING args_str;
 	PR_STRING urls_str;
+	PR_STRING user_data_dir;
 
 	PR_STRING chrome_plus_dir;
 	PR_STRING browser_name;
@@ -50,6 +52,7 @@ typedef struct _BROWSER_INFORMATION
 	BOOLEAN is_deletetorecycle;
 	BOOLEAN is_forcecheck;
 	BOOLEAN is_hasurls;
+	BOOLEAN is_hasprofiledir;
 	BOOLEAN is_onlyupdate;
 	BOOLEAN is_opennewwindow;
 	BOOLEAN is_waitdownloadend;

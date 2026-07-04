@@ -66,7 +66,24 @@ There is list of arguments overrides .ini options
 
 # Command line for Chromium (string):
 # See here: https://peter.sh/experiments/chromium-command-line-switches/
+#
+# When chrlauncher receives an URL from another application, it automatically
+# appends Chromium's last used profile from "Local State" unless this command
+# line already contains --profile-directory.
 ChromiumCommandLine=--flag-switches-begin --user-data-dir=..\profile --no-default-browser-check --disable-logging --no-report-upload --flag-switches-end
+
+# Enable Chromecast / Google Cast support (boolean):
+#
+# false	-> do not add Cast command line flags (default)
+# true	-> add Media Router and Cast discovery flags from ChromiumCastCommandLine
+#
+# Cast requires a Chromium build with Media Router support and Google component
+# update access. Builds without Google integration (for example ungoogled)
+# may not discover or connect to Cast devices even when this option is enabled.
+ChromiumEnableCast=false
+
+# Additional command line used when ChromiumEnableCast=true (string):
+ChromiumCastCommandLine=--load-media-router-component-extension --enable-features=CastAllowAllIPs,AllowAllSitesToInitiateMirroring,DialMediaRouteProvider
 
 # Chromium executable file name (string):
 ChromiumBinary=chrome.exe

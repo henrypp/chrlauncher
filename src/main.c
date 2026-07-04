@@ -280,6 +280,80 @@ VOID _app_delete (
 		_r_log (LOG_LEVEL_ERROR, NULL, is_directory ? L"_r_fs_deletedirectory" : L"_r_fs_deletefile", status, path->buffer);
 }
 
+VOID _app_update_browser_launch_options (
+	_Inout_ PBROWSER_INFORMATION pbi
+)
+{
+	LPWSTR *arga;
+	PR_STRING string;
+	PR_STRING user_data_dir = NULL;
+	INT numargs;
+	NTSTATUS status;
+
+	_r_obj_clearreference ((PVOID_PTR)&pbi->user_data_dir);
+
+	pbi->is_hasprofiledir = FALSE;
+
+	if (_r_obj_isstringempty (pbi->args_str))
+		return;
+
+	arga = CommandLineToArgvW (pbi->args_str->buffer, &numargs);
+
+	if (!arga)
+		return;
+
+	for (INT i = 0; i < numargs; i++)
+	{
+		if (_wcsnicmp (arga[i], L"--user-data-dir=", 16) == 0)
+		{
+			_r_obj_clearreference ((PVOID_PTR)&user_data_dir);
+
+			user_data_dir = _r_obj_createstring (arga[i] + 16);
+		}
+		else if (_wcsicmp (arga[i], L"--user-data-dir") == 0 && i + 1 < numargs)
+		{
+			_r_obj_clearreference ((PVOID_PTR)&user_data_dir);
+
+			user_data_dir = _r_obj_createstring (arga[i + 1]);
+		}
+		else if (_wcsnicmp (arga[i], L"--profile-directory=", 20) == 0 || _wcsicmp (arga[i], L"--profile-directory") == 0)
+		{
+			pbi->is_hasprofiledir = TRUE;
+		}
+	}
+
+	LocalFree (arga);
+
+	if (_r_obj_isstringempty (user_data_dir))
+		return;
+
+	if (PathIsRelativeW (user_data_dir->buffer))
+	{
+		string = _r_format_string (L"%s\\%s", pbi->binary_dir->buffer, user_data_dir->buffer);
+
+		_r_obj_dereference (user_data_dir);
+		user_data_dir = NULL;
+	}
+	else
+	{
+		string = user_data_dir;
+		user_data_dir = NULL;
+	}
+
+	status = _r_path_getfullpath (&user_data_dir, &string->sr);
+
+	if (NT_SUCCESS (status))
+	{
+		_r_obj_movereference ((PVOID_PTR)&pbi->user_data_dir, user_data_dir);
+
+		_r_obj_dereference (string);
+	}
+	else
+	{
+		_r_obj_movereference ((PVOID_PTR)&pbi->user_data_dir, string);
+	}
+}
+
 VOID _app_init_browser_info (
 	_Inout_ PBROWSER_INFORMATION pbi
 )
@@ -302,6 +376,7 @@ VOID _app_init_browser_info (
 
 	R_STRINGREF separator_sr = PR_STRINGREF_INIT (L"\\");
 	PR_STRING browser_arguments;
+	PR_STRING cast_arguments;
 	PR_STRING browser_type;
 	PR_STRING binary_dir;
 	PR_STRING binary_name;
@@ -439,11 +514,37 @@ VOID _app_init_browser_info (
 	browser_type = _r_config_getstring (L"ChromiumType", CHROMIUM_TYPE, NULL);
 	browser_arguments = _r_config_getstringexpand (L"ChromiumCommandLine", CHROMIUM_COMMAND_LINE, NULL);
 
+	if (_r_config_getboolean (L"ChromiumEnableCast", FALSE, NULL))
+	{
+		cast_arguments = _r_config_getstringexpand (L"ChromiumCastCommandLine", CHROMIUM_CAST_COMMAND_LINE, NULL);
+
+		if (cast_arguments)
+		{
+			if (!_r_obj_isstringempty (cast_arguments) && browser_arguments && !_r_obj_isstringempty (browser_arguments))
+			{
+				string = _r_format_string (L"%s %s", browser_arguments->buffer, cast_arguments->buffer);
+
+				_r_obj_movereference ((PVOID_PTR)&browser_arguments, string);
+				_r_obj_dereference (cast_arguments);
+			}
+			else if (!_r_obj_isstringempty (cast_arguments))
+			{
+				_r_obj_movereference ((PVOID_PTR)&browser_arguments, cast_arguments);
+			}
+			else
+			{
+				_r_obj_dereference (cast_arguments);
+			}
+		}
+	}
+
 	if (browser_type)
 		_r_obj_movereference ((PVOID_PTR)&pbi->browser_type, browser_type);
 
 	if (browser_arguments)
 		_r_obj_movereference ((PVOID_PTR)&pbi->args_str, browser_arguments);
+
+	_app_update_browser_launch_options (pbi);
 
 	string = _r_format_string (L"%s (%" TEXT (PR_LONG) L"-bit)", pbi->browser_type->buffer, pbi->architecture);
 
@@ -543,6 +644,227 @@ VOID _app_setstatus (
 	_r_wnd_sendmessage (hwnd, IDC_PROGRESS, PBM_SETPOS, (WPARAM)(LONG)percent, 0);
 }
 
+PR_STRING _app_get_json_string_value (
+	_In_ LPCSTR buffer,
+	_In_ LPCSTR key
+)
+{
+	PR_STRING string = NULL;
+	LPCSTR ptr;
+	LPCSTR end;
+	LPCSTR value;
+	LPSTR profile_name;
+	LPSTR out;
+	LPWSTR unicode_name;
+	INT unicode_length;
+	SIZE_T key_length;
+	SIZE_T value_length;
+	BOOLEAN is_escaped = FALSE;
+
+	ptr = strstr (buffer, key);
+
+	if (!ptr)
+		return NULL;
+
+	key_length = strlen (key);
+	ptr = strchr (ptr + key_length, ':');
+
+	if (!ptr)
+		return NULL;
+
+	ptr += 1;
+
+	while (*ptr == ' ' || *ptr == '\t' || *ptr == '\r' || *ptr == '\n')
+		ptr += 1;
+
+	if (*ptr != '"')
+		return NULL;
+
+	value = ptr + 1;
+
+	for (end = value; *end; end++)
+	{
+		if (!is_escaped && *end == '"')
+			break;
+
+		is_escaped = (!is_escaped && *end == '\\') ? TRUE : FALSE;
+	}
+
+	value_length = end - value;
+	profile_name = _r_mem_allocate (value_length + 1);
+	out = profile_name;
+
+	if (!profile_name)
+		return NULL;
+
+	for (ptr = value; ptr < end; ptr++)
+	{
+		if (*ptr == '\\')
+		{
+			ptr += 1;
+
+			if (ptr >= end)
+				break;
+
+			switch (*ptr)
+			{
+				case '"':
+				case '\\':
+				case '/':
+				{
+					*out++ = *ptr;
+					break;
+				}
+
+				case 'b':
+				{
+					*out++ = '\b';
+					break;
+				}
+
+				case 'f':
+				{
+					*out++ = '\f';
+					break;
+				}
+
+				case 'n':
+				{
+					*out++ = '\n';
+					break;
+				}
+
+				case 'r':
+				{
+					*out++ = '\r';
+					break;
+				}
+
+				case 't':
+				{
+					*out++ = '\t';
+					break;
+				}
+
+				case 'u':
+				{
+					if (ptr[1] && ptr[2] && ptr[3] && ptr[4])
+						ptr += 4;
+
+					*out++ = '?';
+
+					break;
+				}
+
+				default:
+				{
+					*out++ = *ptr;
+					break;
+				}
+			}
+		}
+		else
+		{
+			*out++ = *ptr;
+		}
+	}
+
+	*out = '\0';
+
+	if (*profile_name)
+	{
+		unicode_length = MultiByteToWideChar (CP_UTF8, 0, profile_name, -1, NULL, 0);
+
+		if (unicode_length)
+		{
+			unicode_name = _r_mem_allocate (unicode_length * sizeof (WCHAR));
+
+			if (unicode_name)
+			{
+				if (MultiByteToWideChar (CP_UTF8, 0, profile_name, -1, unicode_name, unicode_length))
+					string = _r_obj_createstring (unicode_name);
+
+				_r_mem_free (unicode_name);
+			}
+		}
+	}
+
+	_r_mem_free (profile_name);
+
+	return string;
+}
+
+PR_STRING _app_get_last_used_profile (
+	_In_ PBROWSER_INFORMATION pbi
+)
+{
+	HANDLE hfile;
+	LARGE_INTEGER file_size;
+	PR_STRING local_state_path;
+	PR_STRING profile_name = NULL;
+	LPSTR buffer;
+	DWORD bytes_read = 0;
+	DWORD bytes_to_read;
+
+	if (_r_obj_isstringempty (pbi->user_data_dir))
+		return NULL;
+
+	local_state_path = _r_format_string (L"%s\\Local State", pbi->user_data_dir->buffer);
+
+	hfile = CreateFileW (local_state_path->buffer, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+
+	_r_obj_dereference (local_state_path);
+
+	if (hfile == INVALID_HANDLE_VALUE)
+		return NULL;
+
+	if (!GetFileSizeEx (hfile, &file_size) || file_size.QuadPart <= 0 || file_size.QuadPart > 16 * 1024 * 1024)
+	{
+		NtClose (hfile);
+
+		return NULL;
+	}
+
+	bytes_to_read = (DWORD)file_size.QuadPart;
+	buffer = _r_mem_allocate (bytes_to_read + 1);
+
+	if (buffer)
+	{
+		if (ReadFile (hfile, buffer, bytes_to_read, &bytes_read, NULL) && bytes_read)
+		{
+			buffer[bytes_read] = '\0';
+			profile_name = _app_get_json_string_value (buffer, "\"last_used\"");
+		}
+
+		_r_mem_free (buffer);
+	}
+
+	NtClose (hfile);
+
+	return profile_name;
+}
+
+PR_STRING _app_get_profile_argument (
+	_In_ PBROWSER_INFORMATION pbi
+)
+{
+	PR_STRING profile_name;
+	PR_STRING profile_argument = NULL;
+
+	if (_r_obj_isstringempty (pbi->args_str) || pbi->is_hasprofiledir)
+		return NULL;
+
+	profile_name = _app_get_last_used_profile (pbi);
+
+	if (!_r_obj_isstringempty (profile_name))
+		profile_argument = _r_format_string (L"--profile-directory=\"%s\"", profile_name->buffer);
+
+	if (profile_name)
+		_r_obj_dereference (profile_name);
+
+	return profile_argument;
+}
+
 BOOLEAN _app_openbrowser (
 	_In_opt_ HWND hwnd,
 	_In_ PBROWSER_INFORMATION pbi
@@ -550,6 +872,7 @@ BOOLEAN _app_openbrowser (
 {
 	PR_STRING args_string;
 	PR_STRING cmdline;
+	PR_STRING profile_argument = NULL;
 	LPWSTR ptr;
 	ULONG_PTR args_length = 0;
 	NTSTATUS status;
@@ -572,6 +895,14 @@ BOOLEAN _app_openbrowser (
 	if (pbi->args_str)
 		args_length += pbi->args_str->length;
 
+	if (pbi->is_hasurls)
+	{
+		profile_argument = _app_get_profile_argument (pbi);
+
+		if (profile_argument)
+			args_length += profile_argument->length + sizeof (WCHAR);
+	}
+
 	if (pbi->is_hasurls && pbi->urls_str)
 		args_length += pbi->urls_str->length;
 
@@ -582,16 +913,29 @@ BOOLEAN _app_openbrowser (
 	if (pbi->args_str)
 		RtlCopyMemory (args_string->buffer, pbi->args_str->buffer, pbi->args_str->length);
 
+	if (profile_argument)
+	{
+		ptr = PTR_ADD_OFFSET (args_string->buffer, pbi->args_str ? pbi->args_str->length : 0);
+
+		if (pbi->args_str)
+		{
+			RtlCopyMemory (ptr, L" ", sizeof (WCHAR)); // insert space
+			ptr = PTR_ADD_OFFSET (ptr, sizeof (WCHAR));
+		}
+
+		RtlCopyMemory (ptr, profile_argument->buffer, profile_argument->length);
+	}
+
 	if (pbi->is_hasurls)
 	{
 		if (pbi->urls_str)
 		{
-			if (pbi->args_str)
+			if (pbi->args_str || profile_argument)
 			{
-				ptr = PTR_ADD_OFFSET (args_string->buffer, pbi->args_str->length);
+				ptr = PTR_ADD_OFFSET (args_string->buffer, (pbi->args_str ? pbi->args_str->length : 0) + (profile_argument ? profile_argument->length + sizeof (WCHAR) : 0));
 				RtlCopyMemory (ptr, L" ", sizeof (WCHAR)); // insert space
 
-				ptr = PTR_ADD_OFFSET (args_string->buffer, pbi->args_str->length + sizeof (WCHAR));
+				ptr = PTR_ADD_OFFSET (ptr, sizeof (WCHAR));
 				RtlCopyMemory (ptr, pbi->urls_str->buffer, pbi->urls_str->length);
 			}
 			else
@@ -615,6 +959,9 @@ BOOLEAN _app_openbrowser (
 
 	if (!NT_SUCCESS (status))
 		_r_show_errormessage (_r_app_gethwnd (), NULL, status, pbi->binary_path->buffer, ET_NATIVE);
+
+	if (profile_argument)
+		_r_obj_dereference (profile_argument);
 
 	_r_obj_dereference (args_string);
 	_r_obj_dereference (cmdline);
@@ -1647,6 +1994,7 @@ INT_PTR CALLBACK DlgProc (
 
 			locale_id = _app_getactionid (&browser_info);
 
+			_r_ctrl_setstring (hwnd, IDC_CLOSE, _r_locale_getstring (IDS_CLOSE));
 			_r_ctrl_setstring (hwnd, IDC_START_BTN, _r_locale_getstring (locale_id));
 
 			break;
@@ -1896,6 +2244,7 @@ INT_PTR CALLBACK DlgProc (
 					break;
 				}
 
+				case IDC_CLOSE:
 				case IDM_EXIT:
 				case IDM_TRAY_EXIT:
 				{

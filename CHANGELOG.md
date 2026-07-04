@@ -1,3 +1,8 @@
+v2.7
+- optimized external URL launch path by caching parsed browser profile options
+- open external application URLs in Chromium's last used profile instead of falling back to an empty/default profile
+- added optional Chromecast / Google Cast launch support through ChromiumEnableCast and ChromiumCastCommandLine
+
 v2.6 (14 January 2022)
 - set win7sp1 as minimum required version
 - prevent system sleep until download complete
