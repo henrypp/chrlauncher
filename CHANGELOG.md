@@ -1,4 +1,7 @@
 v2.7
+- added optional Chromium region / language spoofing through ChromiumSpoofRegion, ChromiumSpoofRegionLocale, and ChromiumSpoofRegionAcceptLanguage
+- added optional Chromium hardware acceleration / GPU launch support through ChromiumEnableHardwareAcceleration and ChromiumHardwareAccelerationCommandLine
+- improved update reliability with partial download staging, staged installs with rollback, safe archive path validation, and stricter extraction failure handling
 - fixed Windows CI build with current routine SDK and Node 24 GitHub Actions
 - optimized external URL launch path by caching parsed browser profile options
 - open external application URLs in Chromium's last used profile instead of falling back to an empty/default profile

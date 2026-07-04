@@ -21,6 +21,9 @@ DEFINE_GUID (GUID_TrayIcon, 0xEAD41630, 0x90BB, 0x4836, 0x82, 0x41, 0xAE, 0xAE, 
 #define CHROMIUM_TYPE L"dev-official"
 #define CHROMIUM_COMMAND_LINE L"--flag-switches-begin --user-data-dir=..\\profile --no-default-browser-check --disable-logging --no-report-upload --flag-switches-end"
 #define CHROMIUM_CAST_COMMAND_LINE L"--load-media-router-component-extension --enable-features=CastAllowAllIPs,AllowAllSitesToInitiateMirroring,DialMediaRouteProvider"
+#define CHROMIUM_HARDWARE_ACCELERATION_COMMAND_LINE L"--enable-gpu-rasterization --enable-zero-copy --ignore-gpu-blocklist"
+#define CHROMIUM_SPOOF_REGION_LOCALE L"en-US"
+#define CHROMIUM_SPOOF_REGION_ACCEPT_LANGUAGE L"en-US,en"
 
 typedef struct _BROWSER_INFORMATION
 {

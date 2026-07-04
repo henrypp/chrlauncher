@@ -37,6 +37,34 @@ Settings:
 # line already contains --profile-directory.
 ChromiumCommandLine=--flag-switches-begin --user-data-dir=..\profile --no-default-browser-check --disable-logging --no-report-upload --flag-switches-end
 
+# Spoof Chromium region / language hints (boolean):
+#
+# false	-> use Chromium/system profile region settings (default)
+# true	-> add --lang and --accept-lang from the options below
+#
+# This changes Chromium locale and Accept-Language hints only. It does not
+# change your IP address, GPS/location permission result, system timezone, or
+# WebRTC network exposure.
+ChromiumSpoofRegion=false
+
+# Locale used when ChromiumSpoofRegion=true (string):
+ChromiumSpoofRegionLocale=en-US
+
+# Accept-Language list used when ChromiumSpoofRegion=true (string):
+ChromiumSpoofRegionAcceptLanguage=en-US,en
+
+# Enable Chromium hardware acceleration / GPU support (boolean):
+#
+# false	-> do not add GPU command line flags
+# true	-> add GPU rasterization and zero-copy flags from ChromiumHardwareAccelerationCommandLine (default)
+#
+# If your GPU driver is unstable, set this to false or remove --ignore-gpu-blocklist
+# from ChromiumHardwareAccelerationCommandLine.
+ChromiumEnableHardwareAcceleration=true
+
+# Additional command line used when ChromiumEnableHardwareAcceleration=true (string):
+ChromiumHardwareAccelerationCommandLine=--enable-gpu-rasterization --enable-zero-copy --ignore-gpu-blocklist
+
 # Enable Chromecast / Google Cast support (boolean):
 #
 # false	-> do not add Cast command line flags (default)

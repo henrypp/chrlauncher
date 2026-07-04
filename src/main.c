@@ -354,6 +354,38 @@ VOID _app_update_browser_launch_options (
 	}
 }
 
+VOID _app_append_browser_arguments (
+	_Inout_ PR_STRING *browser_arguments_ptr,
+	_In_ PR_STRING append_arguments
+)
+{
+	PR_STRING string;
+
+	if (!append_arguments)
+		return;
+
+	if (_r_obj_isstringempty (append_arguments))
+	{
+		_r_obj_dereference (append_arguments);
+
+		return;
+	}
+
+	if (*browser_arguments_ptr && !_r_obj_isstringempty (*browser_arguments_ptr))
+	{
+		string = _r_format_string (L"%s %s", (*browser_arguments_ptr)->buffer, append_arguments->buffer);
+
+		if (string)
+			_r_obj_movereference ((PVOID_PTR)browser_arguments_ptr, string);
+
+		_r_obj_dereference (append_arguments);
+	}
+	else
+	{
+		_r_obj_movereference ((PVOID_PTR)browser_arguments_ptr, append_arguments);
+	}
+}
+
 VOID _app_init_browser_info (
 	_Inout_ PBROWSER_INFORMATION pbi
 )
@@ -375,8 +407,12 @@ VOID _app_init_browser_info (
 	};
 
 	R_STRINGREF separator_sr = PR_STRINGREF_INIT (L"\\");
+	PR_STRING accept_language;
 	PR_STRING browser_arguments;
 	PR_STRING cast_arguments;
+	PR_STRING gpu_arguments;
+	PR_STRING locale;
+	PR_STRING region_arguments;
 	PR_STRING browser_type;
 	PR_STRING binary_dir;
 	PR_STRING binary_name;
@@ -514,28 +550,46 @@ VOID _app_init_browser_info (
 	browser_type = _r_config_getstring (L"ChromiumType", CHROMIUM_TYPE);
 	browser_arguments = _r_config_getstringexpand (L"ChromiumCommandLine", CHROMIUM_COMMAND_LINE);
 
+	if (_r_config_getboolean (L"ChromiumSpoofRegion", FALSE))
+	{
+		locale = _r_config_getstring (L"ChromiumSpoofRegionLocale", CHROMIUM_SPOOF_REGION_LOCALE);
+		accept_language = _r_config_getstring (L"ChromiumSpoofRegionAcceptLanguage", CHROMIUM_SPOOF_REGION_ACCEPT_LANGUAGE);
+		region_arguments = NULL;
+
+		if (!_r_obj_isstringempty (locale) && !_r_obj_isstringempty (accept_language))
+		{
+			region_arguments = _r_format_string (L"--lang=%s --accept-lang=%s", locale->buffer, accept_language->buffer);
+		}
+		else if (!_r_obj_isstringempty (locale))
+		{
+			region_arguments = _r_format_string (L"--lang=%s", locale->buffer);
+		}
+		else if (!_r_obj_isstringempty (accept_language))
+		{
+			region_arguments = _r_format_string (L"--accept-lang=%s", accept_language->buffer);
+		}
+
+		if (locale)
+			_r_obj_dereference (locale);
+
+		if (accept_language)
+			_r_obj_dereference (accept_language);
+
+		_app_append_browser_arguments (&browser_arguments, region_arguments);
+	}
+
+	if (_r_config_getboolean (L"ChromiumEnableHardwareAcceleration", TRUE))
+	{
+		gpu_arguments = _r_config_getstringexpand (L"ChromiumHardwareAccelerationCommandLine", CHROMIUM_HARDWARE_ACCELERATION_COMMAND_LINE);
+
+		_app_append_browser_arguments (&browser_arguments, gpu_arguments);
+	}
+
 	if (_r_config_getboolean (L"ChromiumEnableCast", FALSE))
 	{
 		cast_arguments = _r_config_getstringexpand (L"ChromiumCastCommandLine", CHROMIUM_CAST_COMMAND_LINE);
 
-		if (cast_arguments)
-		{
-			if (!_r_obj_isstringempty (cast_arguments) && browser_arguments && !_r_obj_isstringempty (browser_arguments))
-			{
-				string = _r_format_string (L"%s %s", browser_arguments->buffer, cast_arguments->buffer);
-
-				_r_obj_movereference ((PVOID_PTR)&browser_arguments, string);
-				_r_obj_dereference (cast_arguments);
-			}
-			else if (!_r_obj_isstringempty (cast_arguments))
-			{
-				_r_obj_movereference ((PVOID_PTR)&browser_arguments, cast_arguments);
-			}
-			else
-			{
-				_r_obj_dereference (cast_arguments);
-			}
-		}
+		_app_append_browser_arguments (&browser_arguments, cast_arguments);
 	}
 
 	if (browser_type)
@@ -1104,6 +1158,12 @@ BOOLEAN _app_checkupdate (
 
 				_r_inet_close (hsession);
 			}
+			else
+			{
+				_r_show_errormessage (hwnd, NULL, (LONG)GetLastError (), L"Could not create internet session.", ET_WINHTTP);
+
+				*is_error_ptr = TRUE;
+			}
 
 			if (proxy_string)
 				_r_obj_dereference (proxy_string);
@@ -1189,6 +1249,7 @@ BOOLEAN _app_downloadupdate (
 )
 {
 	R_DOWNLOAD_INFO download_info;
+	PR_STRING part_path;
 	PR_STRING proxy_string;
 	HINTERNET hsession;
 	HANDLE hfile;
@@ -1200,7 +1261,19 @@ BOOLEAN _app_downloadupdate (
 	if (_app_isupdatedownloaded (pbi))
 		return TRUE;
 
+	part_path = _r_format_string (L"%s.part", pbi->cache_path->buffer);
+
+	if (!part_path)
+	{
+		_r_show_errormessage (hwnd, NULL, STATUS_NO_MEMORY, L"_r_format_string", ET_NATIVE);
+
+		*is_error_ptr = TRUE;
+
+		return FALSE;
+	}
+
 	_app_delete (&pbi->cache_path->sr, FALSE);
+	_app_delete (&part_path->sr, FALSE);
 
 	_app_setstatus (hwnd, pbi->htaskbar, _r_locale_getstring (IDS_STATUS_DOWNLOAD), 0, 1);
 
@@ -1213,7 +1286,7 @@ BOOLEAN _app_downloadupdate (
 	if (hsession)
 	{
 		status = _r_fs_createfile (
-			&pbi->cache_path->sr,
+			&part_path->sr,
 			FILE_OVERWRITE_IF,
 			FILE_GENERIC_WRITE,
 			FILE_SHARE_READ | FILE_SHARE_WRITE,
@@ -1226,7 +1299,7 @@ BOOLEAN _app_downloadupdate (
 
 		if (!NT_SUCCESS (status))
 		{
-			_r_show_errormessage (hwnd, NULL, status, pbi->cache_path->buffer, ET_NATIVE);
+			_r_show_errormessage (hwnd, NULL, status, part_path->buffer, ET_NATIVE);
 
 			*is_error_ptr = TRUE;
 		}
@@ -1242,19 +1315,42 @@ BOOLEAN _app_downloadupdate (
 			{
 				_r_show_errormessage (hwnd, NULL, status, pbi->download_url->buffer, ET_WINHTTP);
 
-				_app_delete (&pbi->cache_path->sr, FALSE);
+				_app_delete (&part_path->sr, FALSE);
 
 				*is_error_ptr = TRUE;
 			}
 			else
 			{
-				SAFE_DELETE_REFERENCE (pbi->download_url); // clear download url
+				_app_delete (&pbi->cache_path->sr, FALSE);
 
-				is_success = TRUE;
+				status = _r_fs_movefile (&part_path->sr, &pbi->cache_path->sr, FALSE);
+
+				if (!NT_SUCCESS (status))
+				{
+					_r_show_errormessage (hwnd, NULL, status, pbi->cache_path->buffer, ET_NATIVE);
+
+					_app_delete (&part_path->sr, FALSE);
+
+					*is_error_ptr = TRUE;
+				}
+				else
+				{
+					SAFE_DELETE_REFERENCE (pbi->download_url); // clear download url
+
+					is_success = TRUE;
+				}
 			}
 		}
 
 		_r_inet_close (hsession);
+	}
+	else
+	{
+		_app_delete (&part_path->sr, FALSE);
+
+		_r_show_errormessage (hwnd, NULL, (LONG)GetLastError (), L"Could not create internet session.", ET_WINHTTP);
+
+		*is_error_ptr = TRUE;
 	}
 
 	_r_queuedlock_releaseshared (&lock_download);
@@ -1262,9 +1358,56 @@ BOOLEAN _app_downloadupdate (
 	if (proxy_string)
 		_r_obj_dereference (proxy_string);
 
+	_r_obj_dereference (part_path);
+
 	_app_setstatus (hwnd, pbi->htaskbar, NULL, 0, 0);
 
 	return is_success;
+}
+
+BOOLEAN _app_isarchivepathsafe (
+	_In_ PR_STRINGREF path
+)
+{
+	ULONG_PTR length;
+	BOOLEAN is_segment_start = TRUE;
+	WCHAR chr;
+
+	if (!path || !path->buffer || !path->length)
+		return FALSE;
+
+	length = path->length / sizeof (WCHAR);
+
+	if (path->buffer[0] == OBJ_NAME_PATH_SEPARATOR)
+		return FALSE;
+
+	for (ULONG_PTR i = 0; i < length; i++)
+	{
+		chr = path->buffer[i];
+
+		if (chr == UNICODE_NULL || chr == L':')
+			return FALSE;
+
+		if (chr == OBJ_NAME_PATH_SEPARATOR)
+		{
+			is_segment_start = TRUE;
+
+			continue;
+		}
+
+		if (is_segment_start && chr == L'.')
+		{
+			if ((i + 1) == length || path->buffer[i + 1] == OBJ_NAME_PATH_SEPARATOR)
+				return FALSE;
+
+			if (path->buffer[i + 1] == L'.' && ((i + 2) == length || path->buffer[i + 2] == OBJ_NAME_PATH_SEPARATOR))
+				return FALSE;
+		}
+
+		is_segment_start = FALSE;
+	}
+
+	return TRUE;
 }
 
 SRes _app_unpack_7zip (
@@ -1303,6 +1446,7 @@ SRes _app_unpack_7zip (
 	UInt64 total_read = 0;
 	ULONG_PTR processed_size;
 	ULONG_PTR length;
+	BOOLEAN is_error = FALSE;
 	BOOLEAN is_success = FALSE;
 	LONG status;
 
@@ -1324,6 +1468,8 @@ SRes _app_unpack_7zip (
 
 	if (!look_stream.buf)
 	{
+		status = SZ_ERROR_MEM;
+
 		_r_show_errormessage (hwnd, NULL, STATUS_NO_MEMORY, L"ISzAlloc_Alloc", ET_NATIVE);
 
 		goto CleanupExit;
@@ -1366,6 +1512,15 @@ SRes _app_unpack_7zip (
 			{
 				temp_buff = _r_mem_allocate (temp_size * sizeof (UInt16));
 			}
+
+			if (!temp_buff)
+			{
+				status = SZ_ERROR_MEM;
+
+				_r_show_errormessage (hwnd, NULL, status, L"ISzAlloc_Alloc", ET_NONE);
+
+				goto CleanupExit;
+			}
 		}
 
 		if (!root_dir_name)
@@ -1379,15 +1534,27 @@ SRes _app_unpack_7zip (
 
 			_r_str_replacechar (&path, OBJ_NAME_ALTPATH_SEPARATOR, OBJ_NAME_PATH_SEPARATOR);
 
-			length = path.length - bin_name->length - separator_sr.length;
-
-			if (_r_str_isendsswith (&path, bin_name, TRUE) && path.buffer[length / sizeof (WCHAR)] == OBJ_NAME_PATH_SEPARATOR)
+			if (path.length > bin_name->length + separator_sr.length)
 			{
-				_r_obj_movereference ((PVOID_PTR)&root_dir_name, _r_obj_createstring_ex (path.buffer, path.length - bin_name->length));
+				length = path.length - bin_name->length - separator_sr.length;
 
-				_r_str_trimstring (&root_dir_name->sr, &separator_sr, 0);
+				if (_r_str_isendsswith (&path, bin_name, TRUE) && path.buffer[length / sizeof (WCHAR)] == OBJ_NAME_PATH_SEPARATOR)
+				{
+					_r_obj_movereference ((PVOID_PTR)&root_dir_name, _r_obj_createstring_ex (path.buffer, path.length - bin_name->length));
+
+					_r_str_trimstring (&root_dir_name->sr, &separator_sr, 0);
+				}
 			}
 		}
+	}
+
+	if (!temp_buff)
+	{
+		status = SZ_ERROR_FAIL;
+
+		_r_show_errormessage (hwnd, NULL, status, L"SzArEx_GetFileNameUtf16", ET_NONE);
+
+		goto CleanupExit;
 	}
 
 	for (ULONG_PTR i = 0; i < db.NumFiles; i++)
@@ -1410,12 +1577,30 @@ SRes _app_unpack_7zip (
 		if (root_dir_name)
 			_r_str_skiplength (&path, root_dir_name->length + separator_sr.length);
 
+		if (!_app_isarchivepathsafe (&path))
+		{
+			status = SZ_ERROR_FAIL;
+
+			_r_show_errormessage (hwnd, NULL, status, path.buffer, ET_NONE);
+
+			goto CleanupExit;
+		}
+
 		dest_path = _r_obj_concatstringrefs (
 			3,
 			&pbi->binary_dir->sr,
 			&separator_sr,
 			&path
 		);
+
+		if (!dest_path)
+		{
+			status = SZ_ERROR_MEM;
+
+			_r_show_errormessage (hwnd, NULL, status, L"_r_obj_concatstringrefs", ET_NONE);
+
+			goto CleanupExit;
+		}
 
 		if (SzArEx_IsDir (&db, i))
 		{
@@ -1446,6 +1631,8 @@ SRes _app_unpack_7zip (
 			if (status != SZ_OK)
 			{
 				_r_show_errormessage (hwnd, NULL, status, L"SzArEx_Extract", ET_NONE);
+
+				is_error = TRUE;
 			}
 			else
 			{
@@ -1455,6 +1642,8 @@ SRes _app_unpack_7zip (
 				{
 					if (status != SZ_ERROR_CRC)
 						_r_show_errormessage (hwnd, NULL, status, L"OutFile_OpenW", ET_NONE);
+
+					is_error = TRUE;
 				}
 				else
 				{
@@ -1464,7 +1653,12 @@ SRes _app_unpack_7zip (
 
 					if (status != SZ_OK || processed_size != out_size_processed)
 					{
+						if (status == SZ_OK)
+							status = SZ_ERROR_WRITE;
+
 						_r_show_errormessage (hwnd, NULL, status, L"File_Write", ET_NONE);
+
+						is_error = TRUE;
 					}
 					else
 					{
@@ -1510,6 +1704,9 @@ CleanupExit:
 
 	File_Close (&archive_stream.file);
 
+	if (status == SZ_OK && (!is_success || is_error))
+		status = SZ_ERROR_FAIL;
+
 	return status;
 }
 
@@ -1532,6 +1729,7 @@ BOOLEAN _app_unpack_zip (
 	ULONG64 total_read = 0; // this is our progress so far
 	ULONG_PTR length;
 	UINT total_files;
+	BOOLEAN is_error = FALSE;
 	BOOLEAN is_success = FALSE;
 	NTSTATUS status;
 
@@ -1567,13 +1765,16 @@ BOOLEAN _app_unpack_zip (
 
 			_r_str_replacechar (&path->sr, OBJ_NAME_ALTPATH_SEPARATOR, OBJ_NAME_PATH_SEPARATOR);
 
-			length = path->length - bin_name->length - separator_sr.length;
-
-			if (_r_str_isendsswith (&path->sr, bin_name, TRUE) && path->buffer[length / sizeof (WCHAR)] == OBJ_NAME_PATH_SEPARATOR)
+			if (path->length > bin_name->length + separator_sr.length)
 			{
-				_r_obj_movereference ((PVOID_PTR)&root_dir_name, _r_obj_createstring_ex (path->buffer, path->length - bin_name->length));
+				length = path->length - bin_name->length - separator_sr.length;
 
-				_r_str_trimstring (&root_dir_name->sr, &separator_sr, 0);
+				if (_r_str_isendsswith (&path->sr, bin_name, TRUE) && path->buffer[length / sizeof (WCHAR)] == OBJ_NAME_PATH_SEPARATOR)
+				{
+					_r_obj_movereference ((PVOID_PTR)&root_dir_name, _r_obj_createstring_ex (path->buffer, path->length - bin_name->length));
+
+					_r_str_trimstring (&root_dir_name->sr, &separator_sr, 0);
+				}
 			}
 
 			_r_obj_dereference (path);
@@ -1598,10 +1799,25 @@ BOOLEAN _app_unpack_zip (
 
 		// skip non-root dirs
 		if (!_r_obj_isstringempty (root_dir_name) && (path->length <= root_dir_name->length || !_r_str_isstartswith (&path->sr, &root_dir_name->sr, TRUE)))
+		{
+			_r_obj_dereference (path);
+
 			continue;
+		}
 
 		if (root_dir_name)
 			_r_str_skiplength (&path->sr, root_dir_name->length + separator_sr.length);
+
+		if (!_app_isarchivepathsafe (&path->sr))
+		{
+			_r_show_errormessage (hwnd, NULL, SZ_ERROR_FAIL, path->buffer, ET_NONE);
+
+			_r_obj_dereference (path);
+
+			is_error = TRUE;
+
+			continue;
+		}
 
 		dest_path = _r_obj_concatstringrefs (
 			3,
@@ -1609,6 +1825,17 @@ BOOLEAN _app_unpack_zip (
 			&separator_sr,
 			&path->sr
 		);
+
+		if (!dest_path)
+		{
+			_r_show_errormessage (hwnd, NULL, STATUS_NO_MEMORY, L"_r_obj_concatstringrefs", ET_NATIVE);
+
+			_r_obj_dereference (path);
+
+			is_error = TRUE;
+
+			continue;
+		}
 
 		_app_setstatus (hwnd, pbi->htaskbar, _r_locale_getstring (IDS_STATUS_INSTALL), total_read, total_size);
 
@@ -1629,9 +1856,18 @@ BOOLEAN _app_unpack_zip (
 			}
 
 			if (mz_zip_reader_extract_to_file (&zip_archive, i, dest_path->buffer, MZ_ZIP_FLAG_DO_NOT_SORT_CENTRAL_DIRECTORY))
+			{
 				total_read += file_stat.m_uncomp_size;
+			}
+			else
+			{
+				_r_show_errormessage (hwnd, NULL, zip_archive.m_last_error, mz_zip_get_error_string (zip_archive.m_last_error), ET_NONE);
+
+				is_error = TRUE;
+			}
 		}
 
+		_r_obj_dereference (path);
 		_r_obj_dereference (dest_path);
 
 		if (!is_success)
@@ -1643,7 +1879,7 @@ BOOLEAN _app_unpack_zip (
 
 	mz_zip_reader_end (&zip_archive);
 
-	return is_success;
+	return is_success && !is_error;
 }
 
 BOOLEAN _app_installupdate (
@@ -1652,21 +1888,50 @@ BOOLEAN _app_installupdate (
 	_Out_ PBOOLEAN is_error_ptr
 )
 {
+	R_STRINGREF separator_sr = PR_STRINGREF_INIT (L"\\");
 	R_STRINGREF bin_name;
-	PR_STRING buffer1;
-	PR_STRING buffer2;
+	PR_STRING backup_dir = NULL;
+	PR_STRING buffer1 = NULL;
+	PR_STRING buffer2 = NULL;
+	PR_STRING original_binary_dir = NULL;
+	PR_STRING staged_binary_path = NULL;
+	PR_STRING staging_dir = NULL;
+	BOOLEAN is_backup_created = FALSE;
 	NTSTATUS status;
 
 	_r_queuedlock_acquireshared (&lock_download);
-
-	_app_delete (&pbi->binary_dir->sr, TRUE);
 
 	_r_path_getpathinfo (&pbi->binary_path->sr, NULL, &bin_name);
 
 	_r_sys_setthreadexecutionstate (ES_SYSTEM_REQUIRED | ES_AWAYMODE_REQUIRED);
 
-	if (!_r_fs_exists (&pbi->binary_dir->sr))
-		_r_fs_createdirectory (&pbi->binary_dir->sr);
+	staging_dir = _r_format_string (L"%s.update", pbi->binary_dir->buffer);
+	backup_dir = _r_format_string (L"%s.old", pbi->binary_dir->buffer);
+
+	if (!staging_dir || !backup_dir)
+	{
+		status = STATUS_NO_MEMORY;
+
+		_r_show_errormessage (hwnd, NULL, status, L"_r_format_string", ET_NATIVE);
+
+		goto CleanupExit;
+	}
+
+	_app_delete (&staging_dir->sr, TRUE);
+	_app_delete (&backup_dir->sr, TRUE);
+
+	status = _r_fs_createdirectory (&staging_dir->sr);
+
+	if (!NT_SUCCESS (status))
+	{
+		_r_show_errormessage (hwnd, NULL, status, staging_dir->buffer, ET_NATIVE);
+
+		goto CleanupExit;
+	}
+
+	original_binary_dir = (PR_STRING)_r_obj_reference (pbi->binary_dir);
+
+	_r_obj_movereference ((PVOID_PTR)&pbi->binary_dir, _r_obj_reference (staging_dir));
 
 	if (_app_unpack_zip (hwnd, pbi, &bin_name))
 	{
@@ -1677,30 +1942,113 @@ BOOLEAN _app_installupdate (
 		status = _app_unpack_7zip (hwnd, pbi, &bin_name);
 	}
 
-	// get new version
 	if (status == SZ_OK)
+	{
+		staged_binary_path = _r_obj_concatstringrefs (
+			3,
+			&staging_dir->sr,
+			&separator_sr,
+			&bin_name
+		);
+
+		if (!staged_binary_path)
+		{
+			status = STATUS_NO_MEMORY;
+
+			_r_show_errormessage (hwnd, NULL, status, L"_r_obj_concatstringrefs", ET_NATIVE);
+		}
+		else if (_r_fs_exists (&staged_binary_path->sr))
+		{
+			_r_obj_movereference ((PVOID_PTR)&pbi->binary_dir, original_binary_dir);
+			original_binary_dir = NULL;
+
+			if (_r_fs_exists (&pbi->binary_dir->sr))
+			{
+				status = _r_fs_movefile (&pbi->binary_dir->sr, &backup_dir->sr, FALSE);
+
+				if (NT_SUCCESS (status))
+					is_backup_created = TRUE;
+				else
+					_r_show_errormessage (hwnd, NULL, status, backup_dir->buffer, ET_NATIVE);
+			}
+
+			if (NT_SUCCESS (status))
+			{
+				status = _r_fs_movefile (&staging_dir->sr, &pbi->binary_dir->sr, FALSE);
+
+				if (!NT_SUCCESS (status))
+					_r_show_errormessage (hwnd, NULL, status, pbi->binary_dir->buffer, ET_NATIVE);
+			}
+
+			if (!NT_SUCCESS (status) && is_backup_created)
+			{
+				NTSTATUS rollback_status;
+
+				rollback_status = _r_fs_movefile (&backup_dir->sr, &pbi->binary_dir->sr, FALSE);
+
+				if (!NT_SUCCESS (rollback_status))
+					_r_show_errormessage (hwnd, NULL, rollback_status, pbi->binary_dir->buffer, ET_NATIVE);
+			}
+		}
+		else
+		{
+			status = STATUS_OBJECT_NAME_NOT_FOUND;
+
+			_r_show_errormessage (hwnd, NULL, status, staged_binary_path->buffer, ET_NATIVE);
+		}
+
+		if (staged_binary_path)
+			_r_obj_dereference (staged_binary_path);
+	}
+
+	if (original_binary_dir)
+	{
+		_r_obj_movereference ((PVOID_PTR)&pbi->binary_dir, original_binary_dir);
+		original_binary_dir = NULL;
+	}
+
+	if (status == SZ_OK)
+	{
 		_r_obj_movereference ((PVOID_PTR)&pbi->current_version, _r_res_queryversionstring (pbi->binary_path->buffer));
+
+		if (_r_fs_exists (&pbi->chrome_plus_dir->sr) && _r_fs_isdirectory (&pbi->chrome_plus_dir->sr))
+		{
+			buffer1 = _r_format_string (L"%s\\version.dll", pbi->chrome_plus_dir->buffer);
+			buffer2 = _r_format_string (L"%s\\version.dll", pbi->binary_dir->buffer);
+
+			if (buffer1 && buffer2 && _r_fs_exists (&buffer1->sr))
+				_r_fs_copyfile (&buffer1->sr, &buffer2->sr, FALSE);
+
+			_r_obj_movereference ((PVOID_PTR)&buffer1, _r_format_string (L"%s\\chrome++.ini", pbi->chrome_plus_dir->buffer));
+			_r_obj_movereference ((PVOID_PTR)&buffer2, _r_format_string (L"%s\\chrome++.ini", pbi->binary_dir->buffer));
+
+			if (buffer1 && buffer2 && _r_fs_exists (&buffer1->sr))
+				_r_fs_copyfile (&buffer1->sr, &buffer2->sr, FALSE);
+
+			if (buffer1)
+				_r_obj_dereference (buffer1);
+
+			if (buffer2)
+				_r_obj_dereference (buffer2);
+		}
+	}
+
+CleanupExit:
+
+	if (staging_dir && _r_fs_exists (&staging_dir->sr))
+		_app_delete (&staging_dir->sr, TRUE);
+
+	if (status == SZ_OK && backup_dir && _r_fs_exists (&backup_dir->sr))
+		_app_delete (&backup_dir->sr, TRUE);
 
 	// remove cache file when zip cannot be opened
 	_app_delete (&pbi->cache_path->sr, FALSE);
 
-	if (_r_fs_exists (&pbi->chrome_plus_dir->sr) && _r_fs_isdirectory (&pbi->chrome_plus_dir->sr))
-	{
-		buffer1 = _r_format_string (L"%s\\version.dll", pbi->chrome_plus_dir->buffer);
-		buffer2 = _r_format_string (L"%s\\version.dll", pbi->binary_dir->buffer);
+	if (staging_dir)
+		_r_obj_dereference (staging_dir);
 
-		if (_r_fs_exists (&buffer1->sr))
-			_r_fs_copyfile (&buffer1->sr, &buffer2->sr, FALSE);
-
-		_r_obj_movereference ((PVOID_PTR)&buffer1, _r_format_string (L"%s\\chrome++.ini", pbi->chrome_plus_dir->buffer));
-		_r_obj_movereference ((PVOID_PTR)&buffer2, _r_format_string (L"%s\\chrome++.ini", pbi->binary_dir->buffer));
-
-		if (_r_fs_exists (&buffer1->sr))
-			_r_fs_copyfile (&buffer1->sr, &buffer2->sr, FALSE);
-
-		_r_obj_dereference (buffer1);
-		_r_obj_dereference (buffer2);
-	}
+	if (backup_dir)
+		_r_obj_dereference (backup_dir);
 
 	*is_error_ptr = (status != SZ_OK);
 
