@@ -416,7 +416,7 @@ VOID _app_init_browser_info (
 		// ...by executable
 		if (_r_fs_isexists (&pbi->binary_path->sr))
 		{
-			status = _r_sys_getbinarytype (&pbi->binary_path->sr, &binary_type);
+			status = _r_fs_getbinarytype (&pbi->binary_path->sr, &binary_type);
 
 			if (NT_SUCCESS (status))
 				pbi->architecture = (binary_type == SCS_64BIT_BINARY) ? 64 : 32;
@@ -548,8 +548,7 @@ BOOLEAN _app_openbrowser (
 	_In_ PBROWSER_INFORMATION pbi
 )
 {
-	PR_STRING args_string;
-	PR_STRING cmdline;
+	PR_STRING args_string, cmdline;
 	LPWSTR ptr;
 	ULONG_PTR args_length = 0;
 	NTSTATUS status;
@@ -684,15 +683,10 @@ BOOLEAN _app_checkupdate (
 {
 	PR_HASHTABLE hashtable = NULL;
 	R_DOWNLOAD_INFO download_info;
-	PR_STRING update_url;
-	PR_STRING url;
+	PR_STRING proxy_string, string, update_url, url;
 	HINTERNET hsession;
-	PR_STRING string;
-	PR_STRING proxy_string;
 	BOOLEAN is_updaterequired;
-	BOOLEAN is_newversion = FALSE;
-	BOOLEAN is_success = FALSE;
-	BOOLEAN is_exists;
+	BOOLEAN is_newversion = FALSE, is_success = FALSE, is_exists;
 	NTSTATUS status;
 
 	*is_error_ptr = FALSE;
