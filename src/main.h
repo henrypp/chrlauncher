@@ -20,10 +20,24 @@ DEFINE_GUID (GUID_TrayIcon, 0xEAD41630, 0x90BB, 0x4836, 0x82, 0x41, 0xAE, 0xAE, 
 
 #define CHROMIUM_TYPE L"dev-official"
 #define CHROMIUM_COMMAND_LINE L"--flag-switches-begin --user-data-dir=..\\profile --no-default-browser-check --disable-logging --no-report-upload --flag-switches-end"
-#define CHROMIUM_CAST_COMMAND_LINE L"--load-media-router-component-extension --enable-features=CastAllowAllIPs,AllowAllSitesToInitiateMirroring,DialMediaRouteProvider"
+#define CHROMIUM_CAST_COMMAND_LINE L"--enable-media-router --load-media-router-component-extension"
+#define CHROMIUM_CAST_FEATURES L"MediaRouter,CastAllowAllIPs,AllowAllSitesToInitiateMirroring,DialMediaRouteProvider,FallbackToAudioTabMirroring"
+#define CHROMIUM_CAST_DISABLE_FEATURES L"DelayMediaSinkDiscovery"
 #define CHROMIUM_HARDWARE_ACCELERATION_COMMAND_LINE L"--enable-gpu-rasterization --enable-zero-copy --ignore-gpu-blocklist"
+#define CHROMIUM_DIRECTX_COMMAND_LINE L"--use-angle=d3d11"
+#define CHROMIUM_VULKAN_COMMAND_LINE L"--use-vulkan=native"
+#define CHROMIUM_VULKAN_FEATURES L"Vulkan"
+#define CHROMIUM_WINDOWS11_COMMAND_LINE L""
+#define CHROMIUM_WINDOWS11_FEATURES L"Windows11MicaTitlebar"
+#define CHROMIUM_MULTITHREADING_COMMAND_LINE L"--num-raster-threads=4"
 #define CHROMIUM_SPOOF_REGION_LOCALE L"en-US"
 #define CHROMIUM_SPOOF_REGION_ACCEPT_LANGUAGE L"en-US,en"
+#define CHROMIUM_BACKGROUND_RESOURCE_SAVING_COMMAND_LINE L""
+#define CHROMIUM_BACKGROUND_RESOURCE_SAVING_FEATURES L"IntensiveWakeUpThrottling,CalculateNativeWinOcclusion"
+#define CHROMIUM_RENDERER_SAFETY_COMMAND_LINE L"--site-per-process --js-flags=--stack_size=512"
+#define CHROMIUM_QUIC_COMMAND_LINE L"--enable-quic"
+#define CHROMIUM_DNS_COMMAND_LINE L"--enable-async-dns"
+#define CHROMIUM_GOOGLE_WEBSTORE_COMMAND_LINE L"--user-agent=\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36\" --apps-gallery-url=https://chromewebstore.google.com/ --apps-gallery-update-url=https://clients2.google.com/service/update2/crx --apps-gallery-download-url=\"https://clients2.google.com/service/update2/crx?response=redirect&prodversion=150.0&x=id=%s&installsource=ondemand&uc\""
 
 typedef struct _BROWSER_INFORMATION
 {

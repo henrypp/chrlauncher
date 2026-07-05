@@ -19,6 +19,13 @@
 
 #include "resource.h"
 
+#include <shlobj.h>
+#include <shobjidl.h>
+
+#pragma comment(lib, "ole32.lib")
+#pragma comment(lib, "shell32.lib")
+#pragma comment(lib, "uuid.lib")
+
 BROWSER_INFORMATION browser_info = {0};
 
 R_QUEUED_LOCK lock_download = PR_QUEUED_LOCK_INIT;
@@ -386,6 +393,273 @@ VOID _app_append_browser_arguments (
 	}
 }
 
+VOID _app_append_browser_features (
+	_Inout_ PR_STRING *browser_features_ptr,
+	_In_ PR_STRING append_features
+)
+{
+	PR_STRING string;
+
+	if (!append_features)
+		return;
+
+	if (_r_obj_isstringempty (append_features))
+	{
+		_r_obj_dereference (append_features);
+
+		return;
+	}
+
+	if (*browser_features_ptr && !_r_obj_isstringempty (*browser_features_ptr))
+	{
+		string = _r_format_string (L"%s,%s", (*browser_features_ptr)->buffer, append_features->buffer);
+
+		if (string)
+			_r_obj_movereference ((PVOID_PTR)browser_features_ptr, string);
+
+		_r_obj_dereference (append_features);
+	}
+	else
+	{
+		_r_obj_movereference ((PVOID_PTR)browser_features_ptr, append_features);
+	}
+}
+
+ULONG _app_get_workqueue_threads ()
+{
+	SYSTEM_INFO system_info;
+	LONG threads;
+
+	threads = _r_config_getlong (L"LauncherWorkQueueThreads", 0);
+
+	if (threads == INT_ERROR || threads <= 0)
+	{
+		GetSystemInfo (&system_info);
+
+		threads = (LONG)system_info.dwNumberOfProcessors;
+	}
+
+	if (threads < 1)
+		return 1;
+
+	if (threads > 4)
+		return 4;
+
+	return (ULONG)threads;
+}
+
+ULONG _app_get_profile_count (
+	_In_ PBROWSER_INFORMATION pbi
+)
+{
+	WIN32_FIND_DATAW find_data;
+	PR_STRING find_mask;
+	PR_STRING preferences_path;
+	HANDLE hfind;
+	ULONG count = 0;
+
+	if (_r_obj_isstringempty (pbi->user_data_dir))
+		return 0;
+
+	find_mask = _r_format_string (L"%s\\*", pbi->user_data_dir->buffer);
+
+	if (!find_mask)
+		return 0;
+
+	hfind = FindFirstFileW (find_mask->buffer, &find_data);
+
+	_r_obj_dereference (find_mask);
+
+	if (hfind == INVALID_HANDLE_VALUE)
+		return 0;
+
+	do
+	{
+		if (!(find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+			continue;
+
+		if (_wcsicmp (find_data.cFileName, L".") == 0 || _wcsicmp (find_data.cFileName, L"..") == 0)
+			continue;
+
+		preferences_path = _r_format_string (L"%s\\%s\\Preferences", pbi->user_data_dir->buffer, find_data.cFileName);
+
+		if (preferences_path)
+		{
+			if (_r_fs_exists (&preferences_path->sr))
+				count += 1;
+
+			_r_obj_dereference (preferences_path);
+		}
+	}
+	while (FindNextFileW (hfind, &find_data));
+
+	FindClose (hfind);
+
+	return count;
+}
+
+VOID _app_apply_profile_picker_hook (
+	_Inout_ PBROWSER_INFORMATION pbi
+)
+{
+	if (!_r_config_getboolean (L"ChromiumShowProfilePickerOnTaskbarLaunch", TRUE))
+		return;
+
+	if (pbi->is_hasurls || pbi->is_hasprofiledir)
+		return;
+
+	if (pbi->is_onlyupdate)
+		return;
+
+	if (_app_get_profile_count (pbi) < 2)
+		return;
+
+	_r_obj_movereference ((PVOID_PTR)&pbi->urls_str, _r_obj_createstring (L"chrome://profile-picker/"));
+
+	if (pbi->urls_str)
+	{
+		pbi->is_hasurls = TRUE;
+		pbi->is_hasprofiledir = TRUE;
+	}
+}
+
+VOID _app_repair_taskbar_pins (
+	_In_ PBROWSER_INFORMATION pbi
+)
+{
+	WIN32_FIND_DATAW find_data;
+	IShellLinkW *link;
+	IPersistFile *persist;
+	PR_STRING app_directory = NULL;
+	PR_STRING pinned_dir;
+	PR_STRING pinned_mask;
+	PR_STRING shortcut_path;
+	PWSTR appdata_path = NULL;
+	WCHAR launcher_path[MAX_PATH];
+	WCHAR target_path[MAX_PATH];
+	HANDLE hfind;
+	HRESULT hresult;
+	BOOLEAN is_com_initialized = FALSE;
+
+	if (!_r_config_getboolean (L"ChromiumRepairTaskbarPins", FALSE))
+		return;
+
+	if (_r_obj_isstringempty (pbi->binary_path))
+		return;
+
+	if (!GetModuleFileNameW (NULL, launcher_path, RTL_NUMBER_OF (launcher_path)))
+		return;
+
+	hresult = SHGetKnownFolderPath (&FOLDERID_RoamingAppData, 0, NULL, &appdata_path);
+
+	if (FAILED (hresult))
+		return;
+
+	pinned_dir = _r_format_string (L"%s\\Microsoft\\Internet Explorer\\Quick Launch\\User Pinned\\TaskBar", appdata_path);
+
+	if (!pinned_dir)
+	{
+		CoTaskMemFree (appdata_path);
+
+		return;
+	}
+
+	pinned_mask = _r_format_string (L"%s\\*.lnk", pinned_dir->buffer);
+
+	CoTaskMemFree (appdata_path);
+
+	if (!pinned_mask)
+	{
+		_r_obj_dereference (pinned_dir);
+
+		return;
+	}
+
+	hfind = FindFirstFileW (pinned_mask->buffer, &find_data);
+
+	_r_obj_dereference (pinned_mask);
+
+	if (hfind == INVALID_HANDLE_VALUE)
+	{
+		_r_obj_dereference (pinned_dir);
+
+		return;
+	}
+
+	hresult = CoInitializeEx (NULL, COINIT_APARTMENTTHREADED);
+
+	if (SUCCEEDED (hresult) || hresult == RPC_E_CHANGED_MODE)
+		is_com_initialized = SUCCEEDED (hresult);
+	else
+	{
+		FindClose (hfind);
+		_r_obj_dereference (pinned_dir);
+
+		return;
+	}
+
+	app_directory = _r_app_getdirectory ();
+
+	do
+	{
+		if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+			continue;
+
+		shortcut_path = _r_format_string (L"%s\\%s", pinned_dir->buffer, find_data.cFileName);
+
+		if (!shortcut_path)
+			continue;
+
+		hresult = CoCreateInstance (&CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, &IID_IShellLinkW, (LPVOID *)&link);
+
+		if (SUCCEEDED (hresult))
+		{
+			hresult = link->lpVtbl->QueryInterface (link, &IID_IPersistFile, (LPVOID *)&persist);
+
+			if (SUCCEEDED (hresult))
+			{
+				hresult = persist->lpVtbl->Load (persist, shortcut_path->buffer, STGM_READWRITE);
+
+				if (SUCCEEDED (hresult))
+				{
+					target_path[0] = UNICODE_NULL;
+
+					if (SUCCEEDED (link->lpVtbl->GetPath (link, target_path, RTL_NUMBER_OF (target_path), NULL, SLGP_RAWPATH)))
+					{
+						if (_wcsicmp (target_path, pbi->binary_path->buffer) == 0)
+						{
+							link->lpVtbl->SetPath (link, launcher_path);
+							link->lpVtbl->SetArguments (link, L"");
+
+							if (app_directory)
+								link->lpVtbl->SetWorkingDirectory (link, app_directory->buffer);
+
+							persist->lpVtbl->Save (persist, shortcut_path->buffer, TRUE);
+						}
+					}
+				}
+
+				persist->lpVtbl->Release (persist);
+			}
+
+			link->lpVtbl->Release (link);
+		}
+
+		_r_obj_dereference (shortcut_path);
+	}
+	while (FindNextFileW (hfind, &find_data));
+
+	if (is_com_initialized)
+		CoUninitialize ();
+
+	FindClose (hfind);
+
+	if (app_directory)
+		_r_obj_dereference (app_directory);
+
+	_r_obj_dereference (pinned_dir);
+}
+
 VOID _app_init_browser_info (
 	_Inout_ PBROWSER_INFORMATION pbi
 )
@@ -408,11 +682,27 @@ VOID _app_init_browser_info (
 
 	R_STRINGREF separator_sr = PR_STRINGREF_INIT (L"\\");
 	PR_STRING accept_language;
+	PR_STRING background_arguments;
+	PR_STRING background_features;
 	PR_STRING browser_arguments;
+	PR_STRING browser_disabled_features = NULL;
+	PR_STRING browser_features = NULL;
 	PR_STRING cast_arguments;
+	PR_STRING cast_disabled_features;
+	PR_STRING cast_features;
+	PR_STRING directx_arguments;
+	PR_STRING dns_arguments;
+	PR_STRING google_webstore_arguments;
 	PR_STRING gpu_arguments;
 	PR_STRING locale;
+	PR_STRING multithreading_arguments;
+	PR_STRING quic_arguments;
 	PR_STRING region_arguments;
+	PR_STRING renderer_safety_arguments;
+	PR_STRING vulkan_arguments;
+	PR_STRING vulkan_features;
+	PR_STRING windows11_arguments;
+	PR_STRING windows11_features;
 	PR_STRING browser_type;
 	PR_STRING binary_dir;
 	PR_STRING binary_name;
@@ -578,6 +868,54 @@ VOID _app_init_browser_info (
 		_app_append_browser_arguments (&browser_arguments, region_arguments);
 	}
 
+	if (_r_config_getboolean (L"ChromiumEnableBackgroundResourceSaving", TRUE))
+	{
+		background_arguments = _r_config_getstringexpand (L"ChromiumBackgroundResourceSavingCommandLine", CHROMIUM_BACKGROUND_RESOURCE_SAVING_COMMAND_LINE);
+		background_features = _r_config_getstring (L"ChromiumBackgroundResourceSavingFeatures", CHROMIUM_BACKGROUND_RESOURCE_SAVING_FEATURES);
+
+		_app_append_browser_arguments (&browser_arguments, background_arguments);
+		_app_append_browser_features (&browser_features, background_features);
+	}
+
+	if (_r_config_getboolean (L"ChromiumEnableRendererSafety", TRUE))
+	{
+		renderer_safety_arguments = _r_config_getstringexpand (L"ChromiumRendererSafetyCommandLine", CHROMIUM_RENDERER_SAFETY_COMMAND_LINE);
+
+		_app_append_browser_arguments (&browser_arguments, renderer_safety_arguments);
+	}
+
+	if (_r_config_getboolean (L"ChromiumEnableWindows11Features", TRUE))
+	{
+		windows11_arguments = _r_config_getstringexpand (L"ChromiumWindows11CommandLine", CHROMIUM_WINDOWS11_COMMAND_LINE);
+		windows11_features = _r_config_getstring (L"ChromiumWindows11Features", CHROMIUM_WINDOWS11_FEATURES);
+
+		_app_append_browser_arguments (&browser_arguments, windows11_arguments);
+		_app_append_browser_features (&browser_features, windows11_features);
+	}
+
+	if (_r_config_getboolean (L"ChromiumEnableDirectX", TRUE))
+	{
+		directx_arguments = _r_config_getstringexpand (L"ChromiumDirectXCommandLine", CHROMIUM_DIRECTX_COMMAND_LINE);
+
+		_app_append_browser_arguments (&browser_arguments, directx_arguments);
+	}
+
+	if (_r_config_getboolean (L"ChromiumEnableVulkan", FALSE))
+	{
+		vulkan_arguments = _r_config_getstringexpand (L"ChromiumVulkanCommandLine", CHROMIUM_VULKAN_COMMAND_LINE);
+		vulkan_features = _r_config_getstring (L"ChromiumVulkanFeatures", CHROMIUM_VULKAN_FEATURES);
+
+		_app_append_browser_arguments (&browser_arguments, vulkan_arguments);
+		_app_append_browser_features (&browser_features, vulkan_features);
+	}
+
+	if (_r_config_getboolean (L"ChromiumEnableMultithreadedRaster", TRUE))
+	{
+		multithreading_arguments = _r_config_getstringexpand (L"ChromiumMultithreadingCommandLine", CHROMIUM_MULTITHREADING_COMMAND_LINE);
+
+		_app_append_browser_arguments (&browser_arguments, multithreading_arguments);
+	}
+
 	if (_r_config_getboolean (L"ChromiumEnableHardwareAcceleration", TRUE))
 	{
 		gpu_arguments = _r_config_getstringexpand (L"ChromiumHardwareAccelerationCommandLine", CHROMIUM_HARDWARE_ACCELERATION_COMMAND_LINE);
@@ -585,11 +923,50 @@ VOID _app_init_browser_info (
 		_app_append_browser_arguments (&browser_arguments, gpu_arguments);
 	}
 
-	if (_r_config_getboolean (L"ChromiumEnableCast", FALSE))
+	if (_r_config_getboolean (L"ChromiumEnableQuic", TRUE))
+	{
+		quic_arguments = _r_config_getstringexpand (L"ChromiumQuicCommandLine", CHROMIUM_QUIC_COMMAND_LINE);
+
+		_app_append_browser_arguments (&browser_arguments, quic_arguments);
+	}
+
+	if (_r_config_getboolean (L"ChromiumEnableDnsOptions", FALSE))
+	{
+		dns_arguments = _r_config_getstringexpand (L"ChromiumDnsCommandLine", CHROMIUM_DNS_COMMAND_LINE);
+
+		_app_append_browser_arguments (&browser_arguments, dns_arguments);
+	}
+
+	if (_r_config_getboolean (L"ChromiumEnableGoogleWebStoreFix", TRUE))
+	{
+		google_webstore_arguments = _r_config_getstringexpand (L"ChromiumGoogleWebStoreCommandLine", CHROMIUM_GOOGLE_WEBSTORE_COMMAND_LINE);
+
+		_app_append_browser_arguments (&browser_arguments, google_webstore_arguments);
+	}
+
+	if (_r_config_getboolean (L"ChromiumEnableCast", TRUE))
 	{
 		cast_arguments = _r_config_getstringexpand (L"ChromiumCastCommandLine", CHROMIUM_CAST_COMMAND_LINE);
+		cast_disabled_features = _r_config_getstring (L"ChromiumCastDisableFeatures", CHROMIUM_CAST_DISABLE_FEATURES);
+		cast_features = _r_config_getstring (L"ChromiumCastFeatures", CHROMIUM_CAST_FEATURES);
 
 		_app_append_browser_arguments (&browser_arguments, cast_arguments);
+		_app_append_browser_features (&browser_disabled_features, cast_disabled_features);
+		_app_append_browser_features (&browser_features, cast_features);
+	}
+
+	if (browser_features)
+	{
+		_app_append_browser_arguments (&browser_arguments, _r_format_string (L"--enable-features=%s", browser_features->buffer));
+
+		_r_obj_dereference (browser_features);
+	}
+
+	if (browser_disabled_features)
+	{
+		_app_append_browser_arguments (&browser_arguments, _r_format_string (L"--disable-features=%s", browser_disabled_features->buffer));
+
+		_r_obj_dereference (browser_disabled_features);
 	}
 
 	if (browser_type)
@@ -634,6 +1011,10 @@ VOID _app_init_browser_info (
 		pbi->is_bringtofront = TRUE;
 		pbi->is_waitdownloadend = TRUE;
 	}
+
+	_app_repair_taskbar_pins (pbi);
+
+	_app_apply_profile_picker_hook (pbi);
 }
 
 VOID _app_setstatus (
@@ -2705,7 +3086,7 @@ INT APIENTRY wWinMain (
 	if (!_r_app_initialize (NULL))
 		return ERROR_APP_INIT_FAILURE;
 
-	_r_workqueue_initialize (&workqueue, 1, NULL, APP_NAME);
+	_r_workqueue_initialize (&workqueue, _app_get_workqueue_threads (), NULL, APP_NAME);
 
 	app_directory = _r_app_getdirectory ();
 

@@ -1,4 +1,7 @@
 v2.7
+- added configurable DirectX/ANGLE, Vulkan, Windows 11 UI hints, Chromium raster threads, and launcher worker thread count
+- added taskbar pin repair hook, multi-profile picker launch hook, and Google Web Store compatibility command-line options
+- added configurable Chromium background tab resource saving, renderer safety, QUIC, and DNS command-line hooks
 - added optional Chromium region / language spoofing through ChromiumSpoofRegion, ChromiumSpoofRegionLocale, and ChromiumSpoofRegionAcceptLanguage
 - added optional Chromium hardware acceleration / GPU launch support through ChromiumEnableHardwareAcceleration and ChromiumHardwareAccelerationCommandLine
 - improved update reliability with partial download staging, staged installs with rollback, safe archive path validation, and stricter extraction failure handling
@@ -6,6 +9,7 @@ v2.7
 - optimized external URL launch path by caching parsed browser profile options
 - open external application URLs in Chromium's last used profile instead of falling back to an empty/default profile
 - added optional Chromecast / Google Cast launch support through ChromiumEnableCast and ChromiumCastCommandLine
+- improved TCL/Chromecast discovery workaround with Media Router, DIAL provider, all-IP sink discovery, and immediate sink probing
 
 v2.6 (14 January 2022)
 - set win7sp1 as minimum required version

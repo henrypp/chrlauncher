@@ -37,6 +37,28 @@ Settings:
 # line already contains --profile-directory.
 ChromiumCommandLine=--flag-switches-begin --user-data-dir=..\profile --no-default-browser-check --disable-logging --no-report-upload --flag-switches-end
 
+# Repair pinned taskbar shortcuts that point directly to Chromium (boolean):
+#
+# false	-> do not touch pinned taskbar shortcuts (default)
+# true	-> rewrite matching pinned chrome.exe shortcuts to launch chrlauncher.exe
+#
+# Use this once if Windows pinned Chromium directly and launching it from the
+# taskbar loses chrlauncher command-line options such as --user-data-dir.
+ChromiumRepairTaskbarPins=false
+
+# Show Chromium profile picker when launcher starts without URL and the portable
+# user-data-dir contains more than one profile (boolean):
+#
+# false	-> launch Chromium normally
+# true	-> open chrome://profile-picker/ instead of silently using one profile (default)
+ChromiumShowProfilePickerOnTaskbarLaunch=true
+
+# Launcher worker threads (integer):
+#
+# 0	-> auto-detect CPU count and clamp to 1..4 (default)
+# 1..4	-> explicit worker thread count for launcher background work
+LauncherWorkQueueThreads=0
+
 # Spoof Chromium region / language hints (boolean):
 #
 # false	-> use Chromium/system profile region settings (default)
@@ -53,6 +75,78 @@ ChromiumSpoofRegionLocale=en-US
 # Accept-Language list used when ChromiumSpoofRegion=true (string):
 ChromiumSpoofRegionAcceptLanguage=en-US,en
 
+# Reduce work from hidden/background Chromium tabs (boolean):
+#
+# false	-> do not add background throttling / occlusion flags
+# true	-> add flags from ChromiumBackgroundResourceSavingCommandLine (default)
+#
+# This helps hidden tabs use fewer CPU/GPU resources. It cannot guarantee that
+# every site pauses video decoding; Chromium and the site decide final behavior.
+ChromiumEnableBackgroundResourceSaving=true
+
+# Additional command line used when ChromiumEnableBackgroundResourceSaving=true (string):
+ChromiumBackgroundResourceSavingCommandLine=
+
+# Chromium features enabled when ChromiumEnableBackgroundResourceSaving=true (string):
+ChromiumBackgroundResourceSavingFeatures=IntensiveWakeUpThrottling,CalculateNativeWinOcclusion
+
+# Enable stronger renderer / JavaScript isolation hints (boolean):
+#
+# false	-> do not add renderer safety flags
+# true	-> add flags from ChromiumRendererSafetyCommandLine (default)
+#
+# This can reduce the chance that a bad script takes the whole browser with it.
+# It is not a memory sanitizer and does not add real buffer-overflow detection.
+ChromiumEnableRendererSafety=true
+
+# Additional command line used when ChromiumEnableRendererSafety=true (string):
+ChromiumRendererSafetyCommandLine=--site-per-process --js-flags=--stack_size=512
+
+# Enable Windows 11 Chromium UI/runtime hints (boolean):
+#
+# false	-> do not add Windows 11 command line flags
+# true	-> add flags from ChromiumWindows11CommandLine (default)
+ChromiumEnableWindows11Features=true
+
+# Additional command line used when ChromiumEnableWindows11Features=true (string):
+ChromiumWindows11CommandLine=
+
+# Chromium features enabled when ChromiumEnableWindows11Features=true (string):
+ChromiumWindows11Features=Windows11MicaTitlebar
+
+# Enable DirectX / ANGLE D3D11 backend (boolean):
+#
+# false	-> let Chromium choose graphics backend
+# true	-> force flags from ChromiumDirectXCommandLine (default)
+ChromiumEnableDirectX=true
+
+# Additional command line used when ChromiumEnableDirectX=true (string):
+ChromiumDirectXCommandLine=--use-angle=d3d11
+
+# Enable Vulkan backend (boolean):
+#
+# false	-> do not force Vulkan (default)
+# true	-> add flags from ChromiumVulkanCommandLine
+#
+# Vulkan can improve some GPU paths but may be less stable than D3D11 depending
+# on the Windows driver. If enabled, check chrome://gpu after restart.
+ChromiumEnableVulkan=false
+
+# Additional command line used when ChromiumEnableVulkan=true (string):
+ChromiumVulkanCommandLine=--use-vulkan=native
+
+# Chromium features enabled when ChromiumEnableVulkan=true (string):
+ChromiumVulkanFeatures=Vulkan
+
+# Enable multithreaded raster hints for Chromium (boolean):
+#
+# false	-> do not add raster thread flags
+# true	-> add flags from ChromiumMultithreadingCommandLine (default)
+ChromiumEnableMultithreadedRaster=true
+
+# Additional command line used when ChromiumEnableMultithreadedRaster=true (string):
+ChromiumMultithreadingCommandLine=--num-raster-threads=4
+
 # Enable Chromium hardware acceleration / GPU support (boolean):
 #
 # false	-> do not add GPU command line flags
@@ -65,18 +159,62 @@ ChromiumEnableHardwareAcceleration=true
 # Additional command line used when ChromiumEnableHardwareAcceleration=true (string):
 ChromiumHardwareAccelerationCommandLine=--enable-gpu-rasterization --enable-zero-copy --ignore-gpu-blocklist
 
+# Enable QUIC / HTTP3 startup hints (boolean):
+#
+# false	-> do not add QUIC command line flags
+# true	-> add flags from ChromiumQuicCommandLine (default)
+ChromiumEnableQuic=true
+
+# Additional command line used when ChromiumEnableQuic=true (string):
+ChromiumQuicCommandLine=--enable-quic
+
+# Enable DNS startup hooks (boolean):
+#
+# false	-> use Chromium/system DNS settings (default)
+# true	-> add flags from ChromiumDnsCommandLine
+#
+# For DNS-over-HTTPS, Chromium normally uses profile preferences or enterprise
+# policy. Use this field for command-line DNS switches such as async DNS or
+# host resolver rules, not as a full DoH policy replacement.
+ChromiumEnableDnsOptions=false
+
+# Additional command line used when ChromiumEnableDnsOptions=true (string):
+ChromiumDnsCommandLine=--enable-async-dns
+
+# Improve Google Web Store / Google site Chrome detection (boolean):
+#
+# false	-> do not add Google Web Store compatibility flags
+# true	-> add flags from ChromiumGoogleWebStoreCommandLine (default)
+#
+# This spoofs a current Chrome UA and sets Web Store CRX URLs. It cannot turn
+# an ungoogled or stripped Chromium build into official Google Chrome.
+ChromiumEnableGoogleWebStoreFix=true
+
+# Additional command line used when ChromiumEnableGoogleWebStoreFix=true (string):
+ChromiumGoogleWebStoreCommandLine=--user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36" --apps-gallery-url=https://chromewebstore.google.com/ --apps-gallery-update-url=https://clients2.google.com/service/update2/crx --apps-gallery-download-url="https://clients2.google.com/service/update2/crx?response=redirect&prodversion=150.0&x=id=%s&installsource=ondemand&uc"
+
 # Enable Chromecast / Google Cast support (boolean):
 #
-# false	-> do not add Cast command line flags (default)
-# true	-> add Media Router and Cast discovery flags from ChromiumCastCommandLine
+# false	-> do not add Cast workaround flags
+# true	-> add Media Router, DIAL, all-IP and TCL discovery workaround flags (default)
 #
 # Cast requires a Chromium build with Media Router support and Google component
 # update access. Builds without Google integration (for example ungoogled)
 # may not discover or connect to Cast devices even when this option is enabled.
-ChromiumEnableCast=false
+#
+# If a TCL TV is still missing, check that the TV and PC are on the same LAN/VLAN,
+# AP/client isolation is disabled, and Windows Firewall allows private-network
+# local discovery traffic.
+ChromiumEnableCast=true
 
 # Additional command line used when ChromiumEnableCast=true (string):
-ChromiumCastCommandLine=--load-media-router-component-extension --enable-features=CastAllowAllIPs,AllowAllSitesToInitiateMirroring,DialMediaRouteProvider
+ChromiumCastCommandLine=--enable-media-router --load-media-router-component-extension
+
+# Chromium features enabled when ChromiumEnableCast=true (string):
+ChromiumCastFeatures=MediaRouter,CastAllowAllIPs,AllowAllSitesToInitiateMirroring,DialMediaRouteProvider,FallbackToAudioTabMirroring
+
+# Chromium features disabled when ChromiumEnableCast=true (string):
+ChromiumCastDisableFeatures=DelayMediaSinkDiscovery
 
 # Chromium executable file name (string):
 ChromiumBinary=chrome.exe
