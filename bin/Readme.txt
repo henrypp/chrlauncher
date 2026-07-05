@@ -69,20 +69,91 @@ LauncherWorkQueueThreads=0
 # WebRTC network exposure.
 ChromiumSpoofRegion=false
 
+# Use current Windows user locale for ChromiumSpoofRegion (boolean):
+#
+# false	-> use ChromiumSpoofRegionLocale and ChromiumSpoofRegionAcceptLanguage (default)
+# true	-> read the current Windows user locale and use it for --lang/--accept-lang
+ChromiumSpoofUseWindowsLocale=false
+
 # Locale used when ChromiumSpoofRegion=true (string):
 ChromiumSpoofRegionLocale=en-US
 
 # Accept-Language list used when ChromiumSpoofRegion=true (string):
 ChromiumSpoofRegionAcceptLanguage=en-US,en
 
+# Optional geolocation spoof command line (boolean/string):
+#
+# Chromium has no stable global command line for fake GPS coordinates. This is
+# an explicit hook for builds/extensions that provide such a flag.
+ChromiumSpoofGeolocation=false
+ChromiumSpoofGeolocationCommandLine=
+
+# Optional timezone spoof command line (boolean/string):
+#
+# Modern Chromium reads timezone from the OS. The default command line is a
+# best-effort compatibility hook for older builds/testing builds only.
+ChromiumSpoofTimeZone=false
+ChromiumSpoofTimeZoneId=Europe/Warsaw
+ChromiumSpoofTimeZoneCommandLine=--time-zone-for-testing=
+
+# Optional browser hardware-id/fingerprint command line hook (boolean/string):
+#
+# This does not change real Windows hardware IDs. It only appends Chromium
+# flags you explicitly provide for builds that support browser-level overrides.
+ChromiumSpoofHardwareId=false
+ChromiumSpoofHardwareIdCommandLine=
+
+# Lossless browser optimization bundle (boolean):
+#
+# false	-> do not add conservative performance feature flags
+# true	-> add flags from ChromiumLosslessOptimizationCommandLine and features
+#          from ChromiumLosslessOptimizationFeatures (default)
+ChromiumEnableLosslessOptimization=true
+
+# Additional command line used when ChromiumEnableLosslessOptimization=true (string):
+ChromiumLosslessOptimizationCommandLine=
+
+# Chromium features enabled when ChromiumEnableLosslessOptimization=true (string):
+ChromiumLosslessOptimizationFeatures=ParallelDownloading
+
+# Long generated text / AI chat performance fixes (boolean):
+#
+# false	-> do not add long-text rendering/cache flags
+# true	-> add flags from ChromiumTextPerformanceCommandLine and disable
+#          features from ChromiumTextPerformanceDisableFeatures (default)
+#
+# This targets pages that append a lot of generated text over time. It reduces
+# translate overhead and increases Skia font/resource cache limits. It does not
+# rewrite page DOM or remove old chat nodes from websites.
+ChromiumEnableTextPerformanceFixes=true
+
+# Additional command line used when ChromiumEnableTextPerformanceFixes=true (string):
+ChromiumTextPerformanceCommandLine=--disable-translate --skia-font-cache-limit-mb=64 --skia-resource-cache-limit-mb=128
+
+# Chromium features disabled when ChromiumEnableTextPerformanceFixes=true (string):
+ChromiumTextPerformanceDisableFeatures=
+
+# Aggressive long-text/font/network fixes (boolean):
+#
+# false	-> keep accessibility, remote webfonts and smooth scrolling enabled (default)
+# true	-> add flags from ChromiumAggressiveTextPerformanceCommandLine
+#
+# This can reduce renderer work on very long AI pages and avoid remote font
+# downloads, but it may break screen readers, change font rendering, and make
+# some sites look different.
+ChromiumEnableAggressiveTextPerformanceFixes=false
+
+# Additional command line used when ChromiumEnableAggressiveTextPerformanceFixes=true (string):
+ChromiumAggressiveTextPerformanceCommandLine=--disable-renderer-accessibility --disable-remote-fonts --disable-font-subpixel-positioning --disable-smooth-scrolling
+
 # Reduce work from hidden/background Chromium tabs (boolean):
 #
 # false	-> do not add background throttling / occlusion flags
-# true	-> add flags from ChromiumBackgroundResourceSavingCommandLine (default)
+# true	-> add flags from ChromiumBackgroundResourceSavingCommandLine
 #
 # This helps hidden tabs use fewer CPU/GPU resources. It cannot guarantee that
 # every site pauses video decoding; Chromium and the site decide final behavior.
-ChromiumEnableBackgroundResourceSaving=true
+ChromiumEnableBackgroundResourceSaving=false
 
 # Additional command line used when ChromiumEnableBackgroundResourceSaving=true (string):
 ChromiumBackgroundResourceSavingCommandLine=
@@ -93,11 +164,11 @@ ChromiumBackgroundResourceSavingFeatures=IntensiveWakeUpThrottling,CalculateNati
 # Enable stronger renderer / JavaScript isolation hints (boolean):
 #
 # false	-> do not add renderer safety flags
-# true	-> add flags from ChromiumRendererSafetyCommandLine (default)
+# true	-> add flags from ChromiumRendererSafetyCommandLine
 #
 # This can reduce the chance that a bad script takes the whole browser with it.
 # It is not a memory sanitizer and does not add real buffer-overflow detection.
-ChromiumEnableRendererSafety=true
+ChromiumEnableRendererSafety=false
 
 # Additional command line used when ChromiumEnableRendererSafety=true (string):
 ChromiumRendererSafetyCommandLine=--site-per-process --js-flags=--stack_size=512
@@ -105,8 +176,8 @@ ChromiumRendererSafetyCommandLine=--site-per-process --js-flags=--stack_size=512
 # Enable Windows 11 Chromium UI/runtime hints (boolean):
 #
 # false	-> do not add Windows 11 command line flags
-# true	-> add flags from ChromiumWindows11CommandLine (default)
-ChromiumEnableWindows11Features=true
+# true	-> add flags from ChromiumWindows11CommandLine
+ChromiumEnableWindows11Features=false
 
 # Additional command line used when ChromiumEnableWindows11Features=true (string):
 ChromiumWindows11CommandLine=
@@ -116,9 +187,9 @@ ChromiumWindows11Features=Windows11MicaTitlebar
 
 # Enable DirectX / ANGLE D3D11 backend (boolean):
 #
-# false	-> let Chromium choose graphics backend
-# true	-> force flags from ChromiumDirectXCommandLine (default)
-ChromiumEnableDirectX=true
+# false	-> let Chromium choose graphics backend (default)
+# true	-> force flags from ChromiumDirectXCommandLine
+ChromiumEnableDirectX=false
 
 # Additional command line used when ChromiumEnableDirectX=true (string):
 ChromiumDirectXCommandLine=--use-angle=d3d11
@@ -141,29 +212,46 @@ ChromiumVulkanFeatures=Vulkan
 # Enable multithreaded raster hints for Chromium (boolean):
 #
 # false	-> do not add raster thread flags
-# true	-> add flags from ChromiumMultithreadingCommandLine (default)
-ChromiumEnableMultithreadedRaster=true
+# true	-> add flags from ChromiumMultithreadingCommandLine
+ChromiumEnableMultithreadedRaster=false
 
 # Additional command line used when ChromiumEnableMultithreadedRaster=true (string):
 ChromiumMultithreadingCommandLine=--num-raster-threads=4
 
+# Override Chromium GPU software rendering blocklist (boolean):
+#
+# false	-> keep Chromium's built-in GPU blocklist
+# true	-> add chrome://flags/#ignore-gpu-blocklist equivalent (default)
+ChromiumIgnoreGpuBlocklist=true
+
+# Additional command line used when ChromiumIgnoreGpuBlocklist=true (string):
+ChromiumIgnoreGpuBlocklistCommandLine=--ignore-gpu-blocklist
+
 # Enable Chromium hardware acceleration / GPU support (boolean):
 #
-# false	-> do not add GPU command line flags
-# true	-> add GPU rasterization and zero-copy flags from ChromiumHardwareAccelerationCommandLine (default)
+# false	-> let Chromium use its normal GPU acceleration path (default)
+# true	-> force extra GPU rasterization and zero-copy flags from ChromiumHardwareAccelerationCommandLine
 #
-# If your GPU driver is unstable, set this to false or remove --ignore-gpu-blocklist
-# from ChromiumHardwareAccelerationCommandLine.
-ChromiumEnableHardwareAcceleration=true
+# If your GPU driver is unstable, set ChromiumIgnoreGpuBlocklist=false first.
+ChromiumEnableHardwareAcceleration=false
 
 # Additional command line used when ChromiumEnableHardwareAcceleration=true (string):
-ChromiumHardwareAccelerationCommandLine=--enable-gpu-rasterization --enable-zero-copy --ignore-gpu-blocklist
+ChromiumHardwareAccelerationCommandLine=--enable-gpu-rasterization --enable-zero-copy
+
+# Enable conservative autofill/password form compatibility flags (boolean):
+#
+# false	-> do not add form compatibility flags
+# true	-> add ChromiumAutofillPasswordCommandLine (default)
+ChromiumEnableAutofillPasswordFixes=true
+
+# Additional command line used when ChromiumEnableAutofillPasswordFixes=true (string):
+ChromiumAutofillPasswordCommandLine=--ignore-autocomplete-off-autofill --enable-single-click-autofill --enable-password-generation
 
 # Enable QUIC / HTTP3 startup hints (boolean):
 #
 # false	-> do not add QUIC command line flags
-# true	-> add flags from ChromiumQuicCommandLine (default)
-ChromiumEnableQuic=true
+# true	-> add flags from ChromiumQuicCommandLine
+ChromiumEnableQuic=false
 
 # Additional command line used when ChromiumEnableQuic=true (string):
 ChromiumQuicCommandLine=--enable-quic
@@ -181,22 +269,70 @@ ChromiumEnableDnsOptions=false
 # Additional command line used when ChromiumEnableDnsOptions=true (string):
 ChromiumDnsCommandLine=--enable-async-dns
 
+# Lightweight DNS blocklist from URL (boolean):
+#
+# false	-> do not download DNS/hosts blocklist rules (default)
+# true	-> download ChromiumDnsBlocklistUrl and convert supported entries to
+#          --host-resolver-rules before Chromium starts
+#
+# Supported input examples: "0.0.0.0 ads.example.com",
+# "127.0.0.1 ads.example.com", "||ads.example.com^", or a plain domain.
+# This is lighter at runtime than a content-script adblocker, but the Chromium
+# command line has a practical size limit, so keep MaxRules conservative.
+ChromiumEnableDnsBlocklistUrl=false
+
+# DNS/hosts/adblock list URL used when ChromiumEnableDnsBlocklistUrl=true (string):
+ChromiumDnsBlocklistUrl=
+
+# Cache downloaded DNS blocklists in the dnsblock folder (boolean):
+#
+# false	-> download the list on every launch
+# true	-> use cached dnsblock/list_<hash>.txt files and refresh stale entries (default)
+ChromiumDnsBlocklistCache=true
+
+# DNS blocklist cache directory (string):
+# Relative paths are resolved against the chrlauncher directory.
+ChromiumDnsBlocklistCacheDirectory=dnsblock
+
+# Maximum cache age before trying to refresh from the network (integer, hours):
+# If refresh fails, the stale cached list is used as fallback.
+ChromiumDnsBlocklistCacheMaxAgeHours=24
+
+# Address used for blocked domains (string):
+ChromiumDnsBlocklistSink=0.0.0.0
+
+# Also block subdomains with MAP *.domain rules (boolean):
+ChromiumDnsBlocklistIncludeSubdomains=true
+
+# Maximum accepted domains from the downloaded list (integer):
+ChromiumDnsBlocklistMaxRules=256
+
+# Maximum generated --host-resolver-rules payload length in characters (integer):
+ChromiumDnsBlocklistMaxCommandLineChars=12000
+
 # Improve Google Web Store / Google site Chrome detection (boolean):
 #
 # false	-> do not add Google Web Store compatibility flags
-# true	-> add flags from ChromiumGoogleWebStoreCommandLine (default)
+# true	-> add flags from ChromiumGoogleWebStoreCommandLine
 #
-# This spoofs a current Chrome UA and sets Web Store CRX URLs. It cannot turn
-# an ungoogled or stripped Chromium build into official Google Chrome.
-ChromiumEnableGoogleWebStoreFix=true
+# This spoofs a current Chrome UA, suppresses UA Client Hints that can reveal
+# Chromium, and sets Web Store CRX URLs. It only applies on a cold browser
+# start; close every running Chromium process before testing it.
+#
+# It cannot turn an ungoogled or stripped Chromium build into official Google
+# Chrome, and Google pages can still use server-side or account-side checks.
+ChromiumEnableGoogleWebStoreFix=false
 
 # Additional command line used when ChromiumEnableGoogleWebStoreFix=true (string):
 ChromiumGoogleWebStoreCommandLine=--user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36" --apps-gallery-url=https://chromewebstore.google.com/ --apps-gallery-update-url=https://clients2.google.com/service/update2/crx --apps-gallery-download-url="https://clients2.google.com/service/update2/crx?response=redirect&prodversion=150.0&x=id=%s&installsource=ondemand&uc"
 
+# Chromium features disabled when ChromiumEnableGoogleWebStoreFix=true (string):
+ChromiumGoogleWebStoreDisableFeatures=UserAgentClientHint
+
 # Enable Chromecast / Google Cast support (boolean):
 #
 # false	-> do not add Cast workaround flags
-# true	-> add Media Router, DIAL, all-IP and TCL discovery workaround flags (default)
+# true	-> add Media Router, DIAL, all-IP and TCL discovery workaround flags
 #
 # Cast requires a Chromium build with Media Router support and Google component
 # update access. Builds without Google integration (for example ungoogled)
@@ -205,7 +341,7 @@ ChromiumGoogleWebStoreCommandLine=--user-agent="Mozilla/5.0 (Windows NT 10.0; Wi
 # If a TCL TV is still missing, check that the TV and PC are on the same LAN/VLAN,
 # AP/client isolation is disabled, and Windows Firewall allows private-network
 # local discovery traffic.
-ChromiumEnableCast=true
+ChromiumEnableCast=false
 
 # Additional command line used when ChromiumEnableCast=true (string):
 ChromiumCastCommandLine=--enable-media-router --load-media-router-component-extension

@@ -10,6 +10,16 @@ v2.7
 - open external application URLs in Chromium's last used profile instead of falling back to an empty/default profile
 - added optional Chromecast / Google Cast launch support through ChromiumEnableCast and ChromiumCastCommandLine
 - improved TCL/Chromecast discovery workaround with Media Router, DIAL provider, all-IP sink discovery, and immediate sink probing
+- added advanced Chromium spoof configuration for Windows locale, geolocation hooks, timezone hooks, and browser-level hardware-id hooks
+- added a conservative lossless optimization bundle through ChromiumEnableLosslessOptimization and ParallelDownloading
+- fixed misleading ZIP "failed finding central directory" errors by validating downloaded archives and silently falling back from ZIP probing to 7z
+- strengthened Google Web Store compatibility mode by disabling UserAgentClientHint when spoofing the Chrome user agent
+- changed costly compatibility and forced GPU/raster flags to opt-in defaults after Speedometer data showed regressions versus stock Chrome
+- made Windows 11 UI, forced DirectX, and forced QUIC launch hints opt-in for a cleaner benchmark-focused default profile
+- added optional DNS/hosts/adblock blocklist URL support that converts lightweight domain rules to Chromium host resolver rules
+- moved DNS blocklist downloads into a dedicated dnsblock cache directory with max-age refresh and stale-cache fallback
+- split GPU blocklist override into its own enabled-by-default ini option and added conservative autofill/password form compatibility flags
+- added long generated text/font performance options with Skia cache tuning, translate suppression, and opt-in aggressive webfont/accessibility trimming
 
 v2.6 (14 January 2022)
 - set win7sp1 as minimum required version

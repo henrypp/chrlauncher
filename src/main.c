@@ -425,6 +425,570 @@ VOID _app_append_browser_features (
 	}
 }
 
+PR_STRING _app_get_windows_locale ()
+{
+	WCHAR locale_name[LOCALE_NAME_MAX_LENGTH] = {0};
+	INT length;
+
+	length = GetUserDefaultLocaleName (locale_name, RTL_NUMBER_OF (locale_name));
+
+	if (length <= 1)
+		return NULL;
+
+	return _r_obj_createstring (locale_name);
+}
+
+PR_STRING _app_download_text_url (
+	_In_ PR_STRING url
+)
+{
+	R_DOWNLOAD_INFO download_info;
+	PR_STRING proxy_string;
+	PR_STRING string = NULL;
+	HINTERNET hsession;
+	NTSTATUS status;
+
+	if (_r_obj_isstringempty (url))
+		return NULL;
+
+	proxy_string = _r_app_getproxyconfiguration ();
+	hsession = _r_inet_createsession (_r_app_getuseragent (), proxy_string);
+
+	if (hsession)
+	{
+		_r_inet_initializedownload (&download_info, NULL, NULL, NULL);
+
+		status = _r_inet_begindownload (hsession, &url->sr, &download_info);
+
+		if (status == STATUS_SUCCESS && !_r_obj_isstringempty (download_info.string))
+			string = _r_obj_createstring_ex (download_info.string->buffer, download_info.string->length);
+
+		_r_inet_destroydownload (&download_info);
+		_r_inet_close (hsession);
+	}
+
+	if (proxy_string)
+		_r_obj_dereference (proxy_string);
+
+	return string;
+}
+
+PR_STRING _app_get_dnsblock_cache_path (
+	_In_ PR_STRING url
+)
+{
+	R_STRINGREF separator_sr = PR_STRINGREF_INIT (L"\\");
+	PR_STRING app_directory;
+	PR_STRING cache_directory;
+	PR_STRING cache_path;
+	PR_STRING configured_directory;
+	PR_STRING string;
+	NTSTATUS status;
+
+	if (_r_obj_isstringempty (url))
+		return NULL;
+
+	configured_directory = _r_config_getstringexpand (L"ChromiumDnsBlocklistCacheDirectory", L"dnsblock");
+
+	if (_r_obj_isstringempty (configured_directory))
+	{
+		if (configured_directory)
+			_r_obj_dereference (configured_directory);
+
+		configured_directory = _r_obj_createstring (L"dnsblock");
+	}
+
+	if (!configured_directory)
+		return NULL;
+
+	if (configured_directory->buffer[0] == OBJ_NAME_PATH_SEPARATOR ||
+		(configured_directory->length >= 2 * sizeof (WCHAR) && configured_directory->buffer[1] == L':'))
+	{
+		status = _r_path_getfullpath (configured_directory->buffer, &cache_directory);
+
+		if (NT_SUCCESS (status))
+		{
+			_r_obj_dereference (configured_directory);
+		}
+		else
+		{
+			cache_directory = configured_directory;
+			configured_directory = NULL;
+		}
+	}
+	else
+	{
+		app_directory = _r_app_getdirectory ();
+
+		if (app_directory)
+		{
+			cache_directory = _r_obj_concatstringrefs (
+				3,
+				&app_directory->sr,
+				&separator_sr,
+				&configured_directory->sr
+			);
+
+			_r_obj_dereference (app_directory);
+		}
+		else
+		{
+			cache_directory = (PR_STRING)_r_obj_reference (configured_directory);
+		}
+
+		_r_obj_dereference (configured_directory);
+	}
+
+	if (!cache_directory)
+		return NULL;
+
+	_r_str_trimstring (&cache_directory->sr, &separator_sr, 0);
+
+	if (!_r_fs_exists (&cache_directory->sr))
+		_r_fs_createdirectory (&cache_directory->sr);
+
+	string = _r_format_string (L"list_%" TEXT (PR_ULONG) L".txt", _r_str_gethash2 (&url->sr, TRUE));
+
+	if (string)
+	{
+		cache_path = _r_obj_concatstringrefs (
+			3,
+			&cache_directory->sr,
+			&separator_sr,
+			&string->sr
+		);
+
+		_r_obj_dereference (string);
+	}
+	else
+	{
+		cache_path = NULL;
+	}
+
+	_r_obj_dereference (cache_directory);
+
+	return cache_path;
+}
+
+PR_STRING _app_read_text_cache_file (
+	_In_ PR_STRING cache_path,
+	_In_ LONG max_age_hours,
+	_In_ BOOLEAN ignore_age
+)
+{
+	BY_HANDLE_FILE_INFORMATION file_info;
+	FILETIME now_filetime;
+	HANDLE hfile;
+	LARGE_INTEGER file_size;
+	ULARGE_INTEGER last_write_time;
+	ULARGE_INTEGER now_time;
+	PR_STRING string = NULL;
+	LPWSTR buffer;
+	DWORD bytes_read = 0;
+	DWORD bytes_to_read;
+
+	if (_r_obj_isstringempty (cache_path))
+		return NULL;
+
+	hfile = CreateFileW (cache_path->buffer, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, NULL);
+
+	if (hfile == INVALID_HANDLE_VALUE)
+		return NULL;
+
+	if (!ignore_age && max_age_hours > 0)
+	{
+		if (GetFileInformationByHandle (hfile, &file_info))
+		{
+			GetSystemTimeAsFileTime (&now_filetime);
+
+			last_write_time.LowPart = file_info.ftLastWriteTime.dwLowDateTime;
+			last_write_time.HighPart = file_info.ftLastWriteTime.dwHighDateTime;
+			now_time.LowPart = now_filetime.dwLowDateTime;
+			now_time.HighPart = now_filetime.dwHighDateTime;
+
+			if (now_time.QuadPart > last_write_time.QuadPart &&
+				((now_time.QuadPart - last_write_time.QuadPart) / 10000000ULL) > ((ULONG64)max_age_hours * 60ULL * 60ULL))
+			{
+				NtClose (hfile);
+
+				return NULL;
+			}
+		}
+	}
+
+	if (!GetFileSizeEx (hfile, &file_size) || file_size.QuadPart <= 0 || file_size.QuadPart > 16 * 1024 * 1024)
+	{
+		NtClose (hfile);
+
+		return NULL;
+	}
+
+	bytes_to_read = (DWORD)file_size.QuadPart;
+	buffer = _r_mem_allocate (bytes_to_read + sizeof (WCHAR));
+
+	if (buffer)
+	{
+		if (ReadFile (hfile, buffer, bytes_to_read, &bytes_read, NULL) && bytes_read >= sizeof (WCHAR))
+		{
+			buffer[bytes_read / sizeof (WCHAR)] = UNICODE_NULL;
+			string = _r_obj_createstring_ex (buffer, bytes_read & ~(sizeof (WCHAR) - 1));
+		}
+
+		_r_mem_free (buffer);
+	}
+
+	NtClose (hfile);
+
+	return string;
+}
+
+VOID _app_write_text_cache_file (
+	_In_ PR_STRING cache_path,
+	_In_ PR_STRING text
+)
+{
+	PR_STRING temp_path;
+	HANDLE hfile;
+	DWORD bytes_written = 0;
+
+	if (_r_obj_isstringempty (cache_path) || _r_obj_isstringempty (text))
+		return;
+
+	if (text->length > MAXDWORD)
+		return;
+
+	temp_path = _r_format_string (L"%s.tmp", cache_path->buffer);
+
+	if (!temp_path)
+		return;
+
+	hfile = CreateFileW (temp_path->buffer, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_SEQUENTIAL_SCAN, NULL);
+
+	if (hfile != INVALID_HANDLE_VALUE)
+	{
+		if (WriteFile (hfile, text->buffer, (DWORD)text->length, &bytes_written, NULL) && bytes_written == (DWORD)text->length)
+		{
+			NtClose (hfile);
+
+			MoveFileExW (temp_path->buffer, cache_path->buffer, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH);
+		}
+		else
+		{
+			NtClose (hfile);
+
+			DeleteFileW (temp_path->buffer);
+		}
+	}
+
+	_r_obj_dereference (temp_path);
+}
+
+PR_STRING _app_get_dnsblock_text (
+	_In_ PR_STRING url
+)
+{
+	PR_STRING cache_path = NULL;
+	PR_STRING string = NULL;
+	BOOLEAN use_cache;
+	LONG max_age_hours;
+
+	if (_r_obj_isstringempty (url))
+		return NULL;
+
+	use_cache = _r_config_getboolean (L"ChromiumDnsBlocklistCache", TRUE);
+	max_age_hours = _r_config_getlong (L"ChromiumDnsBlocklistCacheMaxAgeHours", 24);
+
+	if (max_age_hours == INT_ERROR || max_age_hours < 0)
+		max_age_hours = 24;
+
+	if (use_cache)
+	{
+		cache_path = _app_get_dnsblock_cache_path (url);
+		string = _app_read_text_cache_file (cache_path, max_age_hours, FALSE);
+
+		if (string)
+		{
+			_r_obj_dereference (cache_path);
+
+			return string;
+		}
+	}
+
+	string = _app_download_text_url (url);
+
+	if (string)
+	{
+		if (use_cache && cache_path)
+			_app_write_text_cache_file (cache_path, string);
+	}
+	else if (use_cache && cache_path)
+	{
+		string = _app_read_text_cache_file (cache_path, 0, TRUE);
+	}
+
+	if (cache_path)
+		_r_obj_dereference (cache_path);
+
+	return string;
+}
+
+BOOLEAN _app_is_dns_hostname_char (
+	_In_ WCHAR chr
+)
+{
+	return (chr >= L'a' && chr <= L'z') ||
+		(chr >= L'A' && chr <= L'Z') ||
+		(chr >= L'0' && chr <= L'9') ||
+		chr == L'-' ||
+		chr == L'.';
+}
+
+BOOLEAN _app_is_dns_hostname_valid (
+	_In_ LPCWSTR hostname
+)
+{
+	BOOLEAN has_dot = FALSE;
+	ULONG_PTR length;
+	WCHAR chr;
+
+	if (!hostname || !hostname[0])
+		return FALSE;
+
+	length = _r_str_getlength (hostname);
+
+	if (length < 3 || length >= 254)
+		return FALSE;
+
+	if (hostname[0] == L'.' || hostname[length - 1] == L'.' || hostname[length - 1] == L'-')
+		return FALSE;
+
+	for (ULONG_PTR i = 0; i < length; i++)
+	{
+		chr = hostname[i];
+
+		if (!_app_is_dns_hostname_char (chr))
+			return FALSE;
+
+		if (chr == L'.')
+			has_dot = TRUE;
+	}
+
+	if (!has_dot)
+		return FALSE;
+
+	if (lstrcmpiW (hostname, L"localhost") == 0)
+		return FALSE;
+
+	return TRUE;
+}
+
+LPCWSTR _app_read_dns_token (
+	_In_ LPCWSTR ptr,
+	_Out_writes_ (token_count) LPWSTR token,
+	_In_ ULONG_PTR token_count
+)
+{
+	ULONG_PTR length = 0;
+
+	while (*ptr == L' ' || *ptr == L'\t')
+		ptr++;
+
+	while (*ptr && *ptr != L' ' && *ptr != L'\t' && *ptr != L'#' && *ptr != L'!' && length + 1 < token_count)
+	{
+		token[length++] = *ptr++;
+	}
+
+	token[length] = UNICODE_NULL;
+
+	return ptr;
+}
+
+BOOLEAN _app_extract_dns_hostname_from_line (
+	_In_ LPCWSTR line,
+	_Out_writes_ (hostname_count) LPWSTR hostname,
+	_In_ ULONG_PTR hostname_count
+)
+{
+	WCHAR token1[256] = {0};
+	WCHAR token2[256] = {0};
+	ULONG_PTR length = 0;
+	LPCWSTR ptr;
+
+	hostname[0] = UNICODE_NULL;
+	ptr = line;
+
+	while (*ptr == L' ' || *ptr == L'\t')
+		ptr++;
+
+	if (!*ptr || *ptr == L'#' || *ptr == L'!' || *ptr == L'[')
+		return FALSE;
+
+	if (ptr[0] == L'|' && ptr[1] == L'|')
+	{
+		ptr += 2;
+
+		while (_app_is_dns_hostname_char (*ptr) && length + 1 < hostname_count)
+			hostname[length++] = *ptr++;
+
+		hostname[length] = UNICODE_NULL;
+
+		return _app_is_dns_hostname_valid (hostname);
+	}
+
+	(void)_app_read_dns_token (ptr, token1, RTL_NUMBER_OF (token1));
+
+	if (lstrcmpiW (token1, L"0.0.0.0") == 0 ||
+		lstrcmpiW (token1, L"127.0.0.1") == 0 ||
+		lstrcmpiW (token1, L"::") == 0 ||
+		lstrcmpiW (token1, L"::1") == 0)
+	{
+		ptr = _app_read_dns_token (ptr, token1, RTL_NUMBER_OF (token1));
+		(void)_app_read_dns_token (ptr, token2, RTL_NUMBER_OF (token2));
+	}
+	else
+	{
+		_r_str_copy (token2, RTL_NUMBER_OF (token2), token1);
+	}
+
+	if (!_app_is_dns_hostname_valid (token2))
+		return FALSE;
+
+	_r_str_copy (hostname, hostname_count, token2);
+
+	return TRUE;
+}
+
+PR_STRING _app_create_dns_blocklist_arguments ()
+{
+	PR_STRING blocklist_text;
+	PR_STRING blocklist_url;
+	PR_STRING next_rules;
+	PR_STRING rule;
+	PR_STRING rules;
+	PR_STRING sink;
+	LPCWSTR ptr;
+	LONG max_chars;
+	LONG max_rules;
+	ULONG count = 0;
+	BOOLEAN include_subdomains;
+	WCHAR hostname[256];
+	WCHAR line_buffer[1024];
+	ULONG_PTR line_length;
+
+	if (!_r_config_getboolean (L"ChromiumEnableDnsBlocklistUrl", FALSE))
+		return NULL;
+
+	blocklist_url = _r_config_getstringexpand (L"ChromiumDnsBlocklistUrl", L"");
+	blocklist_text = _app_get_dnsblock_text (blocklist_url);
+
+	if (blocklist_url)
+		_r_obj_dereference (blocklist_url);
+
+	if (_r_obj_isstringempty (blocklist_text))
+	{
+		if (blocklist_text)
+			_r_obj_dereference (blocklist_text);
+
+		return NULL;
+	}
+
+	sink = _r_config_getstring (L"ChromiumDnsBlocklistSink", CHROMIUM_DNS_BLOCKLIST_SINK);
+	max_rules = _r_config_getlong (L"ChromiumDnsBlocklistMaxRules", 256);
+	max_chars = _r_config_getlong (L"ChromiumDnsBlocklistMaxCommandLineChars", 12000);
+	include_subdomains = _r_config_getboolean (L"ChromiumDnsBlocklistIncludeSubdomains", TRUE);
+
+	if (max_rules <= 0 || max_rules > 2048)
+		max_rules = 256;
+
+	if (max_chars < 1024 || max_chars > 30000)
+		max_chars = 12000;
+
+	if (_r_obj_isstringempty (sink))
+		_r_obj_movereference ((PVOID_PTR)&sink, _r_obj_createstring (CHROMIUM_DNS_BLOCKLIST_SINK));
+
+	rules = _r_obj_createstring (L"");
+
+	if (!rules || _r_obj_isstringempty (sink))
+	{
+		if (rules)
+			_r_obj_dereference (rules);
+
+		if (sink)
+			_r_obj_dereference (sink);
+
+		_r_obj_dereference (blocklist_text);
+
+		return NULL;
+	}
+
+	ptr = blocklist_text->buffer;
+
+	while (*ptr && count < (ULONG)max_rules)
+	{
+		line_length = 0;
+
+		while (*ptr && *ptr != L'\r' && *ptr != L'\n')
+		{
+			if (line_length + 1 < RTL_NUMBER_OF (line_buffer))
+				line_buffer[line_length++] = *ptr;
+
+			ptr++;
+		}
+
+		line_buffer[line_length] = UNICODE_NULL;
+
+		while (*ptr == L'\r' || *ptr == L'\n')
+			ptr++;
+
+		if (!_app_extract_dns_hostname_from_line (line_buffer, hostname, RTL_NUMBER_OF (hostname)))
+			continue;
+
+		if (include_subdomains)
+			rule = _r_format_string (L"%sMAP %s %s,MAP *.%s %s", _r_obj_isstringempty (rules) ? L"" : L",", hostname, sink->buffer, hostname, sink->buffer);
+		else
+			rule = _r_format_string (L"%sMAP %s %s", _r_obj_isstringempty (rules) ? L"" : L",", hostname, sink->buffer);
+
+		if (!rule)
+			break;
+
+		if ((rules->length + rule->length) > ((ULONG_PTR)max_chars * sizeof (WCHAR)))
+		{
+			_r_obj_dereference (rule);
+
+			break;
+		}
+
+		next_rules = _r_format_string (L"%s%s", rules->buffer, rule->buffer);
+
+		_r_obj_dereference (rule);
+
+		if (!next_rules)
+			break;
+
+		_r_obj_movereference ((PVOID_PTR)&rules, next_rules);
+
+		count++;
+	}
+
+	if (sink)
+		_r_obj_dereference (sink);
+
+	_r_obj_dereference (blocklist_text);
+
+	if (_r_obj_isstringempty (rules))
+	{
+		_r_obj_dereference (rules);
+
+		return NULL;
+	}
+
+	next_rules = _r_format_string (L"--host-resolver-rules=\"%s\"", rules->buffer);
+
+	_r_obj_dereference (rules);
+
+	return next_rules;
+}
+
 ULONG _app_get_workqueue_threads ()
 {
 	SYSTEM_INFO system_info;
@@ -692,17 +1256,32 @@ VOID _app_init_browser_info (
 	PR_STRING cast_features;
 	PR_STRING directx_arguments;
 	PR_STRING dns_arguments;
+	PR_STRING dns_blocklist_arguments;
+	PR_STRING formatted_arguments;
 	PR_STRING google_webstore_arguments;
+	PR_STRING google_webstore_disabled_features;
 	PR_STRING gpu_arguments;
+	PR_STRING geolocation_arguments;
+	PR_STRING hardware_id_arguments;
+	PR_STRING ignore_gpu_blocklist_arguments;
 	PR_STRING locale;
+	PR_STRING lossless_arguments;
+	PR_STRING lossless_features;
 	PR_STRING multithreading_arguments;
 	PR_STRING quic_arguments;
 	PR_STRING region_arguments;
 	PR_STRING renderer_safety_arguments;
+	PR_STRING autofill_password_arguments;
+	PR_STRING text_aggressive_arguments;
+	PR_STRING text_disabled_features;
+	PR_STRING text_performance_arguments;
+	PR_STRING timezone_arguments;
+	PR_STRING timezone_id;
 	PR_STRING vulkan_arguments;
 	PR_STRING vulkan_features;
 	PR_STRING windows11_arguments;
 	PR_STRING windows11_features;
+	PR_STRING windows_locale;
 	PR_STRING browser_type;
 	PR_STRING binary_dir;
 	PR_STRING binary_name;
@@ -846,6 +1425,21 @@ VOID _app_init_browser_info (
 		accept_language = _r_config_getstring (L"ChromiumSpoofRegionAcceptLanguage", CHROMIUM_SPOOF_REGION_ACCEPT_LANGUAGE);
 		region_arguments = NULL;
 
+		if (_r_config_getboolean (L"ChromiumSpoofUseWindowsLocale", FALSE))
+		{
+			windows_locale = _app_get_windows_locale ();
+
+			if (!_r_obj_isstringempty (windows_locale))
+			{
+				_r_obj_movereference ((PVOID_PTR)&locale, windows_locale);
+				_r_obj_movereference ((PVOID_PTR)&accept_language, (PR_STRING)_r_obj_reference (locale));
+			}
+			else if (windows_locale)
+			{
+				_r_obj_dereference (windows_locale);
+			}
+		}
+
 		if (!_r_obj_isstringempty (locale) && !_r_obj_isstringempty (accept_language))
 		{
 			region_arguments = _r_format_string (L"--lang=%s --accept-lang=%s", locale->buffer, accept_language->buffer);
@@ -868,7 +1462,65 @@ VOID _app_init_browser_info (
 		_app_append_browser_arguments (&browser_arguments, region_arguments);
 	}
 
-	if (_r_config_getboolean (L"ChromiumEnableBackgroundResourceSaving", TRUE))
+	if (_r_config_getboolean (L"ChromiumSpoofGeolocation", FALSE))
+	{
+		geolocation_arguments = _r_config_getstringexpand (L"ChromiumSpoofGeolocationCommandLine", CHROMIUM_SPOOF_GEOLOCATION_COMMAND_LINE);
+
+		_app_append_browser_arguments (&browser_arguments, geolocation_arguments);
+	}
+
+	if (_r_config_getboolean (L"ChromiumSpoofTimeZone", FALSE))
+	{
+		timezone_arguments = _r_config_getstringexpand (L"ChromiumSpoofTimeZoneCommandLine", CHROMIUM_SPOOF_TIMEZONE_COMMAND_LINE);
+		timezone_id = _r_config_getstring (L"ChromiumSpoofTimeZoneId", CHROMIUM_SPOOF_TIMEZONE_ID);
+
+		if (!_r_obj_isstringempty (timezone_arguments) && !_r_obj_isstringempty (timezone_id))
+		{
+			formatted_arguments = _r_format_string (L"%s%s", timezone_arguments->buffer, timezone_id->buffer);
+
+			if (formatted_arguments)
+				_r_obj_movereference ((PVOID_PTR)&timezone_arguments, formatted_arguments);
+		}
+
+		if (timezone_id)
+			_r_obj_dereference (timezone_id);
+
+		_app_append_browser_arguments (&browser_arguments, timezone_arguments);
+	}
+
+	if (_r_config_getboolean (L"ChromiumSpoofHardwareId", FALSE))
+	{
+		hardware_id_arguments = _r_config_getstringexpand (L"ChromiumSpoofHardwareIdCommandLine", CHROMIUM_SPOOF_HARDWARE_ID_COMMAND_LINE);
+
+		_app_append_browser_arguments (&browser_arguments, hardware_id_arguments);
+	}
+
+	if (_r_config_getboolean (L"ChromiumEnableLosslessOptimization", TRUE))
+	{
+		lossless_arguments = _r_config_getstringexpand (L"ChromiumLosslessOptimizationCommandLine", CHROMIUM_LOSSLESS_OPTIMIZATION_COMMAND_LINE);
+		lossless_features = _r_config_getstring (L"ChromiumLosslessOptimizationFeatures", CHROMIUM_LOSSLESS_OPTIMIZATION_FEATURES);
+
+		_app_append_browser_arguments (&browser_arguments, lossless_arguments);
+		_app_append_browser_features (&browser_features, lossless_features);
+	}
+
+	if (_r_config_getboolean (L"ChromiumEnableTextPerformanceFixes", TRUE))
+	{
+		text_performance_arguments = _r_config_getstringexpand (L"ChromiumTextPerformanceCommandLine", CHROMIUM_TEXT_PERFORMANCE_COMMAND_LINE);
+		text_disabled_features = _r_config_getstring (L"ChromiumTextPerformanceDisableFeatures", CHROMIUM_TEXT_PERFORMANCE_DISABLE_FEATURES);
+
+		_app_append_browser_arguments (&browser_arguments, text_performance_arguments);
+		_app_append_browser_features (&browser_disabled_features, text_disabled_features);
+	}
+
+	if (_r_config_getboolean (L"ChromiumEnableAggressiveTextPerformanceFixes", FALSE))
+	{
+		text_aggressive_arguments = _r_config_getstringexpand (L"ChromiumAggressiveTextPerformanceCommandLine", CHROMIUM_TEXT_AGGRESSIVE_COMMAND_LINE);
+
+		_app_append_browser_arguments (&browser_arguments, text_aggressive_arguments);
+	}
+
+	if (_r_config_getboolean (L"ChromiumEnableBackgroundResourceSaving", FALSE))
 	{
 		background_arguments = _r_config_getstringexpand (L"ChromiumBackgroundResourceSavingCommandLine", CHROMIUM_BACKGROUND_RESOURCE_SAVING_COMMAND_LINE);
 		background_features = _r_config_getstring (L"ChromiumBackgroundResourceSavingFeatures", CHROMIUM_BACKGROUND_RESOURCE_SAVING_FEATURES);
@@ -877,14 +1529,14 @@ VOID _app_init_browser_info (
 		_app_append_browser_features (&browser_features, background_features);
 	}
 
-	if (_r_config_getboolean (L"ChromiumEnableRendererSafety", TRUE))
+	if (_r_config_getboolean (L"ChromiumEnableRendererSafety", FALSE))
 	{
 		renderer_safety_arguments = _r_config_getstringexpand (L"ChromiumRendererSafetyCommandLine", CHROMIUM_RENDERER_SAFETY_COMMAND_LINE);
 
 		_app_append_browser_arguments (&browser_arguments, renderer_safety_arguments);
 	}
 
-	if (_r_config_getboolean (L"ChromiumEnableWindows11Features", TRUE))
+	if (_r_config_getboolean (L"ChromiumEnableWindows11Features", FALSE))
 	{
 		windows11_arguments = _r_config_getstringexpand (L"ChromiumWindows11CommandLine", CHROMIUM_WINDOWS11_COMMAND_LINE);
 		windows11_features = _r_config_getstring (L"ChromiumWindows11Features", CHROMIUM_WINDOWS11_FEATURES);
@@ -893,7 +1545,7 @@ VOID _app_init_browser_info (
 		_app_append_browser_features (&browser_features, windows11_features);
 	}
 
-	if (_r_config_getboolean (L"ChromiumEnableDirectX", TRUE))
+	if (_r_config_getboolean (L"ChromiumEnableDirectX", FALSE))
 	{
 		directx_arguments = _r_config_getstringexpand (L"ChromiumDirectXCommandLine", CHROMIUM_DIRECTX_COMMAND_LINE);
 
@@ -909,21 +1561,35 @@ VOID _app_init_browser_info (
 		_app_append_browser_features (&browser_features, vulkan_features);
 	}
 
-	if (_r_config_getboolean (L"ChromiumEnableMultithreadedRaster", TRUE))
+	if (_r_config_getboolean (L"ChromiumEnableMultithreadedRaster", FALSE))
 	{
 		multithreading_arguments = _r_config_getstringexpand (L"ChromiumMultithreadingCommandLine", CHROMIUM_MULTITHREADING_COMMAND_LINE);
 
 		_app_append_browser_arguments (&browser_arguments, multithreading_arguments);
 	}
 
-	if (_r_config_getboolean (L"ChromiumEnableHardwareAcceleration", TRUE))
+	if (_r_config_getboolean (L"ChromiumIgnoreGpuBlocklist", TRUE))
+	{
+		ignore_gpu_blocklist_arguments = _r_config_getstringexpand (L"ChromiumIgnoreGpuBlocklistCommandLine", CHROMIUM_IGNORE_GPU_BLOCKLIST_COMMAND_LINE);
+
+		_app_append_browser_arguments (&browser_arguments, ignore_gpu_blocklist_arguments);
+	}
+
+	if (_r_config_getboolean (L"ChromiumEnableHardwareAcceleration", FALSE))
 	{
 		gpu_arguments = _r_config_getstringexpand (L"ChromiumHardwareAccelerationCommandLine", CHROMIUM_HARDWARE_ACCELERATION_COMMAND_LINE);
 
 		_app_append_browser_arguments (&browser_arguments, gpu_arguments);
 	}
 
-	if (_r_config_getboolean (L"ChromiumEnableQuic", TRUE))
+	if (_r_config_getboolean (L"ChromiumEnableAutofillPasswordFixes", TRUE))
+	{
+		autofill_password_arguments = _r_config_getstringexpand (L"ChromiumAutofillPasswordCommandLine", CHROMIUM_AUTOFILL_PASSWORD_COMMAND_LINE);
+
+		_app_append_browser_arguments (&browser_arguments, autofill_password_arguments);
+	}
+
+	if (_r_config_getboolean (L"ChromiumEnableQuic", FALSE))
 	{
 		quic_arguments = _r_config_getstringexpand (L"ChromiumQuicCommandLine", CHROMIUM_QUIC_COMMAND_LINE);
 
@@ -937,14 +1603,20 @@ VOID _app_init_browser_info (
 		_app_append_browser_arguments (&browser_arguments, dns_arguments);
 	}
 
-	if (_r_config_getboolean (L"ChromiumEnableGoogleWebStoreFix", TRUE))
+	dns_blocklist_arguments = _app_create_dns_blocklist_arguments ();
+
+	_app_append_browser_arguments (&browser_arguments, dns_blocklist_arguments);
+
+	if (_r_config_getboolean (L"ChromiumEnableGoogleWebStoreFix", FALSE))
 	{
 		google_webstore_arguments = _r_config_getstringexpand (L"ChromiumGoogleWebStoreCommandLine", CHROMIUM_GOOGLE_WEBSTORE_COMMAND_LINE);
+		google_webstore_disabled_features = _r_config_getstring (L"ChromiumGoogleWebStoreDisableFeatures", CHROMIUM_GOOGLE_WEBSTORE_DISABLE_FEATURES);
 
 		_app_append_browser_arguments (&browser_arguments, google_webstore_arguments);
+		_app_append_browser_features (&browser_disabled_features, google_webstore_disabled_features);
 	}
 
-	if (_r_config_getboolean (L"ChromiumEnableCast", TRUE))
+	if (_r_config_getboolean (L"ChromiumEnableCast", FALSE))
 	{
 		cast_arguments = _r_config_getstringexpand (L"ChromiumCastCommandLine", CHROMIUM_CAST_COMMAND_LINE);
 		cast_disabled_features = _r_config_getstring (L"ChromiumCastDisableFeatures", CHROMIUM_CAST_DISABLE_FEATURES);
@@ -1418,6 +2090,48 @@ BOOLEAN _app_isupdatedownloaded (
 	return !_r_obj_isstringempty (pbi->cache_path) && _r_fs_exists (&pbi->cache_path->sr);
 }
 
+BOOLEAN _app_isdownloadedarchivevalid (
+	_In_ PR_STRINGREF path
+)
+{
+	static const BYTE signature_7z[] = {'7', 'z', 0xBC, 0xAF, 0x27, 0x1C};
+	BYTE header[8] = {0};
+	LARGE_INTEGER file_size;
+	mz_zip_archive zip_archive = {0};
+	HANDLE hfile;
+	DWORD bytes_read = 0;
+	BOOLEAN is_valid = FALSE;
+
+	hfile = CreateFileW (path->buffer, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, NULL);
+
+	if (hfile == INVALID_HANDLE_VALUE)
+		return FALSE;
+
+	if (GetFileSizeEx (hfile, &file_size) && file_size.QuadPart >= RTL_NUMBER_OF (header))
+	{
+		if (ReadFile (hfile, header, sizeof (header), &bytes_read, NULL) && bytes_read >= 6)
+		{
+			if (header[0] == 'P' && header[1] == 'K')
+			{
+				if (mz_zip_reader_init_file_v2 (&zip_archive, path->buffer, 0, 0, 0))
+				{
+					mz_zip_reader_end (&zip_archive);
+
+					is_valid = TRUE;
+				}
+			}
+			else if (RtlEqualMemory (header, signature_7z, sizeof (signature_7z)))
+			{
+				is_valid = TRUE;
+			}
+		}
+	}
+
+	NtClose (hfile);
+
+	return is_valid;
+}
+
 BOOLEAN _app_isupdaterequired (
 	_In_ PBROWSER_INFORMATION pbi
 )
@@ -1695,6 +2409,14 @@ BOOLEAN _app_downloadupdate (
 			if (status != STATUS_SUCCESS)
 			{
 				_r_show_errormessage (hwnd, NULL, status, pbi->download_url->buffer, ET_WINHTTP);
+
+				_app_delete (&part_path->sr, FALSE);
+
+				*is_error_ptr = TRUE;
+			}
+			else if (!_app_isdownloadedarchivevalid (&part_path->sr))
+			{
+				_r_show_message (hwnd, MB_OK | MB_ICONSTOP, NULL, L"Downloaded update is not a valid ZIP/7z archive. The server may have returned a partial file or an HTML error page.");
 
 				_app_delete (&part_path->sr, FALSE);
 
@@ -2116,8 +2838,6 @@ BOOLEAN _app_unpack_zip (
 
 	if (!mz_zip_reader_init_file_v2 (&zip_archive, pbi->cache_path->buffer, 0, 0, 0))
 	{
-		_r_show_errormessage (hwnd, NULL, zip_archive.m_last_error, mz_zip_get_error_string (zip_archive.m_last_error), ET_NONE);
-
 		return FALSE;
 	}
 
