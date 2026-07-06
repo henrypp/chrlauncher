@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - main
+      - restore/**
   pull_request:
     branches:
       - master
