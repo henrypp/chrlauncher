@@ -14,7 +14,7 @@ on:
 
 jobs:
   build:
-    name: Build x64 portable
+    name: Build x64 portable temp-runner
     runs-on: windows-latest
 
     steps:
@@ -60,11 +60,15 @@ jobs:
               throw "Missing portable artifact file: $path"
             }
           }
+          $runner = Get-Content -LiteralPath 'bin\RUN_CHRLAUNCHER_X64.bat' -Raw
+          foreach ($needle in @('%TEMP%\chrlauncher_temp_run_', 'copy /Y', 'pushd "%ROOT%"', 'start "" "%TMP_EXE%"')) {
+            if ($runner -notlike "*$needle*") { throw "Temp runner marker missing: $needle" }
+          }
           Get-Item -LiteralPath 'bin\chrlauncher.x64.exe' | Format-List FullName, Length, LastWriteTimeUtc
 
       - name: Upload portable artifact
         uses: actions/upload-artifact@v7.0.1
         with:
-          name: chrlauncher-restore-x64-portable
+          name: chrlauncher-restore-x64-temp-runner
           path: x/bin/**
           if-no-files-found: error
