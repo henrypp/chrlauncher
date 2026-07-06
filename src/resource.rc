@@ -1,0 +1,195 @@
+#include <windows.h>
+#include <commctrl.h>
+#include <richedit.h>
+
+#include "resource.h"
+#include "rconfig.h"
+#include "app.h"
+
+LANGUAGE LANG_ENGLISH, SUBLANG_DEFAULT
+
+//
+// Accelerator resources
+//
+IDA_MAIN ACCELERATORS
+BEGIN
+	"E", IDM_EXPLORE, CONTROL, VIRTKEY
+	VK_F1, IDM_ABOUT, VIRTKEY
+	VK_F2, IDM_OPEN, VIRTKEY
+	VK_F4, IDM_TRAY_SHOW, ALT, VIRTKEY
+END
+
+//
+// Menu resources
+//
+IDM_MAIN MENU
+BEGIN
+	POPUP " "
+	BEGIN
+		MENUITEM " ", IDM_RUN
+		MENUITEM " ", IDM_OPEN
+		MENUITEM SEPARATOR
+		MENUITEM " ", IDM_EXIT
+	END
+	POPUP " "
+	BEGIN
+		MENUITEM " ", IDM_RUNATEND_CHK
+		MENUITEM " ", IDM_DARKMODE_CHK
+		MENUITEM SEPARATOR
+		POPUP " "
+		BEGIN
+			MENUITEM " ", IDX_LANGUAGE
+		END
+	END
+	POPUP " "
+	BEGIN
+		MENUITEM " ", IDM_WEBSITE
+		MENUITEM " ", IDM_ABOUT
+	END
+END
+
+IDM_TRAY MENU
+BEGIN
+	POPUP ""
+	BEGIN
+		MENUITEM " ", IDM_TRAY_SHOW
+		MENUITEM SEPARATOR
+		MENUITEM " ", IDM_TRAY_RUN
+		MENUITEM " ", IDM_TRAY_OPEN
+		MENUITEM SEPARATOR
+		MENUITEM " ", IDM_TRAY_WEBSITE
+		MENUITEM " ", IDM_TRAY_ABOUT
+		MENUITEM SEPARATOR
+		MENUITEM " ", IDM_TRAY_EXIT
+	END
+END
+
+//
+// Dialog resources
+//
+IDD_MAIN DIALOGEX 0, 0, 238, 132
+STYLE DS_SHELLFONT | DS_MODALFRAME | DS_CENTER | WS_POPUPWINDOW | WS_MINIMIZEBOX | WS_CAPTION | WS_CLIPCHILDREN | NOT WS_VISIBLE
+EXSTYLE WS_EX_COMPOSITED
+CAPTION APP_NAME
+MENU IDM_MAIN
+FONT 8, "Ms Shell Dlg"
+BEGIN
+	CONTROL			"", IDC_PROGRESS, PROGRESS_CLASS, PBS_MARQUEE, 8, 10, 222, 12
+
+	LTEXT			"", IDC_BROWSER, 8, 32, 222 10, SS_ENDELLIPSIS | SS_CENTERIMAGE
+	LTEXT			"", IDC_CURRENTVERSION, 8, 44, 222, 10, SS_ENDELLIPSIS | SS_CENTERIMAGE
+	LTEXT			"", IDC_VERSION, 8, 56, 222, 10, SS_ENDELLIPSIS | SS_CENTERIMAGE
+	LTEXT			"", IDC_DATE, 8, 68, 222, 10, SS_ENDELLIPSIS | SS_CENTERIMAGE
+
+	LTEXT			"", IDC_BROWSER_DATA, 8, 32, 222 10, SS_ENDELLIPSIS | SS_CENTERIMAGE | SS_NOTIFY | SS_RIGHT
+	LTEXT			"", IDC_CURRENTVERSION_DATA, 8, 44, 222, 10, SS_ENDELLIPSIS | SS_CENTERIMAGE | SS_NOTIFY | SS_RIGHT
+	LTEXT			"", IDC_VERSION_DATA, 8, 56, 222, 10, SS_ENDELLIPSIS | SS_CENTERIMAGE | SS_NOTIFY | SS_RIGHT
+	LTEXT			"", IDC_DATE_DATA, 8, 68, 222, 10, SS_ENDELLIPSIS | SS_CENTERIMAGE | SS_NOTIFY | SS_RIGHT
+
+	CONTROL			"", IDC_STATIC, WC_STATIC, SS_ETCHEDHORZ, 8, 86, 222, 1
+
+	PUSHBUTTON		"", IDC_CLOSE, 8, 94, 94, 14
+
+	PUSHBUTTON		"", IDC_START_BTN, 136, 94, 94, 14
+
+	CONTROL			"", IDC_LINKS, WC_LINK, 0, 8, 112, 222, 10
+
+	CONTROL			"", IDC_STATUSBAR, STATUSCLASSNAME, 0, 0, 0, 0, 0
+END
+
+//
+// String resources
+//
+STRINGTABLE
+BEGIN
+	IDS_FILE "File"
+	IDS_RUN "Start"
+	IDS_OPEN "Open"
+	IDS_EXIT "Exit"
+	IDS_SETTINGS "Settings"
+	IDS_LANGUAGE "Language"
+	IDS_HELP "Help"
+	IDS_WEBSITE "Website"
+	IDS_ABOUT "About"
+	IDS_DONATE "Give thanks!"
+
+	IDS_TRAY_SHOW "Show/Hide"
+
+	IDS_BROWSER "Name"
+	IDS_CURRENTVERSION "Current version"
+	IDS_VERSION "New version"
+	IDS_DATE "Build date"
+
+	IDS_ACTION_CHECK "Check for update"
+	IDS_ACTION_DOWNLOAD "Download update"
+	IDS_ACTION_INSTALL "Install update"
+
+	IDS_STATUS_CHECK "Checking for new releases..."
+	IDS_STATUS_DOWNLOAD "Downloading update..."
+	IDS_STATUS_INSTALL "Unpacking update..."
+	IDS_STATUS_FOUND "New version ""%s"" is available!"
+	IDS_STATUS_DOWNLOADED "An update has been downloaded, but not installed. Close Chromium and press 'Install update'."
+	IDS_STATUS_ERROR "Error while checking update..."
+	IDS_STATUS_NOTFOUND "<not found>"
+
+	IDS_QUESTION_STOP "Are you sure you want to cancel the Chromium update process?"
+
+	IDS_CLOSE "Close"
+
+	IDS_RUNATEND_CHK "Start browser at end"
+	IDS_DARKMODE_CHK "Use dark theme"
+
+	IDS_UPDATE_INSTALL "Update available. Do you want to install it now?"
+	IDS_UPDATE_DONE "Downloading update finished."
+	IDS_UPDATE_ERROR "Update server connection error."
+	IDS_UPDATE_YES "Update available. Download and install now?"
+	IDS_UPDATE_NO "No updates available."
+	IDS_UPDATE_INIT "Checking for new releases..."
+	IDS_UPDATE_DOWNLOAD "Downloading update..."
+	IDS_UPDATE_AUTOINSTALL "Automatically install non-executable updates"
+	IDS_QUESTION_FLAG_CHK "Do not ask again"
+	IDS_RESET "Reset"
+END
+
+//
+// Icon resources
+//
+IDI_MAIN		ICON		"res\\100.ico"
+
+//
+// Manifest resource
+//
+1			RT_MANIFEST		"res\\manifest.xml"
+
+//
+// Version Information resources
+//
+1 VERSIONINFO
+FILEVERSION		APP_VERSION_RES
+PRODUCTVERSION	APP_VERSION_RES
+FILEOS			VOS__WINDOWS32
+FILETYPE		VFT_APP
+FILESUBTYPE		VFT2_UNKNOWN
+FILEFLAGSMASK	0x00000000
+FILEFLAGS		VS_FF_PATCHED | VS_FF_PRERELEASE
+BEGIN
+	BLOCK "StringFileInfo"
+	BEGIN
+		BLOCK "040904E4"
+		BEGIN
+			VALUE "Comments", APP_COMMENT
+			VALUE "CompanyName", APP_AUTHOR
+			VALUE "FileDescription", APP_NAME
+			VALUE "FileVersion", APP_VERSION
+			VALUE "InternalName", APP_NAME_SHORT
+			VALUE "LegalCopyright", APP_COPYRIGHT
+			VALUE "OriginalFilename", APP_NAME_SHORT ".exe"
+			VALUE "ProductName", APP_NAME
+			VALUE "ProductVersion", APP_VERSION
+		END
+	END
+	BLOCK "VarFileInfo"
+	BEGIN
+		VALUE "Translation", 0x0409, 1252
+	END
+END
