@@ -1,0 +1,213 @@
+v2.7
+- enabled taskbar pin repair by default and normalize pinned chrome.exe/launcher shortcuts so taskbar and Jumplist launches keep chrlauncher profile routing
+- added configurable DirectX/ANGLE, Vulkan, Windows 11 UI hints, Chromium raster threads, and launcher worker thread count
+- added taskbar pin repair hook, multi-profile picker launch hook, and Google Web Store compatibility command-line options
+- added configurable Chromium background tab resource saving, renderer safety, QUIC, and DNS command-line hooks
+- added optional Chromium region / language spoofing through ChromiumSpoofRegion, ChromiumSpoofRegionLocale, and ChromiumSpoofRegionAcceptLanguage
+- added optional Chromium hardware acceleration / GPU launch support through ChromiumEnableHardwareAcceleration and ChromiumHardwareAccelerationCommandLine
+- improved update reliability with partial download staging, staged installs with rollback, safe archive path validation, and stricter extraction failure handling
+- fixed Windows CI build with current routine SDK and Node 24 GitHub Actions
+- optimized external URL launch path by caching parsed browser profile options
+- open external application URLs in Chromium's last used profile instead of falling back to an empty/default profile
+- added optional Chromecast / Google Cast launch support through ChromiumEnableCast and ChromiumCastCommandLine
+- improved TCL/Chromecast discovery workaround with Media Router, DIAL provider, all-IP sink discovery, and immediate sink probing
+- added advanced Chromium spoof configuration for Windows locale, geolocation hooks, timezone hooks, and browser-level hardware-id hooks
+- added a conservative lossless optimization bundle through ChromiumEnableLosslessOptimization and ParallelDownloading
+- fixed misleading ZIP "failed finding central directory" errors by validating downloaded archives and silently falling back from ZIP probing to 7z
+- strengthened Google Web Store compatibility mode by disabling UserAgentClientHint when spoofing the Chrome user agent
+- changed costly compatibility and forced GPU/raster flags to opt-in defaults after Speedometer data showed regressions versus stock Chrome
+- made Windows 11 UI, forced DirectX, and forced QUIC launch hints opt-in for a cleaner benchmark-focused default profile
+- added optional DNS/hosts/adblock blocklist URL support that converts lightweight domain rules to Chromium host resolver rules
+- moved DNS blocklist downloads into a dedicated dnsblock cache directory with max-age refresh and stale-cache fallback
+- split GPU blocklist override into its own enabled-by-default ini option and added conservative autofill/password form compatibility flags
+- added missing routine update/reset string resources to silence undefined IDS_* build warnings
+- enabled medium-width scrollable tab strip by default when supported by the Chromium build
+- added bundled Close Tabs Right extension and ini toggle to load it by default
+- fixed empty taskbar launches to reuse Chromium's last profile before falling back to the profile picker
+- added long generated text/font performance options with Skia cache tuning, translate suppression, and opt-in aggressive webfont/accessibility trimming
+
+v2.6 (14 January 2022)
+- set win7sp1 as minimum required version
+- prevent system sleep until download complete
+- added brave browser launch support
+- fixed command line with spaces bug (issue #186)
+- fixed cleanup old chromium versions (issue #180)
+- fixed opening windows twice (issue #172)
+- removed flash player support
+- cosmetics fixes
+- fixed bugs
+
+v2.5.7 (17 November 2019)
+- added updater only mode (issue #84 & #119)
+- updated project sdk
+- cosmetics fixes
+- fixed bugs
+
+v2.5.6 (9 March 2019)
+- added better search for browser executables
+- fixed working with multiple chrlauncher copies
+- fixed firefox based browsers support
+
+v2.5.5 (10 February 2019)
+- added more file formats recognition
+- fixed cache file can still available after unpacking (issue #123)
+- fixed passing arguments to browser (issue #125)
+- fixed window blinking on startup
+- updated project sdk
+- updated lzma sdk
+- cosmetics fixes
+- fixed bugs
+
+v2.5.4 (20 December 2018)
+- added 7zip packages support (issue #120)
+- activate browser window when browser is running
+- fixed bugs
+
+v2.5.3 (27 November 2018)
+- fixed loading custom configuration (issue #114)
+- fixed opening new Chromium window
+
+v2.5.2 (22 November 2018)
+- fixed unpacking some zip packages (issue #113)
+- updated locale
+
+v2.5.1 (18 November 2018)
+- added custom configuration settings and removed mutex (issue #59)
+- fixed destroying main window when error occurs
+- fixed proxy credentials parsing (issue #110)
+- fixed proxy support for win81+ (issue #110)
+- updated chromium types description (issue #109)
+- updated install script
+
+v2.5 (3 November 2018)
+- added localization support (please use example.txt, not chrlauncher.lng file)
+- added proxy support (issue #108)
+- fixed unpacking some zip packages (issue #107 & #100)
+- fixed wow64 related bugs
+- updated windows sdk
+- cosmetics fixes
+- fixed bugs
+
+v2.4.3 (2 March 2018)
+- fixed tls 1.2 certificates recognition (issue #95)
+- fixed downloading files
+- updated project sdk
+
+v2.4.1 (28 Juny 2017)
+- fixed always 32-bit downloading (issue #74)
+
+v2.4 (27 Juny 2017)
++ added ChromiumWaitForDownloadEnd config (issue #68 & #65)
++ added ChromiumUpdateUrl config (issue #69)
++ added set of old configuration (v1.9.4)
+- replaced wininet with winhttp library
+- removed errors messages
+- changed http to https (issue #69)
+- updated documentation
+- fixed classic ui
+- fixed bugs
+- ui fixes
+
+v2.3 (14 February 2017)
++ added "ungoogled-chromium" support (issue #33)
++ added forced update checking state into the "ChromiumCheckPeriod" param
+- increased startup speed
+- removed "--disable-component-update" from arguments (issue #35)
+- updated documentation
+- updated localization
+- fixed opening incorrect urls (issue #52 and #56)
+- fixed bugs
+
+v2.2 (21 January 2017)
+- fixed OpenZip failure
+
+v2.1 (18 January 2017)
+- fixed PPAPI arguments
+
+v2.0 (12 January 2017)
+* now download and install update is working in background
++ added tray icon and show it when new version found
++ added download control option
++ added "ChromiumBinary" option to set custom Chromium binary file name
+- increased download buffer size
+- fixed run Chromium when directory contain spaces
+- fixed race conditions on download
+- fixed relative/environment path generation
+- fixed open links if chrlauncher set as default browser
+- removed PPAPI from package
+- updated readme
+- code cleanup
+
+v1.9.4 (16 September 2016)
++ output debug strings on silent mode
+- fixed localization (issue #32)
+
+v1.9.3 (15 September 2016)
++ command line arguments
++ output debug strings on error
+- updated PPAPI to 23.0.0.162
+- updated to the latest sdk
+- fixed localization
+
+v1.9.2 (16 Juny 2016)
+- removed update checking when Chromium is running (issue #16)
+- fixed working under proxy (issue #17)
+- changed default browser type to "dev-codecs-sync"
+- updated PPAPI to 21.0.0.242
+
+v1.9.1 (23 April 2016)
++ now you can pass environment variables via command line
+- update checking time don't saved sometimes
+
+v1.9 (19 April 2016)
++ now you can pass arguments to Chromium through launcher command line
+- fixed parsing arguments ("blank tab" bug)
+- fixed custom builds cleanup
+- updated "SetDefaultBrowser" script
+- updated PPAPI to 21.0.0.213
+- minor bug fixes
+
+v1.8 (19 March 2016)
++ now distributed under MIT license
++ support to download unofficial build with codecs (see chrlauncher.ini)
+- updated PPAPI to 21.0.0.182
+
+v1.7 (23 February 2016)
++ support to use portable version of PPAPI (see "FlashPlayerPath" config)
+- fixed "SetDefaultBrowser" script (now used internal win7 feature to set as default browser)
+- removed std::regex (saved about 100kb)
+- stability improvements
+
+v1.6 (22 January 2016)
++ added script to set chrlauncher as default browser
+- cleanup Chromium package on extract
+- removed Mozilla Firefox support (because his have native autoupdater)
+- minor bug fixes
+
+v1.5 (17 December 2015)
++ added "Mozilla Firefox" support 
++ added new settings
++ added command line for run specified browser
+- fixed CreateProcess current directory parameter
+
+v1.4 (4 December 2015)
++ added "ChromiumDirectory" setting
+- fixed statusbar flickering
+
+v1.3 (1 December 2015)
+- fixed incorrect version checking
+
+v1.2 (30 November 2015)
++ added checking for installation package is really Chromium archive
++ added exit confirmation when downloading/installing
+- fixed architecture detection on various systems
+- changed settings description (see chrlauncher.ini)
+
+v1.1 (29 November 2015)
++ code rewritten on c++
++ added select for downloading architecture
++ added new settings (see chrlauncher.ini)
++ more information about update
+
+v1.0 (26 November 2015)
+- first public version

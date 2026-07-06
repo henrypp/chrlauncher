@@ -1,0 +1,69 @@
+name: Windows build
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  pull_request:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }}
+    runs-on: windows-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - x64
+          - ARM64
+
+    steps:
+      - name: Checkout chrlauncher
+        uses: actions/checkout@v7
+        with:
+          path: x
+          submodules: false
+
+      - name: Checkout routine dependency
+        uses: actions/checkout@v7
+        with:
+          repository: henrypp/routine
+          path: routine
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v3
+
+      - name: Build
+        working-directory: x
+        run: >
+          msbuild chrlauncher.sln
+          /m
+          /p:Configuration=Release
+          /p:Platform=${{ matrix.platform }}
+          /p:PreferredToolArchitecture=x64
+          /verbosity:minimal
+
+      - name: Verify output
+        shell: pwsh
+        working-directory: x
+        run: |
+          $outputRoot = Join-Path $PWD "bin"
+          $exe = Get-ChildItem -Path $outputRoot -Recurse -Filter chrlauncher.exe | Select-Object -First 1
+          if (-not $exe) {
+            Get-ChildItem -Path $outputRoot -Recurse | Format-Table FullName, Length
+            throw "chrlauncher.exe was not produced."
+          }
+          "Artifact: $($exe.FullName)"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: chrlauncher-${{ matrix.platform }}
+          path: x/bin/**
+          if-no-files-found: error
