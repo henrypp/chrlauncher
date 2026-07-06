@@ -14,16 +14,8 @@ on:
 
 jobs:
   build:
-    name: Build ${{ matrix.platform }}
+    name: Build x64 portable
     runs-on: windows-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        platform:
-          - Win32
-          - x64
-          - ARM64
 
     steps:
       - name: Checkout chrlauncher
@@ -41,37 +33,38 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v3
 
-      - name: Build
+      - name: Build x64
         working-directory: x
         run: >
           msbuild chrlauncher.sln
           /m
           /p:Configuration=Release
-          /p:Platform=${{ matrix.platform }}
+          /p:Platform=x64
           /p:PreferredToolArchitecture=x64
           /verbosity:minimal
 
-      - name: Verify output
+      - name: Verify portable layout
         shell: pwsh
         working-directory: x
         run: |
-          $outputRoot = Join-Path $PWD "bin"
-          $expectedName = switch ("${{ matrix.platform }}") {
-            "Win32" { "chrlauncher.x86.exe" }
-            "x64" { "chrlauncher.x64.exe" }
-            "ARM64" { "chrlauncher.arm64.exe" }
-            default { throw "Unsupported platform: ${{ matrix.platform }}" }
+          $ErrorActionPreference = 'Stop'
+          $required = @(
+            'bin\chrlauncher.x64.exe',
+            'bin\RUN_CHRLAUNCHER_X64.bat',
+            'bin\README_PORTABLE_LAYOUT.txt',
+            'bin\Addons\config.ini'
+          )
+          foreach ($path in $required) {
+            if (-not (Test-Path -LiteralPath $path)) {
+              Get-ChildItem -Path bin -Recurse -ErrorAction SilentlyContinue | Format-Table FullName, Length
+              throw "Missing portable artifact file: $path"
+            }
           }
-          $exe = Join-Path $outputRoot $expectedName
-          if (-not (Test-Path -LiteralPath $exe)) {
-            Get-ChildItem -Path $outputRoot -Recurse | Format-Table FullName, Length
-            throw "$expectedName was not produced in bin root."
-          }
-          "Artifact: $exe"
+          Get-Item -LiteralPath 'bin\chrlauncher.x64.exe' | Format-List FullName, Length, LastWriteTimeUtc
 
-      - name: Upload artifact
+      - name: Upload portable artifact
         uses: actions/upload-artifact@v7.0.1
         with:
-          name: chrlauncher-${{ matrix.platform }}
+          name: chrlauncher-restore-x64-portable
           path: x/bin/**
           if-no-files-found: error
