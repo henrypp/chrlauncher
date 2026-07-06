@@ -1,4 +1,4 @@
-@echo off
+aio@echo off
 
 cd ..\builder
 call build_locale chrlauncher
