@@ -1,0 +1,8 @@
+*.c diff
+*.cpp diff
+*.h diff
+*.rc diff
+*.ini diff
+*.txt diff
+*.xml diff
+*.lng diff

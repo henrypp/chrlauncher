@@ -1,0 +1,76 @@
+name: Windows build
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  pull_request:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }}
+    runs-on: windows-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - Win32
+          - x64
+          - ARM64
+
+    steps:
+      - name: Checkout chrlauncher
+        uses: actions/checkout@v7
+        with:
+          path: x
+          submodules: false
+
+      - name: Checkout routine dependency
+        uses: actions/checkout@v7
+        with:
+          repository: henrypp/routine
+          path: routine
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v3
+
+      - name: Build
+        working-directory: x
+        run: >
+          msbuild chrlauncher.sln
+          /m
+          /p:Configuration=Release
+          /p:Platform=${{ matrix.platform }}
+          /p:PreferredToolArchitecture=x64
+          /verbosity:minimal
+
+      - name: Verify output
+        shell: pwsh
+        working-directory: x
+        run: |
+          $outputRoot = Join-Path $PWD "bin"
+          $expectedName = switch ("${{ matrix.platform }}") {
+            "Win32" { "chrlauncher.x86.exe" }
+            "x64" { "chrlauncher.x64.exe" }
+            "ARM64" { "chrlauncher.arm64.exe" }
+            default { throw "Unsupported platform: ${{ matrix.platform }}" }
+          }
+          $exe = Join-Path $outputRoot $expectedName
+          if (-not (Test-Path -LiteralPath $exe)) {
+            Get-ChildItem -Path $outputRoot -Recurse | Format-Table FullName, Length
+            throw "$expectedName was not produced in bin root."
+          }
+          "Artifact: $exe"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: chrlauncher-${{ matrix.platform }}
+          path: x/bin/**
+          if-no-files-found: error
