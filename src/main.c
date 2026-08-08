@@ -1543,15 +1543,15 @@ INT_PTR CALLBACK DlgProc (
 		{
 			HWND htip;
 
-			htip = _r_ctrl_createtip (hwnd);
+			htip = _r_tooltip_create (hwnd);
 
 			if (!htip)
 				break;
 
-			_r_ctrl_settiptext (htip, hwnd, IDC_BROWSER_DATA, LPSTR_TEXTCALLBACK);
-			_r_ctrl_settiptext (htip, hwnd, IDC_CURRENTVERSION_DATA, LPSTR_TEXTCALLBACK);
-			_r_ctrl_settiptext (htip, hwnd, IDC_VERSION_DATA, LPSTR_TEXTCALLBACK);
-			_r_ctrl_settiptext (htip, hwnd, IDC_DATE_DATA, LPSTR_TEXTCALLBACK);
+			_r_tooltip_settext (htip, hwnd, IDC_BROWSER_DATA, LPSTR_TEXTCALLBACK);
+			_r_tooltip_settext (htip, hwnd, IDC_CURRENTVERSION_DATA, LPSTR_TEXTCALLBACK);
+			_r_tooltip_settext (htip, hwnd, IDC_VERSION_DATA, LPSTR_TEXTCALLBACK);
+			_r_tooltip_settext (htip, hwnd, IDC_DATE_DATA, LPSTR_TEXTCALLBACK);
 
 			break;
 		}
@@ -1907,11 +1907,11 @@ INT_PTR CALLBACK DlgProc (
 				case IDM_OPEN:
 				case IDM_TRAY_OPEN:
 				{
-					PR_STRINGREF path;
+					PR_STRING path;
 
 					path = _r_app_getconfigpath ();
 
-					if (_r_fs_isexists (path))
+					if (_r_fs_isexists (&path->sr))
 						_r_shell_opendefault (path->buffer);
 
 					break;
@@ -1996,7 +1996,7 @@ INT APIENTRY wWinMain (
 
 	_r_workqueue_initialize (&workqueue, 1, NULL, NULL);
 
-	_r_fs_setcurrentdirectory (_r_app_getdirectory ());
+	_r_fs_setcurrentdirectory (&_r_app_getdirectory ()->sr);
 
 	if (cmdline)
 	{
