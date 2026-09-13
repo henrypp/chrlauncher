@@ -16,7 +16,7 @@ DEFINE_GUID (GUID_TrayIcon, 0xEAD41630, 0x90BB, 0x4836, 0x82, 0x41, 0xAE, 0xAE, 
 #define FOOTER_STRING L"<a href=\"https://github.com/henrypp\">github.com/henrypp</a>\r\n" \
 	L"<a href=\"https://chromiumbuilds.org/docs/chrlauncher/\">chromiumbuilds.org</a>"
 
-//#define CHROMIUM_UPDATE_URL L"https://chromium.woolyss.com/api/v3/?os=windows&bit=%d&type=%s&out=string"
+//#define CHROMIUM_UPDATE_URL L"https://chromiumbuilds.org/api/v1/builds.json"
 #define CHROMIUM_UPDATE_URL L"https://chromiumbuilds.org/api/chrlauncher/windows-%d-%s.txt"
 
 #define CHROMIUM_TYPE L"dev-official"
