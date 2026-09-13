@@ -725,21 +725,74 @@ BOOLEAN _app_checkupdate (
 
 				status = _r_inet_begindownload (&download_info, hsession, &url->sr);
 
-				if (status == STATUS_SUCCESS)
-				{
-					string = download_info.string;
-
-					if (_r_obj_isstringempty (string))
-					{
-						_r_show_message (hwnd, MB_OK | MB_ICONSTOP, NULL, L"Configuration was not found.");
-
-						*is_error_ptr = TRUE;
-					}
-					else
-					{
-						hashtable = _r_str_unserialize (&string->sr, L';', L'=');
-					}
-				}
+			if (status == STATUS_SUCCESS)
+			{
+			    string = download_info.string;
+			
+			    if (_r_obj_isstringempty (string))
+			    {
+			        _r_show_message (hwnd, MB_OK | MB_ICONSTOP, NULL, L"Configuration was not found.");
+			        *is_error_ptr = TRUE;
+			    }
+			    else
+			    {
+			        LPCWSTR json_buf = string->buffer;
+			        LPCWSTR target_arch = (pbi->architecture == 64) ? L"\"x64\"" : L"\"x86\"";
+			        
+			        // Find matching entry for Windows and the target architecture
+			        LPCWSTR match = json_buf;
+			        while ((match = wcsstr (match, L"\"platform\": \"windows\"")) != NULL)
+			        {
+			            // Check if this build object contains the target architecture within 500 chars
+			            LPCWSTR arch_pos = wcsstr (match, target_arch);
+			            if (arch_pos && (arch_pos - match < 500))
+			            {
+			                // Extract version string
+			                LPCWSTR ver_pos = wcsstr (match, L"\"version\":");
+			                if (ver_pos && (ver_pos - match < 500))
+			                {
+			                    ver_pos = wcschr (ver_pos, L':');
+			                    if (ver_pos) ver_pos = wcschr (ver_pos, L'"');
+			                    if (ver_pos)
+			                    {
+			                        ver_pos++;
+			                        LPCWSTR ver_end = wcschr (ver_pos, L'"');
+			                        if (ver_end)
+			                        {
+			                            SIZE_T len = (ver_end - ver_pos);
+			                            _r_obj_movereference ((PVOID_PTR)&pbi->new_version, _r_obj_createstring_ex (ver_pos, len * sizeof (WCHAR)));
+			                        }
+			                    }
+			                }
+			
+			                // Extract download URL
+			                LPCWSTR url_pos = wcsstr (match, L"\"url\":");
+			                if (url_pos && (url_pos - match < 500))
+			                {
+			                    url_pos = wcsstr (url_pos, L"http");
+			                    if (url_pos)
+			                    {
+			                        LPCWSTR url_end = wcschr (url_pos, L'"');
+			                        if (url_end)
+			                        {
+			                            SIZE_T len = (url_end - url_pos);
+			                            _r_obj_movereference ((PVOID_PTR)&pbi->download_url, _r_obj_createstring_ex (url_pos, len * sizeof (WCHAR)));
+			                        }
+			                    }
+			                }
+			
+			                break; // Target match processed
+			            }
+			            match++;
+			        }
+			
+			        if (_r_obj_isstringempty (pbi->new_version) || _r_obj_isstringempty (pbi->download_url))
+			        {
+			            _r_show_message (hwnd, MB_OK | MB_ICONSTOP, NULL, L"Matching Chromium build not found.");
+			            *is_error_ptr = TRUE;
+			        }
+			    }
+			}
 				else
 				{
 					_r_show_errormessage (hwnd, NULL, status, L"Could not download update.", ET_WINHTTP);
