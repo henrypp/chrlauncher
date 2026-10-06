@@ -6,15 +6,12 @@
 #include "main.h"
 #include "rapp.h"
 
-#include "CpuArch.h"
-
 #include "7z.h"
 #include "7zAlloc.h"
 #include "7zBuf.h"
 #include "7zCrc.h"
 #include "7zFile.h"
 #include "7zWindows.h"
-
 #include "miniz.h"
 
 #include "resource.h"
@@ -26,7 +23,7 @@ R_QUEUED_LOCK lock_thread = PR_QUEUED_LOCK_INIT;
 
 R_WORKQUEUE workqueue;
 
-BOOL CALLBACK activate_browser_window_callback (
+static BOOL CALLBACK activate_browser_window_callback (
 	_In_ HWND hwnd,
 	_In_ LPARAM lparam
 )
@@ -40,10 +37,7 @@ BOOL CALLBACK activate_browser_window_callback (
 
 	GetWindowThreadProcessId (hwnd, &pid);
 
-	if (HandleToULong (NtCurrentProcessId ()) == pid)
-		return TRUE;
-
-	if (!_r_wnd_isvisible (hwnd, FALSE))
+	if (HandleToULong (NtCurrentProcessId ()) == pid || !_r_wnd_isvisible (hwnd, FALSE))
 		return TRUE;
 
 	status = _r_sys_openprocess (&hprocess, pid, PROCESS_QUERY_LIMITED_INFORMATION);
@@ -72,7 +66,7 @@ BOOL CALLBACK activate_browser_window_callback (
 	return is_success;
 }
 
-BOOLEAN _app_path_is_url (
+static BOOLEAN _app_path_is_url (
 	_In_ LPCWSTR path
 )
 {
@@ -98,13 +92,12 @@ BOOLEAN _app_path_is_url (
 	return FALSE;
 }
 
-VOID _app_update_browser_info (
+static VOID _app_update_browser_info (
 	_In_ HWND hwnd,
 	_In_ PBROWSER_INFORMATION pbi
 )
 {
-	PR_STRING localized_string;
-	PR_STRING date_dormat;
+	PR_STRING date_dormat, localized_string;
 	LPCWSTR string;
 	R_STRINGREF empty_string;
 	HDWP hdefer;
@@ -170,13 +163,11 @@ VOID _app_update_browser_info (
 	_r_obj_dereference (localized_string);
 }
 
-VOID _app_parse_args (
+static VOID _app_parse_args (
 	_Inout_ PBROWSER_INFORMATION pbi
 )
 {
-	LPWSTR *arga;
-	LPWSTR key;
-	LPWSTR key2;
+	LPWSTR *arga, key, key2;
 	ULONG_PTR first_arg_length = 0;
 	INT numargs;
 
@@ -253,7 +244,7 @@ VOID _app_parse_args (
 
 }
 
-VOID _app_delete (
+static VOID _app_delete (
 	_In_ PCR_STRINGREF path,
 	_In_ BOOLEAN is_directory
 )
@@ -277,10 +268,10 @@ VOID _app_delete (
 	}
 
 	if (!NT_SUCCESS (status) && status != STATUS_OBJECT_NAME_NOT_FOUND && status != E_NOT_SET)
-		_r_log (LOG_LEVEL_ERROR, NULL, is_directory ? L"_r_fs_deletedirectory" : L"_r_fs_deletefile", status, path->buffer);
+		_r_log (LOG_LEVEL_ERROR, NULL, is_directory ? L"_r_fs_deletedirectory" : L"_r_fs_deletefile", path->buffer, status);
 }
 
-VOID _app_init_browser_info (
+static VOID _app_init_browser_info (
 	_Inout_ PBROWSER_INFORMATION pbi
 )
 {
@@ -301,11 +292,7 @@ VOID _app_init_browser_info (
 	};
 
 	R_STRINGREF separator_sr = PR_STRINGREF_INIT (L"\\");
-	PR_STRING browser_arguments;
-	PR_STRING browser_type;
-	PR_STRING binary_dir;
-	PR_STRING binary_name;
-	PR_STRING string;
+	PR_STRING browser_arguments, binary_dir, binary_name, browser_type, string;
 	ULONG binary_type;
 	USHORT architecture;
 	NTSTATUS status;
@@ -313,8 +300,8 @@ VOID _app_init_browser_info (
 	// reset
 	pbi->is_hasurls = FALSE;
 
-	_r_obj_clearreference ((PVOID_PTR)&pbi->urls_str);
 	_r_obj_clearreference ((PVOID_PTR)&pbi->args_str);
+	_r_obj_clearreference ((PVOID_PTR)&pbi->urls_str);
 
 	// configure paths
 	binary_dir = _r_config_getstringexpand (L"ChromiumDirectory", L".\\bin", NULL);
@@ -448,7 +435,6 @@ VOID _app_init_browser_info (
 	string = _r_format_string (L"%s (%" TEXT (PR_LONG) L"-bit)", pbi->browser_type->buffer, pbi->architecture);
 
 	_r_obj_movereference ((PVOID_PTR)&pbi->browser_name, string);
-
 	_r_obj_movereference ((PVOID_PTR)&pbi->current_version, _r_res_queryversionstring (pbi->binary_path->buffer));
 
 	// parse arguments
@@ -481,7 +467,7 @@ VOID _app_init_browser_info (
 	}
 }
 
-VOID _app_setstatus (
+static VOID _app_setstatus (
 	_In_ HWND hwnd,
 	_In_opt_ HWND htaskbar,
 	_In_opt_ LPCWSTR string,
@@ -494,7 +480,6 @@ VOID _app_setstatus (
 	if (htaskbar)
 	{
 		_r_taskbar_setprogressstate (htaskbar, hwnd, TBPF_NORMAL);
-
 		_r_taskbar_setprogressvalue (htaskbar, hwnd, total_read, total_length);
 	}
 
@@ -513,7 +498,7 @@ VOID _app_setstatus (
 	}
 	else if (total_read && total_length)
 	{
-		percent = _r_calc_clamp64 ((ULONG64)PR_CALC_PERCENTOF (total_read, total_length), 0, 100);
+		percent = _r_calc_clamp64 ((LONG64)PR_CALC_PERCENTOF (total_read, total_length), 0, 100);
 
 		_r_status_settextformat (hwnd, IDC_STATUSBAR, 0, L"%s %" TEXT (PR_LONG64) L"%%", string, percent);
 
@@ -543,7 +528,7 @@ VOID _app_setstatus (
 	_r_wnd_sendmessage (hwnd, IDC_PROGRESS, PBM_SETPOS, (WPARAM)(LONG)percent, 0);
 }
 
-BOOLEAN _app_openbrowser (
+static BOOLEAN _app_openbrowser (
 	_In_opt_ HWND hwnd,
 	_In_ PBROWSER_INFORMATION pbi
 )
@@ -556,7 +541,7 @@ BOOLEAN _app_openbrowser (
 	if (_r_obj_isstringempty (pbi->binary_path) || !_r_fs_isexists (&pbi->binary_path->sr))
 	{
 		if (hwnd)
-			_r_show_errormessage (hwnd, NULL, STATUS_OBJECT_PATH_NOT_FOUND, _r_obj_getstring (pbi->binary_path), ET_NATIVE);
+			_r_show_errormessage (hwnd, L"Binary was not found!", _r_obj_getstring (pbi->binary_path), STATUS_OBJECT_PATH_NOT_FOUND, ET_NATIVE);
 
 		return FALSE;
 	}
@@ -613,7 +598,7 @@ BOOLEAN _app_openbrowser (
 	status = _r_sys_createprocess (&pbi->binary_path->sr, &cmdline->sr, &pbi->binary_dir->sr, FALSE);
 
 	if (!NT_SUCCESS (status))
-		_r_show_errormessage (_r_app_gethwnd (), NULL, status, pbi->binary_path->buffer, ET_NATIVE);
+		_r_show_errormessage (_r_app_gethwnd (), L"Could not create process!", pbi->binary_path->buffer, status, ET_NATIVE);
 
 	_r_obj_dereference (args_string);
 	_r_obj_dereference (cmdline);
@@ -621,21 +606,21 @@ BOOLEAN _app_openbrowser (
 	return NT_SUCCESS (status);
 }
 
-BOOLEAN _app_ishaveupdate (
+static BOOLEAN _app_ishaveupdate (
 	_In_ PBROWSER_INFORMATION pbi
 )
 {
 	return !_r_obj_isstringempty (pbi->download_url) && !_r_obj_isstringempty (pbi->new_version);
 }
 
-BOOLEAN _app_isupdatedownloaded (
+static BOOLEAN _app_isupdatedownloaded (
 	_In_ PBROWSER_INFORMATION pbi
 )
 {
 	return !_r_obj_isstringempty (pbi->cache_path) && _r_fs_isexists (&pbi->cache_path->sr);
 }
 
-BOOLEAN _app_isupdaterequired (
+static BOOLEAN _app_isupdaterequired (
 	_In_ PBROWSER_INFORMATION pbi
 )
 {
@@ -649,8 +634,7 @@ BOOLEAN _app_isupdaterequired (
 
 	if (pbi->check_period)
 	{
-		timestamp = _r_unixtime_now ();
-		timestamp -= _r_config_getlong64 (L"ChromiumLastCheck", 0, NULL);
+		timestamp = _r_unixtime_now () - _r_config_getlong64 (L"ChromiumLastCheck", 0, NULL);
 
 		if (timestamp >= _r_calc_days2seconds (pbi->check_period))
 			return TRUE;
@@ -659,7 +643,7 @@ BOOLEAN _app_isupdaterequired (
 	return FALSE;
 }
 
-ULONG _app_getactionid (
+static ULONG _app_getactionid (
 	_In_ PBROWSER_INFORMATION pbi
 )
 {
@@ -675,18 +659,17 @@ ULONG _app_getactionid (
 	return IDS_ACTION_CHECK;
 }
 
-BOOLEAN _app_checkupdate (
+static BOOLEAN _app_checkupdate (
 	_In_ HWND hwnd,
 	_In_ PBROWSER_INFORMATION pbi,
 	_Out_ PBOOLEAN is_error_ptr
 )
 {
+	PR_STRING proxy_string, string, update_url, url;
 	PR_HASHTABLE hashtable = NULL;
 	R_DOWNLOAD_INFO download_info;
-	PR_STRING proxy_string, string, update_url, url;
 	HINTERNET hsession;
-	BOOLEAN is_updaterequired;
-	BOOLEAN is_newversion = FALSE, is_success = FALSE, is_exists;
+	BOOLEAN is_exists, is_newversion = FALSE, is_success = FALSE, is_updaterequired;
 	NTSTATUS status;
 
 	*is_error_ptr = FALSE;
@@ -731,7 +714,7 @@ BOOLEAN _app_checkupdate (
 
 					if (_r_obj_isstringempty (string))
 					{
-						_r_show_message (hwnd, MB_OK | MB_ICONSTOP, NULL, L"Configuration was not found.");
+						_r_show_message (hwnd, MB_OK | MB_ICONSTOP, L"Configuration was not found!", NULL);
 
 						*is_error_ptr = TRUE;
 					}
@@ -742,7 +725,7 @@ BOOLEAN _app_checkupdate (
 				}
 				else
 				{
-					_r_show_errormessage (hwnd, NULL, status, L"Could not download update.", ET_WINHTTP);
+					_r_show_errormessage (hwnd, L"Could not download update!", NULL, status, ET_WINHTTP);
 
 					*is_error_ptr = TRUE;
 				}
@@ -810,22 +793,20 @@ BOOLEAN _app_checkupdate (
 	return is_success;
 }
 
-BOOLEAN WINAPI _app_downloadupdate_callback (
+static BOOLEAN WINAPI _app_downloadupdate_callback (
 	_In_ ULONG64 total_written,
 	_In_ ULONG64 total_length,
 	_In_ PVOID lparam
 )
 {
-	PBROWSER_INFORMATION pbi;
+	PBROWSER_INFORMATION pbi = (PBROWSER_INFORMATION)lparam;
 
-	pbi = lparam;
-
-	_app_setstatus (pbi->hwnd, pbi->htaskbar, _r_locale_getstring (IDS_STATUS_DOWNLOAD), total_written, total_length);
+	_app_setstatus (_r_app_gethwnd (), pbi->htaskbar, _r_locale_getstring (IDS_STATUS_DOWNLOAD), total_written, total_length);
 
 	return TRUE;
 }
 
-BOOLEAN _app_downloadupdate (
+static BOOLEAN _app_downloadupdate (
 	_In_ HWND hwnd,
 	_In_ PBROWSER_INFORMATION pbi,
 	_Out_ PBOOLEAN is_error_ptr
@@ -869,7 +850,7 @@ BOOLEAN _app_downloadupdate (
 
 		if (!NT_SUCCESS (status))
 		{
-			_r_show_errormessage (hwnd, NULL, status, pbi->cache_path->buffer, ET_NATIVE);
+			_r_show_errormessage (hwnd, L"Could not create cache file!", pbi->cache_path->buffer, status, ET_NATIVE);
 
 			*is_error_ptr = TRUE;
 		}
@@ -883,7 +864,7 @@ BOOLEAN _app_downloadupdate (
 
 			if (status != STATUS_SUCCESS)
 			{
-				_r_show_errormessage (hwnd, NULL, status, pbi->download_url->buffer, ET_WINHTTP);
+				_r_show_errormessage (hwnd, L"Could not download file!", pbi->download_url->buffer, status, ET_WINHTTP);
 
 				_app_delete (&pbi->cache_path->sr, FALSE);
 
@@ -910,7 +891,7 @@ BOOLEAN _app_downloadupdate (
 	return is_success;
 }
 
-SRes _app_unpack_7zip (
+static SRes _app_unpack_7zip (
 	_In_ HWND hwnd,
 	_In_ PBROWSER_INFORMATION pbi,
 	_In_ PR_STRINGREF bin_name
@@ -925,27 +906,20 @@ SRes _app_unpack_7zip (
 	CFileInStream archive_stream = {0};
 	CLookToRead2 look_stream;
 	CSzArEx db;
-	ULONG_PTR temp_size = 0;
 	LPWSTR temp_buff = NULL;
 
 	// if you need cache, use these 3 variables.
 	// if you use external function, you can make these variable as static.
 
-	UInt32 block_index = UINT32_MAX; // it can have any value before first call (if out_buffer = 0)
 	Byte *out_buffer = NULL; // it must be 0 before first call for each new archive.
-	ULONG_PTR out_buffer_size = 0; // it can have any value before first call (if out_buffer = 0)
 	R_STRINGREF path;
-	PR_STRING root_dir_name = NULL;
-	PR_STRING dest_path;
-	PR_STRING sub_dir;
+	PR_STRING dest_path, root_dir_name = NULL, sub_dir;
 	CSzFile out_file;
-	ULONG_PTR offset;
-	ULONG_PTR out_size_processed;
 	UInt32 attrib;
-	UInt64 total_size = 0;
-	UInt64 total_read = 0;
-	ULONG_PTR processed_size;
-	ULONG_PTR length;
+	UInt32 block_index = UINT32_MAX; // it can have any value before first call (if out_buffer = 0)
+	UInt64 total_read = 0, total_size = 0;
+	ULONG_PTR out_buffer_size = 0; // it can have any value before first call (if out_buffer = 0)
+	ULONG_PTR length, offset, out_size_processed, processed_size, temp_size = 0;
 	BOOLEAN is_success = FALSE;
 	LONG status;
 
@@ -953,7 +927,7 @@ SRes _app_unpack_7zip (
 
 	if (status != ERROR_SUCCESS)
 	{
-		_r_show_errormessage (hwnd, NULL, status, pbi->cache_path->buffer, ET_WINDOWS);
+		_r_show_errormessage (hwnd, L"Could not open file for reading!", pbi->cache_path->buffer, status, ET_WINDOWS);
 
 		return status;
 	}
@@ -967,7 +941,7 @@ SRes _app_unpack_7zip (
 
 	if (!look_stream.buf)
 	{
-		_r_show_errormessage (hwnd, NULL, STATUS_NO_MEMORY, L"ISzAlloc_Alloc", ET_NATIVE);
+		_r_show_errormessage (hwnd, L"No memory available!", L"ISzAlloc_Alloc", STATUS_NO_MEMORY, ET_NATIVE);
 
 		goto CleanupExit;
 	}
@@ -983,7 +957,7 @@ SRes _app_unpack_7zip (
 
 	if (status != SZ_OK)
 	{
-		_r_show_errormessage (hwnd, NULL, status, L"SzArEx_Open", ET_NONE);
+		_r_show_errormessage (hwnd, L"Could not open archive!", L"SzArEx_Open", status, ET_NONE);
 
 		goto CleanupExit;
 	}
@@ -1033,7 +1007,7 @@ SRes _app_unpack_7zip (
 		}
 	}
 
-	for (ULONG_PTR i = 0; i < db.NumFiles; i++)
+	for (UINT i = 0; i < db.NumFiles; i++)
 	{
 		length = SzArEx_GetFileNameUtf16 (&db, i, temp_buff);
 
@@ -1084,11 +1058,11 @@ SRes _app_unpack_7zip (
 			offset = 0;
 			out_size_processed = 0;
 
-			status = SzArEx_Extract (&db, &look_stream.vt, (UINT32)i, &block_index, &out_buffer, &out_buffer_size, &offset, &out_size_processed, &alloc_imp, &alloc_temp_imp);
+			status = SzArEx_Extract (&db, &look_stream.vt, i, &block_index, &out_buffer, &out_buffer_size, &offset, &out_size_processed, &alloc_imp, &alloc_temp_imp);
 
 			if (status != SZ_OK)
 			{
-				_r_show_errormessage (hwnd, NULL, status, L"SzArEx_Extract", ET_NONE);
+				_r_show_errormessage (hwnd, L"Could not extract!", L"SzArEx_Extract", status, ET_NONE);
 			}
 			else
 			{
@@ -1097,7 +1071,7 @@ SRes _app_unpack_7zip (
 				if (status != SZ_OK)
 				{
 					if (status != SZ_ERROR_CRC)
-						_r_show_errormessage (hwnd, NULL, status, L"OutFile_OpenW", ET_NONE);
+						_r_show_errormessage (hwnd, L"Could not open file for write!", dest_path->buffer, status, ET_NONE);
 				}
 				else
 				{
@@ -1107,7 +1081,7 @@ SRes _app_unpack_7zip (
 
 					if (status != SZ_OK || processed_size != out_size_processed)
 					{
-						_r_show_errormessage (hwnd, NULL, status, L"File_Write", ET_NONE);
+						_r_show_errormessage (hwnd, L"Could not write to file!", L"File_Write", status, ET_NONE);
 					}
 					else
 					{
@@ -1115,8 +1089,7 @@ SRes _app_unpack_7zip (
 						{
 							attrib = db.Attribs.Vals[i];
 
-							//	p7zip stores posix attributes in high 16 bits and adds 0x8000 as marker.
-							//	We remove posix bits, if we detect posix mode field
+							//	p7zip stores posix attributes in high 16 bits and adds 0x8000 as marker. we remove posix bits, if we detect posix mode field.
 							if ((attrib & 0xF0000000) != 0)
 								attrib &= 0x7FFF;
 
@@ -1156,23 +1129,18 @@ CleanupExit:
 	return status;
 }
 
-BOOLEAN _app_unpack_zip (
+static BOOLEAN _app_unpack_zip (
 	_In_ HWND hwnd,
 	_In_ PBROWSER_INFORMATION pbi,
 	_In_ PR_STRINGREF bin_name
 )
 {
-	static R_STRINGREF separator_sr = PR_STRINGREF_INIT (L"\\");
-
+	R_STRINGREF separator_sr = PR_STRINGREF_INIT (L"\\");
 	mz_zip_archive_file_stat file_stat;
 	mz_zip_archive zip_archive = {0};
-	PR_STRING root_dir_name = NULL;
+	PR_STRING dest_path, path, root_dir_name = NULL, sub_dir;
 	R_BYTEREF path_sr;
-	PR_STRING path;
-	PR_STRING dest_path;
-	PR_STRING sub_dir;
-	ULONG64 total_size = 0;
-	ULONG64 total_read = 0; // this is our progress so far
+	ULONG64 total_size = 0, total_read = 0; // this is our progress so far
 	ULONG_PTR length;
 	UINT total_files;
 	BOOLEAN is_success = FALSE;
@@ -1180,7 +1148,7 @@ BOOLEAN _app_unpack_zip (
 
 	if (!mz_zip_reader_init_file_v2 (&zip_archive, pbi->cache_path->buffer, 0, 0, 0))
 	{
-		_r_show_errormessage (hwnd, NULL, zip_archive.m_last_error, mz_zip_get_error_string (zip_archive.m_last_error), ET_NONE);
+		_r_show_errormessage (hwnd, L"Could not init zip file!", mz_zip_get_error_string (zip_archive.m_last_error), zip_archive.m_last_error, ET_NONE);
 
 		return FALSE;
 	}
@@ -1223,7 +1191,7 @@ BOOLEAN _app_unpack_zip (
 		}
 	}
 
-	for (ULONG i = 0; i < total_files; i++)
+	for (UINT i = 0; i < total_files; i++)
 	{
 		if (!mz_zip_reader_file_stat (&zip_archive, i, &file_stat))
 			continue;
@@ -1289,16 +1257,15 @@ BOOLEAN _app_unpack_zip (
 	return is_success;
 }
 
-BOOLEAN _app_installupdate (
+static BOOLEAN _app_installupdate (
 	_In_ HWND hwnd,
 	_In_ PBROWSER_INFORMATION pbi,
 	_Out_ PBOOLEAN is_error_ptr
 )
 {
+	PR_STRING buffer1, buffer2;
 	R_STRINGREF bin_name;
-	PR_STRING buffer1;
-	PR_STRING buffer2;
-	NTSTATUS status;
+	HRESULT status;
 
 	_r_queuedlock_acquireshared (&lock_download);
 
@@ -1356,17 +1323,13 @@ BOOLEAN _app_installupdate (
 	return (status == SZ_OK) ? TRUE : FALSE;
 }
 
-VOID _app_thread_check (
+static VOID _app_thread_check (
 	_In_ PVOID arglist
 )
 {
 	PBROWSER_INFORMATION pbi;
 	HWND hwnd;
-	BOOLEAN is_haveerror = FALSE;
-	BOOLEAN is_installed = FALSE;
-	BOOLEAN is_stayopen = FALSE;
-	BOOLEAN is_updaterequired;
-	BOOLEAN is_exists;
+	BOOLEAN is_exists, is_haveerror = FALSE, is_installed = FALSE, is_stayopen = FALSE, is_updaterequired;
 
 	pbi = (PBROWSER_INFORMATION)arglist;
 	hwnd = _r_app_gethwnd ();
@@ -1541,9 +1504,9 @@ INT_PTR CALLBACK DlgProc (
 	{
 		case WM_INITDIALOG:
 		{
-			HWND htip;
+			HWND htip = _r_tooltip_create (hwnd);
 
-			htip = _r_tooltip_create (hwnd);
+			_r_app_sethwnd (hwnd); // HACK!!!
 
 			if (!htip)
 				break;
@@ -1560,8 +1523,7 @@ INT_PTR CALLBACK DlgProc (
 		{
 			HMENU hmenu;
 			HICON hicon;
-			LONG icon_small;
-			LONG dpi_value;
+			LONG dpi_value, icon_small;
 			BOOLEAN is_hidden;
 
 			dpi_value = _r_dc_gettaskbardpi ();
@@ -1569,8 +1531,6 @@ INT_PTR CALLBACK DlgProc (
 			icon_small = _r_dc_getsystemmetrics (SM_CXSMICON, dpi_value);
 
 			hicon = _r_sys_loadsharedicon (_r_sys_getimagebase (), MAKEINTRESOURCE (IDI_MAIN), icon_small);
-
-			browser_info.hwnd = hwnd;
 
 			_app_init_browser_info (&browser_info);
 
@@ -1606,8 +1566,7 @@ INT_PTR CALLBACK DlgProc (
 		case RM_LOCALIZE:
 		{
 			// localize menu
-			HMENU hmenu;
-			HMENU hsubmenu;
+			HMENU hmenu, hsubmenu;
 			ULONG locale_id;
 
 			hmenu = GetMenu (hwnd);
@@ -1618,7 +1577,7 @@ INT_PTR CALLBACK DlgProc (
 				_r_menu_setitemtext (hmenu, 1, TRUE, _r_locale_getstring (IDS_SETTINGS));
 				_r_menu_setitemtext (hmenu, 2, TRUE, _r_locale_getstring (IDS_HELP));
 
-				hsubmenu = GetSubMenu (hmenu, 1);
+				hsubmenu = GetSubMenu (hmenu, LANG_SUBMENU);
 
 				if (hsubmenu)
 					_r_menu_setitemtextformat (hsubmenu, LANG_MENU, TRUE, L"%s (Language)", _r_locale_getstring (IDS_LANGUAGE));
@@ -1632,7 +1591,8 @@ INT_PTR CALLBACK DlgProc (
 				_r_menu_setitemtextformat (hmenu, IDM_ABOUT, FALSE, L"%s\tF1", _r_locale_getstring (IDS_ABOUT));
 
 				// enum localizations
-				_r_locale_enum ((HWND)GetSubMenu (hmenu, 1), LANG_MENU, IDX_LANGUAGE);
+				if (hsubmenu)
+					_r_locale_enum (hsubmenu, LANG_MENU, IDX_LANGUAGE);
 			}
 
 			_app_update_browser_info (hwnd, &browser_info);
@@ -1649,13 +1609,10 @@ INT_PTR CALLBACK DlgProc (
 		case RM_TASKBARCREATED:
 		{
 			HICON hicon;
-			LONG dpi_value;
 			LONG icon_small;
 			BOOLEAN is_hidden;
 
-			dpi_value = _r_dc_gettaskbardpi ();
-
-			icon_small = _r_dc_getsystemmetrics (SM_CXSMICON, dpi_value);
+			icon_small = _r_dc_getsystemmetrics (SM_CXSMICON, _r_dc_gettaskbardpi ());
 
 			hicon = _r_sys_loadsharedicon (_r_sys_getimagebase (), MAKEINTRESOURCE (IDI_MAIN), icon_small);
 
@@ -1669,12 +1626,9 @@ INT_PTR CALLBACK DlgProc (
 		case WM_DPICHANGED:
 		{
 			HICON hicon;
-			LONG dpi_value;
 			LONG icon_small;
 
-			dpi_value = _r_dc_gettaskbardpi ();
-
-			icon_small = _r_dc_getsystemmetrics (SM_CXSMICON, dpi_value);
+			icon_small = _r_dc_getsystemmetrics (SM_CXSMICON, _r_dc_gettaskbardpi ());
 
 			hicon = _r_sys_loadsharedicon (_r_sys_getimagebase (), MAKEINTRESOURCE (IDI_MAIN), icon_small);
 
@@ -1689,7 +1643,7 @@ INT_PTR CALLBACK DlgProc (
 		{
 			if (_r_queuedlock_islocked (&lock_download))
 			{
-				if (_r_show_message (hwnd, MB_YESNO | MB_ICONQUESTION, NULL, _r_locale_getstring (IDS_QUESTION_STOP)) != IDYES)
+				if (_r_show_message (hwnd, MB_YESNO | MB_ICONQUESTION, _r_locale_getstring (IDS_QUESTION_STOP), NULL ) != IDYES)
 				{
 					SetWindowLongPtrW (hwnd, DWLP_MSGRESULT, TRUE);
 
@@ -1730,11 +1684,7 @@ INT_PTR CALLBACK DlgProc (
 		case WM_EXITSIZEMOVE:
 		case WM_CAPTURECHANGED:
 		{
-			LONG_PTR ex_style;
-
-			ex_style = _r_wnd_getstyle (hwnd, GWL_EXSTYLE);
-
-			if ((ex_style & WS_EX_LAYERED) == 0)
+			if ((_r_wnd_getstyle (hwnd, GWL_EXSTYLE) & WS_EX_LAYERED) == 0)
 				_r_wnd_setstyle (hwnd, WS_EX_LAYERED, WS_EX_LAYERED, GWL_EXSTYLE);
 
 			SetLayeredWindowAttributes (hwnd, 0, (msg == WM_ENTERSIZEMOVE) ? 100 : 255, LWA_ALPHA);
@@ -1746,9 +1696,7 @@ INT_PTR CALLBACK DlgProc (
 
 		case WM_NOTIFY:
 		{
-			LPNMHDR lpnmhdr;
-
-			lpnmhdr = (LPNMHDR)lparam;
+			LPNMHDR lpnmhdr = (LPNMHDR)lparam;
 
 			switch (lpnmhdr->code)
 			{
@@ -1780,9 +1728,7 @@ INT_PTR CALLBACK DlgProc (
 				case NM_CLICK:
 				case NM_RETURN:
 				{
-					PNMLINK nmlink;
-
-					nmlink = (PNMLINK)lparam;
+					PNMLINK nmlink = (PNMLINK)lparam;
 
 					if (!_r_str_isempty (nmlink->item.szUrl))
 						_r_shell_opendefault (nmlink->item.szUrl);
@@ -1814,7 +1760,7 @@ INT_PTR CALLBACK DlgProc (
 
 				case WM_MBUTTONUP:
 				{
-					_r_wnd_sendmessage (hwnd, 0, WM_COMMAND, MAKEWPARAM (IDM_EXPLORE, 0), 0);
+					_r_wnd_sendcommand (hwnd, IDM_EXPLORE, 0);
 					break;
 				}
 
@@ -1826,21 +1772,20 @@ INT_PTR CALLBACK DlgProc (
 
 				case WM_CONTEXTMENU:
 				{
-					HMENU hmenu;
-					HMENU hsubmenu;
+					HMENU hmenu, hsubmenu;
 
 					SetForegroundWindow (hwnd); // don't touch
 
-					hmenu = LoadMenuW (NULL, MAKEINTRESOURCE (IDM_TRAY));
+					hmenu = LoadMenuW (_r_sys_getimagebase (), MAKEINTRESOURCE (IDM_TRAY));
 
 					if (!hmenu)
 						break;
 
 					hsubmenu = GetSubMenu (hmenu, 0);
 
+					// localize
 					if (hsubmenu)
 					{
-						// localize
 						_r_menu_setitemtext (hsubmenu, IDM_TRAY_SHOW, FALSE, _r_locale_getstring (IDS_TRAY_SHOW));
 						_r_menu_setitemtextformat (hsubmenu, IDM_TRAY_RUN, FALSE, L"%s...", _r_locale_getstring (IDS_RUN));
 						_r_menu_setitemtextformat (hsubmenu, IDM_TRAY_OPEN, FALSE, L"%s...", _r_locale_getstring (IDS_OPEN));
@@ -1851,7 +1796,7 @@ INT_PTR CALLBACK DlgProc (
 						if (_r_obj_isstringempty (browser_info.binary_path) || !_r_fs_isexists (&browser_info.binary_path->sr))
 							_r_menu_enableitem (hsubmenu, IDM_TRAY_RUN, MF_BYCOMMAND, FALSE);
 
-						_r_menu_popup (hsubmenu, hwnd, NULL, TRUE);
+						_r_menu_popup (hsubmenu, hwnd, NULL, 0);
 					}
 
 					DestroyMenu (hmenu);
@@ -1870,13 +1815,20 @@ INT_PTR CALLBACK DlgProc (
 
 			if (HIWORD (wparam) == 0 && LOWORD (wparam) >= IDX_LANGUAGE && LOWORD (wparam) <= IDX_LANGUAGE + _r_locale_getcount ())
 			{
-				HMENU hmenu;
+				HMENU hmenu = GetMenu (hwnd);
 
-				hmenu = GetMenu (hwnd);
-				hmenu = GetSubMenu (hmenu, 1);
+				if (!hmenu)
+					break;
+
+				hmenu = GetSubMenu (hmenu, LANG_SUBMENU);
+
+				if (!hmenu)
+					break;
+
 				hmenu = GetSubMenu (hmenu, LANG_MENU);
 
-				_r_locale_apply (hmenu, LOWORD (wparam), IDX_LANGUAGE);
+				if (hmenu)
+					_r_locale_apply (hmenu, LOWORD (wparam), IDX_LANGUAGE);
 
 				return FALSE;
 			}
@@ -1907,9 +1859,7 @@ INT_PTR CALLBACK DlgProc (
 				case IDM_OPEN:
 				case IDM_TRAY_OPEN:
 				{
-					PR_STRING path;
-
-					path = _r_app_getconfigpath ();
+					PR_STRING path = _r_app_getconfigpath ();
 
 					if (_r_fs_isexists (&path->sr))
 						_r_shell_opendefault (path->buffer);
@@ -1919,33 +1869,27 @@ INT_PTR CALLBACK DlgProc (
 
 				case IDM_EXPLORE:
 				{
-					if (!browser_info.binary_dir)
+					if (_r_obj_isstringempty (browser_info.binary_dir))
 						break;
 
 					if (_r_fs_isexists (&browser_info.binary_dir->sr))
-						_r_shell_opendefault (browser_info.binary_dir->buffer);
+						_r_shell_showfile (&browser_info.binary_dir->sr);
 
 					break;
 				}
 
 				case IDM_RUNATEND_CHK:
 				{
-					BOOLEAN new_val;
-
-					new_val = !_r_config_getboolean (L"ChromiumRunAtEnd", TRUE, NULL);
+					BOOLEAN new_val = _r_config_invertboolean (L"ChromiumRunAtEnd", TRUE, NULL);
 
 					_r_menu_checkitem (GetMenu (hwnd), ctrl_id, 0, MF_BYCOMMAND, new_val);
-
-					_r_config_setboolean (L"ChromiumRunAtEnd", new_val, NULL);
 
 					break;
 				}
 
 				case IDM_DARKMODE_CHK:
 				{
-					BOOLEAN new_val;
-
-					new_val = !_r_theme_isenabled ();
+					BOOLEAN new_val = !_r_theme_isenabled ();
 
 					_r_menu_checkitem (GetMenu (hwnd), ctrl_id, 0, MF_BYCOMMAND, new_val);
 
@@ -1994,7 +1938,7 @@ INT APIENTRY wWinMain (
 	if (!_r_app_initialize (NULL))
 		return ERROR_APP_INIT_FAILURE;
 
-	_r_workqueue_initialize (&workqueue, 1, NULL, NULL);
+	_r_workqueue_initialize (&workqueue, 1, NULL, L"UpdaterThread");
 
 	_r_fs_setcurrentdirectory (&_r_app_getdirectory ()->sr);
 
