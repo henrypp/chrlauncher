@@ -1,6 +1,6 @@
 v2.7 (7 October 2027)
 
-\- dropped 32-bit support (issue ##252)
+\- dropped 32-bit support (issue #252)
 
 \- added chrome\_plus support
 
