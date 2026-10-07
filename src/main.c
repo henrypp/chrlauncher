@@ -1523,12 +1523,10 @@ INT_PTR CALLBACK DlgProc (
 		{
 			HMENU hmenu;
 			HICON hicon;
-			LONG dpi_value, icon_small;
+			LONG icon_small;
 			BOOLEAN is_hidden;
 
-			dpi_value = _r_dc_gettaskbardpi ();
-
-			icon_small = _r_dc_getsystemmetrics (SM_CXSMICON, dpi_value);
+			icon_small = _r_dc_getsystemmetrics (SM_CXSMICON, _r_dc_gettaskbardpi ());
 
 			hicon = _r_sys_loadsharedicon (_r_sys_getimagebase (), MAKEINTRESOURCE (IDI_MAIN), icon_small);
 
