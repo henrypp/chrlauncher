@@ -1,3 +1,11 @@
+v2.7 (7 October 2027)
+- dropped 32-bit support (issue ##252)
+- added chrome_plus support
+- updated current api support
+- updated project sdk
+- cosmetics fixes
+- fixed bugs
+
 v2.6 (14 January 2022)
 - set win7sp1 as minimum required version
 - prevent system sleep until download complete
