@@ -62,7 +62,7 @@ There is list of arguments overrides .ini options
 [chrlauncher]
 
 # Custom Chromium update URL (string):
-ChromiumUpdateUrl=https://chromiumbuilds.org/api/chrlauncher/windows-%d-%s.txt
+#ChromiumUpdateUrl=https://chromiumbuilds.org/api/chrlauncher/windows-%d-%s.txt
 
 # Command line for Chromium (string):
 # See here: https://peter.sh/experiments/chromium-command-line-switches/

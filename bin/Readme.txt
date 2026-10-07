@@ -3,7 +3,7 @@ chrlauncher
 Small and very fast portable launcher and updater for Chromium.
 
 System requirements:
-- Windows 7, 8, 8.1, 10, 11 32-bit/64-bit/ARM64
+- Windows 7, 8, 8.1, 10, 11 64-bit/ARM64
 - An SSE2-capable CPU
 
 Default browser:
@@ -27,7 +27,7 @@ Settings:
 [chrlauncher]
 
 # Custom Chromium update URL (string):
-#ChromiumUpdateUrl=https://chromium.woolyss.com/api/v3/?os=windows&bit=%d&type=%s&out=string
+#ChromiumUpdateUrl=https://chromiumbuilds.org/api/chrlauncher/windows-%d-%s.txt
 
 # Command line for Chromium (string):
 # See here: https://peter.sh/experiments/chromium-command-line-switches/
@@ -114,6 +114,10 @@ ChromiumLastCheck=0
 #
 ChromiumRunAtEnd=true
 
+# Delete Chromium directory to recylcle when installing update (boolean)
+#
+ChromiumDeleteToRecycle=true
+
 # A DLL hijack implements Chrome full portability as well as tab enhancements.
 # https://github.com/Bush2021/chrome_plus
 #ChromePlusDirectory=.\chrome_plus
@@ -122,12 +126,14 @@ ChromiumRunAtEnd=true
 # Internal settings (SDK)
 #
 
+# Set main window on top (string):
+AlwaysOnTop=false
+
 # Set custom useragent (string):
 #UserAgent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36
 
 # Set proxy configuration (string):
 #Proxy=127.0.0.1:80
-
 Website: https://github.com/henrypp
 Support: sforce5@mail.ru
 
