@@ -1,0 +1,11 @@
+# Optional building on https://reporoad.org
+# After merging, submit this repository on the site to join.
+version: 1
+style: stone
+color: "#7991aa"
+roof: gable
+signText: chrlauncher
+garden: true
+support:
+  sponsor: false
+  helpWanted: false
